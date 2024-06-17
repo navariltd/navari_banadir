@@ -17,16 +17,12 @@ from erpnext.accounts.report.financial_statements import (
 )
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
-from erpnext import get_company_currency, get_default_company
+from erpnext import get_company_currency
 
-from erpnext.accounts.report.financial_statements import get_cost_centers_with_children
-from erpnext.accounts.report.utils import convert_to_presentation_currency, get_currency
-from erpnext.accounts.utils import get_account_currency
-from erpnext.accounts.report.utils import convert_to_presentation_currency,convert
+from erpnext.accounts.report.utils import convert
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
-	# frappe.throw(str(filters))
 	columns = get_columns(filters)
 	data = get_data(filters)
 	chart = (
@@ -42,15 +38,6 @@ def get_conditions(filters):
 	conditions = {"docstatus": 1}
 	status = filters.status
 	date_field = frappe.scrub(filters.date_based_on or "Purchase Date")
-
-	if filters.get("presentation_currency"):
-		filters.presentation_currency = filters["presentation_currency"]
-	else:
-		if filters.get("company"):
-			filters.presentation_currency = get_company_currency(filters["company"])
-		else:
-			company = get_default_company()
-			filters.presentation_currency = get_company_currency(company)
 
 	if filters.get("company"):
 		conditions["company"] = filters.company
@@ -80,10 +67,7 @@ def get_conditions(filters):
 		conditions["asset_category"] = filters.get("asset_category")
 	if filters.get("cost_center"):
 		conditions["cost_center"] = filters.get("cost_center")
-	# if filters.get("presentation_currency"):
-	# 	conditions["presentation_currency"] = filters.get("presentation_currency")
-	# conditions["company_currency"]= get_company_currency(filters.company)
-
+	
 	if status:
 		# In Store assets are those that are not sold or scrapped or capitalized or decapitalized
 		operand = "not in"
@@ -98,7 +82,6 @@ def get_data(filters):
 	data = []
 	company_currency= get_company_currency(filters.company)
 	conditions = get_conditions(filters)
-	# frappe.throw(str(conditions))
 	pr_supplier_map = get_purchase_receipt_supplier_map()
 	pi_supplier_map = get_purchase_invoice_supplier_map()
 
@@ -119,38 +102,38 @@ def get_data(filters):
 	
 	if group_by in ("asset_category", "location"):
 		data = get_group_by_data(group_by, conditions, assets_linked_to_fb, depreciation_amount_map)
-		
 		if filters.get("presentation_currency"):
 			for row in data:
 				conversion_date = frappe.utils.getdate(filters.get("date") or frappe.utils.now())
 				row['gross_purchase_amount'] = convert(
 					row['gross_purchase_amount'], 
-     				filters.presentation_currency, 
+     
+	 				filters.presentation_currency, 
 					company_currency, 
 					
 					conversion_date
 				)
 				row['opening_accumulated_depreciation'] = convert(
 					row['opening_accumulated_depreciation'], 
-					company_currency,
 					filters.presentation_currency, 
+					company_currency,  
 					conversion_date
 				)
 				row['depreciated_amount'] = convert(
 					row['depreciated_amount'], 
-				company_currency, 
-					filters.presentation_currency, 
+				filters.presentation_currency, 
+					company_currency, 
 					conversion_date
 				)
 				row['asset_value'] = convert(
 					row['asset_value'], 
-					company_currency, 
 					filters.presentation_currency, 
+					company_currency, 
 					conversion_date
 				)
+		
 		return data
-	
-	
+		
 	fields = [
 		"name as asset_id",
 		"asset_name",
@@ -181,7 +164,7 @@ def get_data(filters):
 		
 		# Convert currency if presentation currency is set
 		if filters.get("presentation_currency"):
-			frappe.throw("I am here")
+			
 			conversion_date = frappe.utils.getdate(asset.purchase_date)
 			asset['gross_purchase_amount'] = convert(
 				asset.gross_purchase_amount, 
@@ -228,81 +211,6 @@ def get_data(filters):
 		}
 		data.append(row)
 	return data
-
-# def get_data(filters):
-# 	data = []
-
-# 	conditions = get_conditions(filters)
-# 	pr_supplier_map = get_purchase_receipt_supplier_map()
-# 	pi_supplier_map = get_purchase_invoice_supplier_map()
-
-# 	assets_linked_to_fb = get_assets_linked_to_fb(filters)
-
-# 	company_fb = frappe.get_cached_value("Company", filters.company, "default_finance_book")
-
-# 	if filters.include_default_book_assets and company_fb:
-# 		finance_book = company_fb
-# 	elif filters.finance_book:
-# 		finance_book = filters.finance_book
-# 	else:
-# 		finance_book = None
-
-# 	depreciation_amount_map = get_asset_depreciation_amount_map(filters, finance_book)
-
-# 	group_by = frappe.scrub(filters.get("group_by"))
-
-# 	if group_by in ("asset_category", "location"):
-# 		data = get_group_by_data(group_by, conditions, assets_linked_to_fb, depreciation_amount_map)
-# 		return data
-
-# 	fields = [
-# 		"name as asset_id",
-# 		"asset_name",
-# 		"status",
-# 		"department",
-# 		"company",
-# 		"cost_center",
-# 		"calculate_depreciation",
-# 		"purchase_receipt",
-# 		"asset_category",
-# 		"purchase_date",
-# 		"gross_purchase_amount",
-# 		"location",
-# 		"available_for_use_date",
-# 		"purchase_invoice",
-# 		"opening_accumulated_depreciation",
-# 	]
-# 	assets_record = frappe.db.get_all("Asset", filters=conditions, fields=fields)
-
-# 	for asset in assets_record:
-# 		if assets_linked_to_fb and asset.calculate_depreciation and asset.asset_id not in assets_linked_to_fb:
-# 			continue
-
-# 		asset_value = get_asset_value_after_depreciation(
-# 			asset.asset_id, finance_book
-# 		) or get_asset_value_after_depreciation(asset.asset_id)
-
-# 		row = {
-# 			"asset_id": asset.asset_id,
-# 			"asset_name": asset.asset_name,
-# 			"status": asset.status,
-# 			"department": asset.department,
-# 			"cost_center": asset.cost_center,
-# 			"vendor_name": pr_supplier_map.get(asset.purchase_receipt)
-# 			or pi_supplier_map.get(asset.purchase_invoice),
-# 			"gross_purchase_amount": asset.gross_purchase_amount,
-# 			"opening_accumulated_depreciation": asset.opening_accumulated_depreciation,
-# 			"depreciated_amount": depreciation_amount_map.get(asset.asset_id) or 0.0,
-# 			"available_for_use_date": asset.available_for_use_date,
-# 			"location": asset.location,
-# 			"asset_category": asset.asset_category,
-# 			"purchase_date": asset.purchase_date,
-# 			"asset_value": asset_value,
-# 			"company": asset.company,
-# 		}
-# 		data.append(row)
-
-# 	return data
 
 
 def prepare_chart_data(data, filters):
@@ -509,134 +417,137 @@ def get_purchase_invoice_supplier_map():
 		)
 	)
 
-
 def get_columns(filters):
-	if filters.get("group_by") in ["Asset Category", "Location"]:
-		return [
-			{
-				"label": _("{}").format(filters.get("group_by")),
-				"fieldtype": "Link",
-				"fieldname": frappe.scrub(filters.get("group_by")),
-				"options": filters.get("group_by"),
-				"width": 216,
-			},
-			{
-				"label": _("Gross Purchase Amount"),
-				"fieldname": "gross_purchase_amount",
-				"fieldtype": "Currency",
-				"options": "Company:company:default_currency",
-				"width": 250,
-			},
-			{
-				"label": _("Opening Accumulated Depreciation"),
-				"fieldname": "opening_accumulated_depreciation",
-				"fieldtype": "Currency",
-				"options": "Company:company:default_currency",
-				"width": 250,
-			},
-			{
-				"label": _("Depreciated Amount"),
-				"fieldname": "depreciated_amount",
-				"fieldtype": "Currency",
-				"options": "Company:company:default_currency",
-				"width": 250,
-			},
-			{
-				"label": _("Asset Value"),
-				"fieldname": "asset_value",
-				"fieldtype": "Currency",
-				"options": "Company:company:default_currency",
-				"width": 250,
-			},
-			{
-				"label": _("Company"),
-				"fieldname": "company",
-				"fieldtype": "Link",
-				"options": "Company",
-				"width": 120,
-			},
-		]
+    presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
+		"Company", filters.company, "default_currency"
+	)
+    presentation_currency=presentation_currency
+    
+    if filters.get("group_by") in ["Asset Category", "Location"]:
+        return [
+            {
+                "label": _("{}").format(filters.get("group_by")),
+                "fieldtype": "Link",
+                "fieldname": frappe.scrub(filters.get("group_by")),
+                "options": filters.get("group_by"),
+                "width": 216,
+            },
+            {
+                "label": _(f"Gross Purchase Amount({presentation_currency})"),
+                "fieldname": "gross_purchase_amount",
+                "fieldtype": "Float",
+                
+                "width": 250,
+            },
+            {
+                "label": _(f"Opening Accumulated Depreciation({presentation_currency})"),
+                "fieldname": "opening_accumulated_depreciation",
+                "fieldtype":"Float",
+                "width": 250,
+            },
+            {
+                "label": _(f"Depreciated Amount({presentation_currency})"),
+                "fieldname": "depreciated_amount",
+                "fieldtype": "Float",
+               
+                "width": 250,
+            },
+            {
+                "label": _(f"Asset Value({presentation_currency})"),
+                "fieldname": "asset_value",
+                "fieldtype": "Float",
+               
+                "width": 250,
+            },
+            {
+                "label": _("Company"),
+                "fieldname": "company",
+                "fieldtype": "Link",
+                "options": "Company",
+                "width": 120,
+            },
+          
+        ]
 
-	return [
-		{
-			"label": _("Asset ID"),
-			"fieldtype": "Link",
-			"fieldname": "asset_id",
-			"options": "Asset",
-			"width": 60,
-		},
-		{"label": _("Asset Name"), "fieldtype": "Data", "fieldname": "asset_name", "width": 140},
-		{
-			"label": _("Asset Category"),
-			"fieldtype": "Link",
-			"fieldname": "asset_category",
-			"options": "Asset Category",
-			"width": 100,
-		},
-		{"label": _("Status"), "fieldtype": "Data", "fieldname": "status", "width": 80},
-		{"label": _("Purchase Date"), "fieldtype": "Date", "fieldname": "purchase_date", "width": 90},
-		{
-			"label": _("Available For Use Date"),
-			"fieldtype": "Date",
-			"fieldname": "available_for_use_date",
-			"width": 90,
-		},
-		{
-			"label": _("Gross Purchase Amount"),
-			"fieldname": "gross_purchase_amount",
-			"fieldtype": "Currency",
-			"options": "Company:company:default_currency",
-			"width": 100,
-		},
-		{
-			"label": _("Asset Value"),
-			"fieldname": "asset_value",
-			"fieldtype": "Currency",
-			"options": "Company:company:default_currency",
-			"width": 100,
-		},
-		{
-			"label": _("Opening Accumulated Depreciation"),
-			"fieldname": "opening_accumulated_depreciation",
-			"fieldtype": "Currency",
-			"options": "Company:company:default_currency",
-			"width": 90,
-		},
-		{
-			"label": _("Depreciated Amount"),
-			"fieldname": "depreciated_amount",
-			"fieldtype": "Currency",
-			"options": "Company:company:default_currency",
-			"width": 100,
-		},
-		{
-			"label": _("Cost Center"),
-			"fieldtype": "Link",
-			"fieldname": "cost_center",
-			"options": "Cost Center",
-			"width": 100,
-		},
-		{
-			"label": _("Department"),
-			"fieldtype": "Link",
-			"fieldname": "department",
-			"options": "Department",
-			"width": 100,
-		},
-		{"label": _("Vendor Name"), "fieldtype": "Data", "fieldname": "vendor_name", "width": 100},
-		{
-			"label": _("Location"),
-			"fieldtype": "Link",
-			"fieldname": "location",
-			"options": "Location",
-			"width": 100,
-		},
-		{
-			"label": _("Company"),
-			"fieldname": "company",
-			"fieldtype": "Link",
-			"options": "Company",
-			"width": 120,
-		},
-	]
+    return [
+        {
+            "label": _("Asset ID"),
+            "fieldtype": "Link",
+            "fieldname": "asset_id",
+            "options": "Asset",
+            "width": 60,
+        },
+        {"label": _("Asset Name"), "fieldtype": "Data", "fieldname": "asset_name", "width": 140},
+        {
+            "label": _("Asset Category"),
+            "fieldtype": "Link",
+            "fieldname": "asset_category",
+            "options": "Asset Category",
+            "width": 100,
+        },
+        {"label": _("Status"), "fieldtype": "Data", "fieldname": "status", "width": 80},
+        {"label": _("Purchase Date"), "fieldtype": "Date", "fieldname": "purchase_date", "width": 90},
+        {
+            "label": _("Available For Use Date"),
+            "fieldtype": "Date",
+            "fieldname": "available_for_use_date",
+            "width": 90,
+        },
+        {
+            "label": _(f"Gross Purchase Amount({presentation_currency})"),
+            "fieldname": "gross_purchase_amount",
+            "fieldtype": "Float",
+          
+            "width": 100,
+        },
+        {
+            "label": _(f"Asset Value({presentation_currency})"),
+            "fieldname": "asset_value",
+            "fieldtype": "Float",
+            "width": 100,
+        },
+        {
+            "label": _(f"Opening Accumulated Depreciation({presentation_currency})"),
+            "fieldname": "opening_accumulated_depreciation",
+            "fieldtype": "Float",
+            "width": 90,
+        },
+        {
+            "label": _(f"Depreciated Amount({presentation_currency})"),
+            "fieldname": "depreciated_amount",
+            "fieldtype": "Float",
+            "width": 100,
+        },
+        {
+            "label": _("Cost Center"),
+            "fieldtype": "Link",
+            "fieldname": "cost_center",
+            "options": "Cost Center",
+            "width": 100,
+        },
+        {
+            "label": _("Department"),
+            "fieldtype": "Link",
+            "fieldname": "department",
+            "options": "Department",
+            "width": 100,
+        },
+        {"label": _("Vendor Name"), "fieldtype": "Data", "fieldname": "vendor_name", "width": 100},
+        {
+            "label": _("Location"),
+            "fieldtype": "Link",
+            "fieldname": "location",
+            "options": "Location",
+            "width": 100,
+        },
+        {
+            "label": _("Company"),
+            "fieldname": "company",
+            "fieldtype": "Link",
+            "options": "Company",
+            "default": filters.company,
+            "width": 120,
+        },
+       
+    ]
 
