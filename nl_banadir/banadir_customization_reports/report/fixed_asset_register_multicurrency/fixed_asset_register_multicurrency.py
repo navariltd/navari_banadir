@@ -111,25 +111,25 @@ def get_data(filters):
 	 				filters.presentation_currency, 
 					company_currency, 
 					
-					conversion_date
+					filters.get("currency_exchange_date")
 				)
 				row['opening_accumulated_depreciation'] = convert(
 					row['opening_accumulated_depreciation'], 
 					filters.presentation_currency, 
 					company_currency,  
-					conversion_date
+					filters.get("currency_exchange_date")
 				)
 				row['depreciated_amount'] = convert(
 					row['depreciated_amount'], 
 				filters.presentation_currency, 
 					company_currency, 
-					conversion_date
+					filters.get("currency_exchange_date")
 				)
 				row['asset_value'] = convert(
 					row['asset_value'], 
 					filters.presentation_currency, 
 					company_currency, 
-					conversion_date
+					filters.get("currency_exchange_date")
 				)
 		
 		return data
@@ -170,25 +170,25 @@ def get_data(filters):
 				asset.gross_purchase_amount, 
 				asset.company_currency, 
 				conditions["presentation_currency"], 
-				conversion_date
+				filters.get("currency_exchange_date")
 			)
 			asset_value = convert(
 				asset_value, 
 				asset.company_currency, 
 				filters.presentation_currency, 
-				conversion_date
+				filters.get("currency_exchange_date")
 			)
 			asset['opening_accumulated_depreciation'] = convert(
 				asset.opening_accumulated_depreciation, 
 				asset.company_currency, 
 				filters.presentation_currency, 
-				conversion_date
+				filters.get("currency_exchange_date")
 			)
 			depreciation_amount_map[asset.asset_id] = convert(
 				depreciation_amount_map.get(asset.asset_id, 0.0), 
 				asset.company_currency, 
 				filters.presentation_currency, 
-				conversion_date
+				filters.get("currency_exchange_date")
 			)
 
 		row = {
