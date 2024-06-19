@@ -601,7 +601,7 @@ class StockBalanceReport:
 
 #The convert function is inverted hence I had to invert the values to get the right figures
 	def convert_currency_fields(self, data, filters):
-		date=frappe.utils.now()
+		date=filters.get("to_date") or frappe.utils.now()
 		to_currency=frappe.get_cached_value("Company", filters.company, "default_currency")
 		from_currency=filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 		for entry in data:

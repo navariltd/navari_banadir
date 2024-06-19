@@ -39,6 +39,14 @@ frappe.query_reports["Fixed Asset Register MultiCurrency"] = {
 				
 			},
 			{
+				fieldname: "currency_exchange_date",
+				label: __("Currency Exchange Date"),
+				fieldtype: "Date",
+				default: frappe.datetime.get_today(),
+				
+			},
+			
+			{
 				fieldname: "group_by",
 				label: __("Group By"),
 				fieldtype: "Select",
@@ -110,6 +118,7 @@ frappe.query_reports["Fixed Asset Register MultiCurrency"] = {
 				default: "Purchase Date",
 				depends_on: "eval: doc.filter_based_on == 'Date Range' || doc.filter_based_on == 'Fiscal Year'",
 			},
+			
 			
 		],
 	};
