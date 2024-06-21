@@ -45,13 +45,13 @@ frappe.query_reports["Fixed Asset Register MultiCurrency"] = {
 				default: frappe.datetime.get_today(),
 				
 			},
-			
+						
 			{
 				fieldname: "group_by",
 				label: __("Group By"),
 				fieldtype: "Select",
 				options: ["--Select a group--", "Asset Category", "Location"],
-				default: "--Select a group--",
+				default: "Asset Category",
 				reqd: 1,
 			},
 			
@@ -118,7 +118,6 @@ frappe.query_reports["Fixed Asset Register MultiCurrency"] = {
 				default: "Purchase Date",
 				depends_on: "eval: doc.filter_based_on == 'Date Range' || doc.filter_based_on == 'Fiscal Year'",
 			},
-			
 			
 		],
 	};
