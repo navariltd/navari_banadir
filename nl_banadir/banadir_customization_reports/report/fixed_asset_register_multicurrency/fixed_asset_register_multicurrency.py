@@ -30,8 +30,6 @@ def execute(filters=None):
 		if filters.get("group_by") not in ("Asset Category", "Location")
 		else {}
 	)
-	# exchange_rate=get_currency_exchange_rate(filters)
-	# data.append(exchange_rate)
 	return columns, data, None, chart
 
 
@@ -585,6 +583,5 @@ def get_currency_exchange_rate(filters):
 	company_currency=frappe.get_cached_value(
 		"Company", filters.company, "default_currency")
 	rate=get_rate_as_at(date, company_currency, presentation_currency)
-	# filters["currency_exchange_rate"]=rate
 	return rate
 	
