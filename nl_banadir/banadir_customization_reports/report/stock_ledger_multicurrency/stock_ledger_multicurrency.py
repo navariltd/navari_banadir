@@ -265,7 +265,7 @@ def get_columns(filters):
 			{
 				"label": _(f"Incoming Rate<strong>({presentation_currency})</strong>"),
 				"fieldname": "incoming_rate",
-				"fieldtype": "Float",
+				"fieldtype": "Int",
 				"width": 110,
 		
 				"convertible": "rate",
@@ -273,7 +273,7 @@ def get_columns(filters):
 			{
 				"label": _(f"Avg Rate (Balance Stock)-<strong>({presentation_currency})</strong>"),
 				"fieldname": "valuation_rate",
-				"fieldtype": "Float",
+				"fieldtype": "Int",
 				"width": 180,
 				
 				"convertible": "rate",
@@ -281,7 +281,7 @@ def get_columns(filters):
 			{
 				"label": _(f"Valuation Rate <strong>({presentation_currency})</strong>"),
 				"fieldname": "in_out_rate",
-				"fieldtype":"Float", 
+				"fieldtype":"Int", 
 				"width": 140,
 				
 				"convertible": "rate",
@@ -289,13 +289,13 @@ def get_columns(filters):
 			{
 				"label": _(f"Balance Value <strong>({presentation_currency})</strong>"),
 				"fieldname": "stock_value",
-				"fieldtype": "Float",
+				"fieldtype": "Int",
 				"width": 110,
 			},
 			{
 				"label": _(f"Value Change<strong>({presentation_currency})</strong>"),
 				"fieldname": "stock_value_difference",
-				"fieldtype": "Float",
+				"fieldtype": "Int",
 				"width": 110,
 			},
 			{"label": _("Voucher Type"), "fieldname": "voucher_type", "width": 110},
