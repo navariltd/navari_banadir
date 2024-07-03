@@ -425,12 +425,14 @@ class StockBalanceReport:
 					"fieldname": "bal_qty",
 					"fieldtype": "Float",
 					"width": 100,
+					"precision":0,
 					"convertible": "qty",
 				},
 				{
 					"label": _(f"Balance Value({presentation_currency})"),
 					"fieldname": "bal_val",
-					"fieldtype": "Float",
+					"fieldtype": "Int",
+      "precision": 0,
 					"width": 100,
 				},
 				{
@@ -438,22 +440,24 @@ class StockBalanceReport:
 					"fieldname": "opening_qty",
 					"fieldtype": "Float",
 					"width": 100,
+     
 					"convertible": "qty",
 				},
 				{
 					"label": _(f"Opening Value({presentation_currency})"),
 					"fieldname": "opening_val",
-					"fieldtype": "Float",
+					"fieldtype": "Int",
 					"width": 110,
 				},
 				{
 					"label": _("In Qty"),
 					"fieldname": "in_qty",
 					"fieldtype": "Float",
+     
 					"width": 80,
 					"convertible": "qty",
 				},
-				{"label": _(f"In Value({presentation_currency})"), "fieldname": "in_val", "fieldtype": "Float", "width": 80},
+				{"label": _(f"In Value({presentation_currency})"), "fieldname": "in_val", "fieldtype": "Int","precision":0, "width": 80},
 				{
 					"label": _("Out Qty"),
 					"fieldname": "out_qty",
@@ -461,11 +465,11 @@ class StockBalanceReport:
 					"width": 80,
 					"convertible": "qty",
 				},
-				{"label": _(f"Out Value({presentation_currency})"), "fieldname": "out_val", "fieldtype": "Float", "width": 80},
+				{"label": _(f"Out Value({presentation_currency})"), "fieldname": "out_val", "fieldtype": "Int", "width": 80},
 				{
 					"label": _(f"Valuation Rate({presentation_currency})"),
 					"fieldname": "val_rate",
-					"fieldtype": "Float",
+					"fieldtype": "Int",
 					"width": 90,
 					"convertible": "rate",
 					
