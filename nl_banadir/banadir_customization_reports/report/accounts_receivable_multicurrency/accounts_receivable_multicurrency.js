@@ -156,9 +156,9 @@ frappe.query_reports["Accounts Receivable MultiCurrency"] = {
 	],
 
 	onload: function (report) {
-		report.page.add_inner_button(__("Accounts Receivable"), function () {
+		report.page.add_inner_button(__("Accounts Receivable MultiCurrency"), function () {
 			var filters = report.get_values();
-			frappe.set_route("query-report", "Accounts Receivable", { company: filters.company });
+			frappe.set_route("query-report", "Accounts Receivable MultiCurrency", { company: filters.company });
 		});
 	},
 };
