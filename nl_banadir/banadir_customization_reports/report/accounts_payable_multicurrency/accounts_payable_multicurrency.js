@@ -179,9 +179,9 @@ frappe.query_reports["Accounts Payable MultiCurrency"] = {
   },
 
   onload: function (report) {
-    report.page.add_inner_button(__("Accounts Payable Summary"), function () {
+    report.page.add_inner_button(__("Accounts Payable Summary MultiCurrency"), function () {
       var filters = report.get_values();
-      frappe.set_route("query-report", "Accounts Payable Summary", {
+      frappe.set_route("query-report", "Accounts Payable Summary MultiCurrency", {
         company: filters.company,
       });
     });
