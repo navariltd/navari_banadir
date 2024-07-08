@@ -370,46 +370,64 @@ class ReceivablePayableReport:
         """
         Function to convert the currencies if filter is defined
         """
-        if self.filters.get("presentation_currency"):
+        def get_conversion_rate(from_currency, to_currency, date):
 
-            from_currency = frappe.get_cached_value("Company", self.filters.company, "default_currency")
-            
-            to_currency = self.filters.get("presentation_currency") or frappe.get_cached_value("Company", self.filters.company, "default_currency")
-            
             conversion_rate = frappe.db.get_value(
                 "Currency Exchange",
                 {"from_currency": from_currency, "to_currency": to_currency},
                 ["exchange_rate", "date"]
             )
-            if not conversion_rate:
-                frappe.throw(
-                    _("Exchange rate not found for {0} to {1}").format(
-                        from_currency, to_currency
-                    )
-                )
-            else:
-                conversion_data = []
-                for value in conversion_rate:
-                    conversion_data.append(value)
-                for entry in self.data:
-                    entry['currency'] = self.filters.get("presentation_currency")
-                    entry['account_currency'] = self.filters.get("presentation_currency")
-                    entry['invoiced'] = convert(entry.get('invoiced', 0), from_currency, to_currency, conversion_data[1])
-                    entry['paid'] = convert(entry.get('paid', 0), from_currency, to_currency, conversion_data[1])
-                    entry['credit_note'] = convert(entry.get('credit_note', 0), from_currency, to_currency, conversion_data[1])
-                    entry['outstanding'] = convert(entry.get('outstanding', 0), from_currency, to_currency, conversion_data[1])
-                    entry['invoiced_in_account_currency'] = convert(entry.get('invoiced_in_account_currency', 0), from_currency, to_currency, conversion_data[1])
-                    entry['paid_in_account_currency'] = convert(entry.get('paid_in_account_currency', 0), from_currency, to_currency, conversion_data[1])
-                    entry['credit_note_in_account_currency'] = convert(entry.get('credit_note_in_account_currency', 0), from_currency, to_currency, conversion_data[1])
-                    entry['outstanding_in_account_currency'] = convert(entry.get('outstanding_in_account_currency', 0), from_currency, to_currency, conversion_data[1])
-                    entry['invoice_grand_total'] = convert(entry.get('invoice_grand_total', 0), from_currency, to_currency, conversion_data[1])
-                    entry['range1'] = convert(entry.get('range1', 0), from_currency, to_currency, conversion_data[1])
-                    entry['range2'] = convert(entry.get('range2', 0), from_currency, to_currency, conversion_data[1])
-                    entry['range3'] = convert(entry.get('range3', 0), from_currency, to_currency, conversion_data[1])
-                    entry['range4'] = convert(entry.get('range4', 0), from_currency, to_currency, conversion_data[1])
-                    entry['range5'] = convert(entry.get('range5', 0), from_currency, to_currency, conversion_data[1])
-                    entry['total_due'] = convert(entry.get('total_due', 0), from_currency, to_currency, conversion_data[1])
 
+            if conversion_rate:
+                return conversion_rate[0], conversion_rate[1]
+            else:
+                # Try fetching the inverse exchange rate
+                inverse_conversion_rate = frappe.db.get_value(
+                    "Currency Exchange",
+                    {"from_currency": to_currency, "to_currency": from_currency},
+                    ["exchange_rate", "date"]
+                )
+
+                if inverse_conversion_rate:
+                    inverse_exchange_rate = inverse_conversion_rate[0]
+                    return 1 / inverse_exchange_rate, inverse_conversion_rate[1]
+                else:
+                    frappe.throw(
+                        _("Exchange rate not found for {0} to {1}").format(
+                            from_currency, to_currency
+                        )
+                    )
+
+        def convert_amount(amount, exchange_rate):
+            return amount * exchange_rate
+
+        if self.filters.get("presentation_currency"):
+
+            from_currency = frappe.get_cached_value("Company", self.filters.company, "default_currency")
+            
+            to_currency = self.filters.get("presentation_currency") or frappe.get_cached_value("Company", self.filters.company, "default_currency")
+                            
+
+            exchange_rate, rate_date = get_conversion_rate(from_currency, to_currency, self.filters.get("exchange_date"))
+
+            for entry in self.data:
+                entry['currency'] = to_currency
+                entry['account_currency'] = to_currency
+                entry['invoiced'] = convert_amount(entry.get('invoiced', 0), exchange_rate)
+                entry['paid'] = convert_amount(entry.get('paid', 0), exchange_rate)
+                entry['credit_note'] = convert_amount(entry.get('credit_note', 0), exchange_rate)
+                entry['outstanding'] = convert_amount(entry.get('outstanding', 0), exchange_rate)
+                entry['invoiced_in_account_currency'] = convert_amount(entry.get('invoiced_in_account_currency', 0), exchange_rate)
+                entry['paid_in_account_currency'] = convert_amount(entry.get('paid_in_account_currency', 0), exchange_rate)
+                entry['credit_note_in_account_currency'] = convert_amount(entry.get('credit_note_in_account_currency', 0), exchange_rate)
+                entry['outstanding_in_account_currency'] = convert_amount(entry.get('outstanding_in_account_currency', 0), exchange_rate)
+                entry['invoice_grand_total'] = convert_amount(entry.get('invoice_grand_total', 0), exchange_rate)
+                entry['range1'] = convert_amount(entry.get('range1', 0), exchange_rate)
+                entry['range2'] = convert_amount(entry.get('range2', 0), exchange_rate)
+                entry['range3'] = convert_amount(entry.get('range3', 0), exchange_rate)
+                entry['range4'] = convert_amount(entry.get('range4', 0), exchange_rate)
+                entry['range5'] = convert_amount(entry.get('range5', 0), exchange_rate)
+                entry['total_due'] = convert_amount(entry.get('total_due', 0), exchange_rate)
 
     def append_row(self, row):
         self.allocate_future_payments(row)
