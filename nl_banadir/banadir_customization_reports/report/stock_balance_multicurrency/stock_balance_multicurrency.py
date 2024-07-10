@@ -620,6 +620,7 @@ class StockBalanceReport:
 			entry['in_val'] = convert(entry.get('in_val', 0), from_currency, to_currency, date)
 			entry['out_val'] = convert(entry.get('out_val', 0), from_currency, to_currency, date)
 			entry['val_rate'] = convert(entry.get('val_rate', 0), from_currency, to_currency, date)
+			entry['val_rate_alt']=convert(entry.get('val_rate_alt',0), from_currency, to_currency, date)
 			entry['opening_val'] = convert(entry.get('opening_val', 0), from_currency, to_currency, date)
 		return data
 
