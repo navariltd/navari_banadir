@@ -1,7 +1,7 @@
 // Copyright (c) 2024, Navari Ltd and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Accounts Receivable Summary MultiCurrency"] = {
+frappe.query_reports["Accounts Receivable Summary Multi Currency"] = {
 	filters: [
 		{
 			fieldname: "company",
@@ -156,9 +156,9 @@ frappe.query_reports["Accounts Receivable Summary MultiCurrency"] = {
 	],
 
 	onload: function (report) {
-		report.page.add_inner_button(__("Accounts Receivable MultiCurrency"), function () {
+		report.page.add_inner_button(__("Accounts Receivable Multi Currency"), function () {
 			var filters = report.get_values();
-			frappe.set_route("query-report", "Accounts Receivable MultiCurrency", { company: filters.company });
+			frappe.set_route("query-report", "Accounts Receivable Multi Currency", { company: filters.company });
 		});
 	},
 };
@@ -176,3 +176,4 @@ function get_party_type_options() {
 		});
 	return options;
 }
+
