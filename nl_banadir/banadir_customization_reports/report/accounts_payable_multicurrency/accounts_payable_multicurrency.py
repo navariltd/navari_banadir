@@ -3,7 +3,7 @@
 
 # import frappe
 
-from nl_banadir.banadir_customization_reports.report.accounts_receivable_multicurrency.accounts_receivable_multicurrency import (
+from nl_banadir.banadir_customization_reports.report.accounts_payable_multicurrency.accounts_payable_multicurrency import (
     ReceivablePayableReport,
 )
 
