@@ -108,28 +108,55 @@ class AccountsReceivableSummary(ReceivablePayableReport):
                 
                 from_currency = frappe.get_cached_value("Company", self.filters.company, "default_currency")
                 
-                to_currency = self.filters.get("presentation_currency") or frappe.get_cached_value("Company", self.filters.company, "default_currency")
+                to_currency = self.filters.get("presentation_currency")
                 
                 conversion_rate = frappe.db.get_value(
                     "Currency Exchange",
                     {"from_currency": from_currency, "to_currency": to_currency},
                     ["exchange_rate", "date"]
                 )
+
                 if not conversion_rate:
+
+                    # Try fetching the inverse exchange rate
+                    conversion_rate = frappe.db.get_value(
+                        "Currency Exchange",
+                        {"from_currency": to_currency, "to_currency": from_currency},
+                        ["exchange_rate", "date"]
+                    )
+
+                    if conversion_rate:
+                        
+                        conversion_rate = (1 / conversion_rate[0], conversion_rate[1])
+                        # frappe.throw(_("{0}").format(conversion_rate))
+
+                if not conversion_rate:
+
                     frappe.throw(
                         _("Exchange rate not found for {0} to {1}").format(
                             from_currency, to_currency
                         )
                     )
+
                 else:
                     conversion_data = []
                     for value in conversion_rate:
                         conversion_data.append(value)
                     row.currency = self.filters.get("presentation_currency")
-                    row.invoiced = convert(row.invoiced, from_currency, to_currency, conversion_data[1])
-                    row.paid = convert(row.paid, from_currency, to_currency, conversion_data[1])
-                    row.outstanding = convert(row.outstanding, from_currency, to_currency, conversion_data[1])
-                    row.advance = convert(row.advance, from_currency, to_currency, conversion_data[1])
+                    row.invoiced = convert(row.invoiced,  to_currency, from_currency, conversion_data[1])
+                    row.paid = convert(row.paid,  to_currency, from_currency, conversion_data[1])
+                    row.outstanding = convert(row.outstanding,  to_currency, from_currency, conversion_data[1])
+                    row.advance = convert(row.advance,  to_currency, from_currency, conversion_data[1])
+                    row.range1 = convert(row.range1,  to_currency, from_currency, conversion_data[1])
+                    row.range2 = convert(row.range2,  to_currency, from_currency, conversion_data[1])
+                    row.range3 = convert(row.range3,  to_currency, from_currency, conversion_data[1])
+                    row.range4 = convert(row.range4,  to_currency, from_currency, conversion_data[1])
+                    row.range5 = convert(row.range5,  to_currency, from_currency, conversion_data[1])
+                    row.total_due = convert(row.total_due,  to_currency, from_currency, conversion_data[1])
+                    row.future_amount = convert(row.future_amount,  to_currency, from_currency, conversion_data[1])
+                    row.gl_balance = convert(row.gl_balance,  to_currency, from_currency, conversion_data[1])
+                    row.diff = convert(row.diff,  to_currency, from_currency, conversion_data[1])
+                    row.remaining_balance = convert(row.remaining_balance,  to_currency, from_currency, conversion_data[1])
 
             
     def get_party_total(self, args):
