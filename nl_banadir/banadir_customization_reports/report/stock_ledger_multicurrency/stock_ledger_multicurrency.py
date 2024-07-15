@@ -28,73 +28,74 @@ from erpnext import get_company_currency
 from erpnext.accounts.report.utils import convert
 
 def execute(filters=None):
-    is_reposting_item_valuation_in_progress()
-    include_uom = filters.get("include_uom")
-    columns = get_columns(filters)
-    items = get_items(filters)
-    sl_entries = get_stock_ledger_entries(filters, items)
-    item_details = get_item_details(items, sl_entries, include_uom)
-    opening_row = get_opening_balance(filters, columns, sl_entries)
-    precision = cint(frappe.db.get_single_value("System Settings", "float_precision"))
-    bundle_details = {}
+	is_reposting_item_valuation_in_progress()
+	include_uom = filters.get("include_uom")
+	columns = get_columns(filters)
+	items = get_items(filters)
+	sl_entries = get_stock_ledger_entries(filters, items)
+	item_details = get_item_details(items, sl_entries, include_uom)
+	opening_row = get_opening_balance(filters, columns, sl_entries)
+	precision = cint(frappe.db.get_single_value("System Settings", "float_precision"))
+	bundle_details = {}
 
-    if filters.get("segregate_serial_batch_bundle"):
-        bundle_details = get_serial_batch_bundle_details(sl_entries, filters)
+	if filters.get("segregate_serial_batch_bundle"):
+		bundle_details = get_serial_batch_bundle_details(sl_entries, filters)
 
-    data = []
-    conversion_factors = []
-    if opening_row:
-        data.append(opening_row)
-        conversion_factors.append(0)
+	data = []
+	conversion_factors = []
+	if opening_row:
+		data.append(opening_row)
+		conversion_factors.append(0)
 
-    actual_qty = stock_value = 0
-    if opening_row:
-        actual_qty = opening_row.get("qty_after_transaction")
-        stock_value = opening_row.get("stock_value")
+	actual_qty = stock_value = 0
+	if opening_row:
+		actual_qty = opening_row.get("qty_after_transaction")
+		stock_value = opening_row.get("stock_value")
 
-    available_serial_nos = {}
-    inventory_dimension_filters_applied = check_inventory_dimension_filters_applied(filters)
+	available_serial_nos = {}
+	inventory_dimension_filters_applied = check_inventory_dimension_filters_applied(filters)
 
-    batch_balance_dict = defaultdict(float)
-    for sle in sl_entries:
-        item_detail = item_details[sle.item_code]
+	batch_balance_dict = defaultdict(float)
+	for sle in sl_entries:
+		item_detail = item_details[sle.item_code]
 
-        sle.update(item_detail)
-        if bundle_info := bundle_details.get(sle.serial_and_batch_bundle):
-            data.extend(get_segregated_bundle_entries(sle, bundle_info, batch_balance_dict))
-            continue
+		sle.update(item_detail)
+		if bundle_info := bundle_details.get(sle.serial_and_batch_bundle):
+			data.extend(get_segregated_bundle_entries(sle, bundle_info, batch_balance_dict))
+			continue
 
-        if filters.get("batch_no") or inventory_dimension_filters_applied:
-            actual_qty += flt(sle.actual_qty, precision)
-            stock_value += sle.stock_value_difference
-            batch_balance_dict[sle.batch_no] += sle.actual_qty
-            if filters.get("segregate_serial_batch_bundle"):
-                actual_qty = batch_balance_dict[sle.batch_no]
+		if filters.get("batch_no") or inventory_dimension_filters_applied:
+			actual_qty += flt(sle.actual_qty, precision)
+			stock_value += sle.stock_value_difference
+			batch_balance_dict[sle.batch_no] += sle.actual_qty
+			if filters.get("segregate_serial_batch_bundle"):
+				actual_qty = batch_balance_dict[sle.batch_no]
 
-            if sle.voucher_type == "Stock Reconciliation" and not sle.actual_qty:
-                actual_qty = sle.qty_after_transaction
-                stock_value = sle.stock_value
+			if sle.voucher_type == "Stock Reconciliation" and not sle.actual_qty:
+				actual_qty = sle.qty_after_transaction
+				stock_value = sle.stock_value
 
-            sle.update({"qty_after_transaction": actual_qty, "stock_value": stock_value})
+			sle.update({"qty_after_transaction": actual_qty, "stock_value": stock_value})
 
-        sle.update({"in_qty": max(sle.actual_qty, 0), "out_qty": min(sle.actual_qty, 0)})
+		sle.update({"in_qty": max(sle.actual_qty, 0), "out_qty": min(sle.actual_qty, 0)})
 
-        if sle.serial_no:
-            update_available_serial_nos(available_serial_nos, sle)
+		if sle.serial_no:
+			update_available_serial_nos(available_serial_nos, sle)
 
-        if sle.actual_qty:
-            sle["in_out_rate"] = flt(sle.stock_value_difference / sle.actual_qty, precision)
-        elif sle.voucher_type == "Stock Reconciliation":
-            sle["in_out_rate"] = sle.valuation_rate
+		if sle.actual_qty:
+			sle["in_out_rate"] = flt(sle.stock_value_difference / sle.actual_qty, precision)
+		elif sle.voucher_type == "Stock Reconciliation":
+			sle["in_out_rate"] = sle.valuation_rate
 
-        data.append(sle)
+		data.append(sle)
 
-        if include_uom:
-            conversion_factors.append(item_detail.conversion_factor)
-       
-    update_included_uom_in_report(columns, data, include_uom, conversion_factors)
-    data = convert_currency_fields(data, filters)
-    return columns, data
+		if include_uom:
+			conversion_factors.append(item_detail.conversion_factor)
+	   
+	update_included_uom_in_report(columns, data, include_uom, conversion_factors)
+	data = convert_currency_fields(data, filters)
+	# frappe.throw(str(data))
+	return columns, data
 
 
 
@@ -223,7 +224,7 @@ def get_columns(filters):
 				"label": _("In Qty"),
 				"fieldname": "in_qty",
 				"fieldtype": "Float",
-    "precision": 2,
+	"precision": 2,
 				"width": 80,
 				"convertible": "qty",
 			},
@@ -239,7 +240,7 @@ def get_columns(filters):
 				"label": _("Balance Qty"),
 				"fieldname": "qty_after_transaction",
 				"fieldtype": "Float",
-    "precision": 2,
+	"precision": 2,
 				"width": 100,
 				"convertible": "qty",
 			},
@@ -269,7 +270,7 @@ def get_columns(filters):
 				"label": _(f"Incoming Rate<strong>({presentation_currency})</strong>"),
 				"fieldname": "incoming_rate",
 				"fieldtype": "Float",
-    "precision": 2,
+	"precision": 2,
 				"width": 110,
 		
 				"convertible": "rate",
@@ -278,7 +279,7 @@ def get_columns(filters):
 				"label": _(f"Avg Rate (Balance Stock)-<strong>({presentation_currency})</strong>"),
 				"fieldname": "valuation_rate",
 				"fieldtype": "Float",
-    "precision": 2,
+	"precision": 2,
 				"width": 180,
 				
 				"convertible": "rate",
@@ -287,7 +288,7 @@ def get_columns(filters):
 				"label": _(f"Valuation Rate <strong>({presentation_currency})</strong>"),
 				"fieldname": "in_out_rate",
 				"fieldtype":"Float", 
-    "precision": 2,
+	"precision": 2,
 				"width": 140,
 				
 				"convertible": "rate",
@@ -296,14 +297,14 @@ def get_columns(filters):
 				"label": _(f"Balance Value <strong>({presentation_currency})</strong>"),
 				"fieldname": "stock_value",
 				"fieldtype": "Float",
-    "precision": 2,
+	"precision": 2,
 				"width": 110,
 			},
 			{
 				"label": _(f"Value Change<strong>({presentation_currency})</strong>"),
 				"fieldname": "stock_value_difference",
 				"fieldtype": "Float",
-    "precision": 2,
+	"precision": 2,
 				"width": 110,
 			},
 			{"label": _("Voucher Type"), "fieldname": "voucher_type", "width": 110},
@@ -587,14 +588,27 @@ def check_inventory_dimension_filters_applied(filters) -> bool:
 
 
 def convert_currency_fields(data, filters):
+	valuation_rat_uom=create_valuation_rate_with_uom(filters)
 	date=filters.get("currency_exchange_date") or frappe.utils.now()
 	to_currency=frappe.get_cached_value("Company", filters.company, "default_currency")
 	from_currency=filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 	for entry in data:
 		entry['incoming_rate'] = convert(entry.get('incoming_rate', 0), from_currency, to_currency, date)
 		entry['valuation_rate'] = convert(entry.get('valuation_rate', 0), from_currency, to_currency, date)
+		entry[f'{valuation_rat_uom}'] = convert(entry.get(f'{valuation_rat_uom}', 0), from_currency, to_currency, date)
 		entry['stock_value_difference'] = convert(entry.get('stock_value_difference', 0), from_currency, to_currency, date)
 		entry['stock_value'] = convert(entry.get('stock_value', 0), from_currency, to_currency, date)
 		entry['in_out_rate'] = convert(entry.get('in_out_rate', 0), from_currency, to_currency, date)
 		
 	return data
+
+def format_uom(uom):
+    formatted_uom = uom.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('-', '_').replace('/', '_')
+    return formatted_uom
+
+def create_valuation_rate_with_uom(filter):
+    if filter.get("include_uom"):
+        formatted_uom = format_uom(filter.get("include_uom"))
+        full_formatted_uom="valuation_rate_"+formatted_uom
+        return full_formatted_uom
+        
