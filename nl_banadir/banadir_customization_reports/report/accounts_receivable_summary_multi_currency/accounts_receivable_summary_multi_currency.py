@@ -103,6 +103,32 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
             self.data.append(row)
 
+            # Helper function to find exchange rate
+            def get_exchange_rate(from_currency, to_currency):
+
+                if from_currency == to_currency:
+                    return (1, None)
+                
+                # Try direct exchange rate
+                conversion_rate = frappe.db.get_value(
+                    "Currency Exchange",
+                    {"from_currency": from_currency, "to_currency": to_currency},
+                    ["exchange_rate", "date"],
+                )
+
+                if not conversion_rate:
+                    # Try fetching the inverse exchange rate
+                    conversion_rate = frappe.db.get_value(
+                        "Currency Exchange",
+                        {"from_currency": to_currency, "to_currency": from_currency},
+                        ["exchange_rate", "date"],
+                    )
+
+                    if conversion_rate:
+                        conversion_rate = (1 / conversion_rate[0], conversion_rate[1])
+
+                return conversion_rate
+
             # Convert amounts to presentation currency
             if self.filters.get("presentation_currency"):
                 
@@ -110,25 +136,8 @@ class AccountsReceivableSummary(ReceivablePayableReport):
                 
                 to_currency = self.filters.get("presentation_currency")
                 
-                conversion_rate = frappe.db.get_value(
-                    "Currency Exchange",
-                    {"from_currency": from_currency, "to_currency": to_currency},
-                    ["exchange_rate", "date"]
-                )
-
-                if not conversion_rate:
-
-                    # Try fetching the inverse exchange rate
-                    conversion_rate = frappe.db.get_value(
-                        "Currency Exchange",
-                        {"from_currency": to_currency, "to_currency": from_currency},
-                        ["exchange_rate", "date"]
-                    )
-
-                    if conversion_rate:
-                        
-                        conversion_rate = (1 / conversion_rate[0], conversion_rate[1])
-                        # frappe.throw(_("{0}").format(conversion_rate))
+                # Step 1: Try to get Direct or inverse conversion rate
+                conversion_rate = get_exchange_rate(from_currency, to_currency)
 
                 if not conversion_rate:
 
