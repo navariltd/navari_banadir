@@ -372,6 +372,9 @@ class ReceivablePayableReport:
         """
         def get_conversion_rate(from_currency, to_currency, date):
 
+            if from_currency == to_currency:
+                return (1, None)
+
             conversion_rate = frappe.db.get_value(
                 "Currency Exchange",
                 {"from_currency": from_currency, "to_currency": to_currency},
