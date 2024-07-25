@@ -66,6 +66,7 @@ def get_data(filters):
 			po_item.item_code,
 			po_item.qty,
 			po_item.received_qty,
+   po.custom_container_qty,
 			
 			(po_item.qty - po_item.received_qty).as_("pending_qty"),
 			Sum(IfNull(pi_item.qty, 0)).as_("billed_qty"),
@@ -142,6 +143,7 @@ def prepare_data(data, filters):
 					"qty",
 					"received_qty",
 					"pending_qty",
+     "custom_container_qty",
 					"billed_qty",
 					"qty_to_bill",
 					"advance_paid",
@@ -247,7 +249,12 @@ def get_columns(filters):
 				"convertible": "qty",
 			},
    
-				
+				{
+					"label":"Container Qty",
+					"fieldname":"custom_container_qty",
+					"fieldtype":"Float",
+					"precision":2,
+				},
 
 			{
 				"label": _("Billed Qty"),
