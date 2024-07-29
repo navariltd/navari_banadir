@@ -8,6 +8,24 @@ app_license = "agpl-3.0"
 
 # Includes in <head>
 # ------------------
+doc_events = {
+	"Sales Invoice": {
+		"before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.sales_invoice_before_submit",
+		
+	},
+ "Purchase Invoice": {
+        "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
+        
+    },
+    "Payment Entry": {
+        "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.payment_entry_before_submit",
+        
+    },
+    "Journal Entry": {
+        "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
+}
+}
+
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/nl_banadir/css/nl_banadir.css"
