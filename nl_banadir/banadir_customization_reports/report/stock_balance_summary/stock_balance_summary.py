@@ -23,6 +23,9 @@ def execute(filters=None):
 	columns = get_columns(filters)
 	data = get_data(filters)
 	chart = get_chart_data(columns)
+	
+    # Add default alternative UOM filter
+	filters.alternative_uom = filters.get('alternative_uom')
 
 	return columns, data, None, chart
 
@@ -46,6 +49,8 @@ def get_columns(filters):
 		},
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Data", "width": 120},
 		{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Data", "width": 120},
+        {"label": _("Alternative UOM"), "fieldname": "alternative_uom", "fieldtype": "Data", "width": 120},
+		{"label": _("")}
 	]
 
 	ranges = get_period_date_ranges(filters)
@@ -222,36 +227,52 @@ def fill_intermediate_periods(
 
 
 def get_data(filters):
-	data = []
-	items = get_items(filters)
-	sle = get_stock_ledger_entries(filters, items)
-	item_details = get_item_details(items, sle)
-	periodic_data = get_periodic_data(sle, filters)
-	ranges = get_period_date_ranges(filters)
+    data = []
+    items = get_items(filters)
+    sle = get_stock_ledger_entries(filters, items)
+    item_details = get_item_details(items, sle)
+    periodic_data = get_periodic_data(sle, filters)
+    ranges = get_period_date_ranges(filters)
 
-	today = getdate()
+    today = getdate()
 
-	for _dummy, item_data in item_details.items():
-		row = {
-			"name": item_data.name,
-			"item_name": item_data.item_name,
-			"item_group": item_data.item_group,
-			"uom": item_data.stock_uom,
-			"brand": item_data.brand,
-		}
-		previous_period_value = 0.0
-		for start_date, end_date in ranges:
-			period = get_period(end_date, filters)
-			period_data = periodic_data.get(item_data.name, {}).get(period)
-			if period_data:
-				row[scrub(period)] = previous_period_value = sum(period_data.values())
-			else:
-				row[scrub(period)] = previous_period_value if today >= start_date else None
+    for _dummy, item_data in item_details.items():
+        row = {
+            "name": item_data.name,
+            "item_name": item_data.item_name,
+            "item_group": item_data.item_group,
+            "uom": item_data.stock_uom,
+            "brand": item_data.brand,
+        }
 
-		data.append(row)
+        # Fetch conversion factor if alternative UOM is specified
+        if filters.alternative_uom:
+            conversion_factor = get_conversion_factor(item_data.name, filters.alternative_uom)
+            row["alternative_uom"] = filters.alternative_uom
+        else:
+            conversion_factor = 1
+            row["alternative_uom"] = ""
 
-	return data
+        previous_period_value = 0.0
+        for start_date, end_date in ranges:
+            period = get_period(end_date, filters)
+            period_data = periodic_data.get(item_data.name, {}).get(period)
+            if period_data:
+                # Apply conversion factor to the quantity
+                row[scrub(period)] = previous_period_value = sum(period_data.values()) * conversion_factor
+            else:
+                row[scrub(period)] = previous_period_value if today >= start_date else None
 
+        data.append(row)
+
+    return data
+
+
+def get_conversion_factor(item_code, alternative_uom):
+	
+    uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+	
+    return uom_conversion or 1
 
 def get_chart_data(columns):
 	labels = [d.get("label") for d in columns[5:]]

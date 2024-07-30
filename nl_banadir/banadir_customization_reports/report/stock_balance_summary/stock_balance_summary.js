@@ -29,6 +29,12 @@ frappe.query_reports["Stock Balance Summary"] = {
 			default: "Quantity",
 			reqd: 1,
 		},
+        {
+			fieldname: "alternative_uom",
+			label: __("Include UOM"),
+			fieldtype: "Link",
+			options: "UOM",
+		},
 		{
 			fieldname: "brand",
 			label: __("Brand"),
