@@ -3,6 +3,14 @@
 
 frappe.query_reports["Stock Balance Summary"] = {
 	filters: [
+        {
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+			reqd: 1,
+		},
 		{
 			fieldname: "item_group",
 			label: __("Item Group"),
@@ -41,14 +49,6 @@ frappe.query_reports["Stock Balance Summary"] = {
 			fieldtype: "Link",
 			options: "Brand",
 			default: "",
-		},
-		{
-			fieldname: "company",
-			label: __("Company"),
-			fieldtype: "Link",
-			options: "Company",
-			default: frappe.defaults.get_user_default("Company"),
-			reqd: 1,
 		},
 		{
 			fieldname: "warehouse",

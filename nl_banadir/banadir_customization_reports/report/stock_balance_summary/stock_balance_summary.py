@@ -49,8 +49,6 @@ def get_columns(filters):
 		},
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Data", "width": 120},
 		{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Data", "width": 120},
-        {"label": _("Alternative UOM"), "fieldname": "alternative_uom", "fieldtype": "Data", "width": 120},
-		{"label": _("")}
 	]
 
 	ranges = get_period_date_ranges(filters)
@@ -59,6 +57,8 @@ def get_columns(filters):
 		period = get_period(end_date, filters)
 
 		columns.append({"label": _(period), "fieldname": scrub(period), "fieldtype": "Float", "width": 120})
+		if filters.alternative_uom:
+			columns.append({"label": _(f"{period} ({filters.alternative_uom})"), "fieldname": scrub(f"{period}_alt"), "fieldtype": "Float", "width": 120})
 
 	return columns
 
@@ -259,11 +259,17 @@ def get_data(filters):
             period_data = periodic_data.get(item_data.name, {}).get(period)
             if period_data:
                 # Apply conversion factor to the quantity
-                row[scrub(period)] = previous_period_value = sum(period_data.values()) * conversion_factor
+                row[scrub(period)] = previous_period_value = sum(period_data.values())
+                if filters.alternative_uom:
+                    row[scrub(f"{period}_alt")] = previous_period_value * conversion_factor
             else:
                 row[scrub(period)] = previous_period_value if today >= start_date else None
+                if filters.alternative_uom:
+                    row[scrub(f"{period}_alt")] = previous_period_value * conversion_factor if today >= start_date else None
 
-        data.append(row)
+        # Only add the row if the stock quantity is greater than 0
+        if any(value > 0 for key, value in row.items() if isinstance(value, (int, float))):
+            data.append(row)
 
     return data
 
