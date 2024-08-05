@@ -261,11 +261,11 @@ def get_data(filters):
                 # Apply conversion factor to the quantity
                 row[scrub(period)] = previous_period_value = sum(period_data.values())
                 if filters.alternative_uom:
-                    row[scrub(f"{period}_alt")] = previous_period_value * conversion_factor
+                    row[scrub(f"{period}_alt")] = previous_period_value / conversion_factor
             else:
                 row[scrub(period)] = previous_period_value if today >= start_date else None
                 if filters.alternative_uom:
-                    row[scrub(f"{period}_alt")] = previous_period_value * conversion_factor if today >= start_date else None
+                    row[scrub(f"{period}_alt")] = previous_period_value / conversion_factor if today >= start_date else None
 
         # Only add the row if the stock quantity is greater than 0
         if any(value > 0 for key, value in row.items() if isinstance(value, (int, float))):
