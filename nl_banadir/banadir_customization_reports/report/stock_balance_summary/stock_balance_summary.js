@@ -87,7 +87,7 @@ frappe.query_reports["Stock Balance Summary"] = {
 				// { value: "Weekly", label: __("Weekly") },
 				{ value: "Monthly", label: __("Monthly") },
 				// { value: "Quarterly", label: __("Quarterly") },
-				// { value: "Yearly", label: __("Yearly") },
+				{ value: "Yearly", label: __("Yearly") },
 			],
 			default: "Monthly",
 			reqd: 1,
