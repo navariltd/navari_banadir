@@ -1,7 +1,7 @@
 {
  "add_total_row": 1,
  "columns": [],
- "creation": "2024-07-26 10:34:22.775937",
+ "creation": "2024-08-12 08:53:43.932047",
  "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
@@ -9,14 +9,14 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2024-07-26 10:34:22.775937",
+ "modified": "2024-08-12 08:53:43.932047",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
- "name": "Stock Balance Summary",
+ "name": "Total Stock Balance Summary",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Stock Entry",
- "report_name": "Stock Balance Summary",
+ "report_name": "Total Stock Balance Summary",
  "report_type": "Script Report",
  "roles": [
   {
