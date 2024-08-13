@@ -20,7 +20,7 @@ frappe.query_reports["Total Stock Balance Summary"] = {
 			options: "Company",
 			reqd: 1,
 			default: frappe.defaults.get_user_default("Company"),
-			depends_on: "eval: doc.group_by != 'Company'",
+			depends_on: "eval: doc.group_by == 'Company'",
 		},
 		{
 			fieldname: "current_date",
