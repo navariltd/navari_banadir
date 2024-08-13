@@ -51,6 +51,10 @@ def get_total_stock(filters):
 	# Apply date filter if provided
 	if filters.get("current_date"):
 		query = query.where(bin.modified <= filters.get("current_date"))
+		
+    # Apply company filter if provided
+	if filters.get("company"):
+		query = query.where(wh.company == filters.get("company"))
 
 	if filters.get("group_by") == "Warehouse":
 		if filters.get("company"):
