@@ -21,14 +21,13 @@ def execute(filters=None):
 
 	columns = get_columns(filters)
 	data = get_data(filters)
-	# frappe.throw(str(data))
-	data=convert_currency_columns(data, filters)
+	
 
 	if not data:
 		return [], [], None, []
 
 	data, chart_data = prepare_data(data, filters)
-
+	data=convert_currency_columns(data, filters)
 	return columns, data, None, chart_data
 
 
@@ -122,7 +121,8 @@ def prepare_data(data, filters):
 		#frappe.throw(str(row['base_grand_total']))
 		row["balance"] = flt(row["base_grand_total"]) - flt(row["advance_paid"])
 		#frappe.throw(str(row["balance"]))
-		row['balance'] = convert_balance_currency(row['balance'], filters)
+		# row['balance'] = convert_balance_currency(row['balance'], filters)
+		# row['advance_paid'] = convert_balance_currency(row['advance_paid'], filters)
 
 		# Fetch additional fields if they exist
 		row["branch"] = row.get("branch", None)
@@ -372,8 +372,7 @@ def convert_currency_columns(data, filters):
 	date = filters.get("to_date") or frappe.utils.now()
 	to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
 	from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
-	
-	currency_fields = ['amount', 'received_qty_amount', 'billed_amount','advance_paid', 'pending_amount','balance']  # Add other fields as necessary
+	currency_fields = ['amount', 'received_qty_amount', 'billed_amount', 'pending_amount','balance','advance_paid']  # Add other fields as necessary
 
 	for entry in data:
 		for field in currency_fields:
@@ -381,15 +380,15 @@ def convert_currency_columns(data, filters):
 	
 	return data
 
-def convert_balance_currency(balance, filters):
-	date = filters.get("to_date") or frappe.utils.now()
-	to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
-	from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
+# def convert_balance_currency(balance, filters):
+# 	date = filters.get("to_date") or frappe.utils.now()
+# 	to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+# 	from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 	
 	
-	balance= convert(balance, from_currency, to_currency, date)
+# 	balance= convert(balance, from_currency, to_currency, date)
 	
-	return balance
+# 	return balance
 
 
 def calculate_advance_paid(purchase_order):
