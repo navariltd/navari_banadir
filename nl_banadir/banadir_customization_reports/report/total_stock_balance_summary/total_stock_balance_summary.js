@@ -11,6 +11,7 @@ frappe.query_reports["Total Stock Balance Summary"] = {
 			reqd: 1,
 			options: ["Company"],
 			default: "Company",
+            hidden: 1,
 		},
 		{
 			fieldname: "company",
