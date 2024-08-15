@@ -90,7 +90,7 @@ class Analytics:
 
 		if self.filters.tree_type in ["Supplier Group", "Item Group", "Customer Group", "Territory"]:
 			skip_total_row = 1
-		#frappe.throw(str(self.data))
+		self.columns = add_currency_label(self.columns, filters)
 		self.data=convert_currency_columns(self.data, filters)
 		return self.columns, self.data, None, self.chart, None, skip_total_row
 
@@ -564,3 +564,21 @@ def convert_currency_columns(data, filters):
 			entry[field] = convert(entry.get(field, 0), from_currency, to_currency, to_date)
 	
 	return data
+
+def add_currency_label(columns, filters):
+    presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
+        "Company", filters.company, "default_currency"
+    )
+    
+    # List of column labels to exclude from appending the currency
+    columns_not_to_include = ["Item", "UOM", "Item Name", "Customer Name", "Supplier Name", 
+                              "Territory", "Customer Group", "Supplier Group", 
+                              "Item Group", "Order Type", "Project","Customer", "Supplier"]
+    
+    # Loop through each column and update the label
+    for column in columns:
+        if column['label'] not in columns_not_to_include and presentation_currency:
+            column['label'] = f"{column['label']} (<strong>{presentation_currency}</strong>)"
+    
+    return columns
+

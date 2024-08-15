@@ -380,15 +380,6 @@ def convert_currency_columns(data, filters):
 	
 	return data
 
-# def convert_balance_currency(balance, filters):
-# 	date = filters.get("to_date") or frappe.utils.now()
-# 	to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
-# 	from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
-	
-	
-# 	balance= convert(balance, from_currency, to_currency, date)
-	
-# 	return balance
 
 
 def calculate_advance_paid(purchase_order):
