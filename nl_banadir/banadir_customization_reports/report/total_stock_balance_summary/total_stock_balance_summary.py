@@ -35,61 +35,63 @@ def get_columns(filters):
 
 
 def get_total_stock(filters):
-	bin = frappe.qb.DocType("Bin")
-	item = frappe.qb.DocType("Item")
-	wh = frappe.qb.DocType("Warehouse")
+    bin = frappe.qb.DocType("Bin")
+    item = frappe.qb.DocType("Item")
+    wh = frappe.qb.DocType("Warehouse")
 
-	query = (
-		frappe.qb.from_(bin)
-		.inner_join(item)
-		.on(bin.item_code == item.item_code)
-		.inner_join(wh)
-		.on(wh.name == bin.warehouse)
-		.where(bin.actual_qty != 0)
-	)
+    query = (
+        frappe.qb.from_(bin)
+        .inner_join(item).on(bin.item_code == item.item_code)
+        .inner_join(wh).on(wh.name == bin.warehouse)
+        .where(bin.actual_qty != 0)
+    )
 
-	# Apply date filter if provided
-	if filters.get("current_date"):
-		query = query.where(bin.modified <= filters.get("current_date"))
-		
-    # Apply company filter if provided
-	if filters.get("company"):
-		query = query.where(wh.company == filters.get("company"))
-
-	if filters.get("group_by") == "Warehouse":
-		if filters.get("company"):
-			query = query.where(wh.company == filters.get("company"))
-
-		query = query.select(bin.warehouse).groupby(bin.warehouse)
-	else:
-		query = query.select(wh.company).groupby(wh.company)
-
-	# Select item_code, uom, and actual_qty
-	query = query.select(
-		item.item_code, 
-		item.stock_uom,  # Include UOM
-		Sum(bin.actual_qty).as_("actual_qty")
-	)
-
-	# Include conversion to alternative UOM if selected
-	if filters.get("alternative_uom"):
-		# Join with UOM Conversion table if necessary
-		uom_conversion = frappe.qb.DocType("UOM Conversion Detail")
-		query = query.left_join(uom_conversion).on(
-			(item.item_code == uom_conversion.parent) &
-			(uom_conversion.uom == filters.get("alternative_uom"))
-		)
-
-		# Calculate the converted quantity in the alternative UOM
-		query = query.select(
-			uom_conversion.uom.as_("alternative_uom"),
-			(Sum(bin.actual_qty) / uom_conversion.conversion_factor).as_("qty_in_alternative_uom")
-		)
+    # Apply date filter if provided
+    if filters.get("current_date"):
+        query = query.where(bin.modified <= filters.get("current_date"))
         
+    # Apply company filter if provided
+    if filters.get("company"):
+        query = query.where(wh.company == filters.get("company"))
 
-	query = query.groupby(item.item_code)
+    # Apply item group filter if provided
+    if filters.get("item_group"):
+        query = query.where(item.item_group == filters.get("item_group"))
 
-	return query.run() 
+    # Apply warehouse filter if provided
+    if filters.get("warehouse"):
+        query = query.where(bin.warehouse == filters.get("warehouse"))
+
+    if filters.get("group_by") == "Warehouse":
+        query = query.select(bin.warehouse).groupby(bin.warehouse)
+    else:
+        query = query.select(wh.company).groupby(wh.company)
+
+    # Select item_code, uom, and actual_qty
+    query = query.select(
+        item.item_code, 
+        item.stock_uom,  # Include UOM
+        Sum(bin.actual_qty).as_("actual_qty")
+    )
+
+    # Include conversion to alternative UOM if selected
+    if filters.get("alternative_uom"):
+        # Join with UOM Conversion table if necessary
+        uom_conversion = frappe.qb.DocType("UOM Conversion Detail")
+        query = query.left_join(uom_conversion).on(
+            (item.item_code == uom_conversion.parent) &
+            (uom_conversion.uom == filters.get("alternative_uom"))
+        )
+
+        # Calculate the converted quantity in the alternative UOM
+        query = query.select(
+            uom_conversion.uom.as_("alternative_uom"),
+            (Sum(bin.actual_qty) / uom_conversion.conversion_factor).as_("qty_in_alternative_uom")
+        )
+
+    query = query.groupby(item.item_code)
+
+    return query.run() 
 
 def get_conversion_factor(item_code, alternative_uom):
 	
