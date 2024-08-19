@@ -87,11 +87,16 @@ class Analytics:
 
 		# Skipping total row for tree-view reports
 		skip_total_row = 0
-
 		if self.filters.tree_type in ["Supplier Group", "Item Group", "Customer Group", "Territory"]:
 			skip_total_row = 1
 		self.columns = add_currency_label(self.columns, filters)
 		self.data=convert_currency_columns(self.data, filters)
+  
+		if filters.get("tree_type")=="Item" and filters.get('value_quantity')== "Quantity":
+			self.data=convert_alternative_uom(self.data, filters)
+   
+   
+  
 		return self.columns, self.data, None, self.chart, None, skip_total_row
 
 	def get_columns(self):
@@ -566,19 +571,55 @@ def convert_currency_columns(data, filters):
 	return data
 
 def add_currency_label(columns, filters):
-    presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
-        "Company", filters.company, "default_currency"
-    )
-    
-    # List of column labels to exclude from appending the currency
-    columns_not_to_include = ["Item", "UOM", "Item Name", "Customer Name", "Supplier Name", 
-                              "Territory", "Customer Group", "Supplier Group", 
-                              "Item Group", "Order Type", "Project","Customer", "Supplier"]
-    
-    # Loop through each column and update the label
-    for column in columns:
-        if column['label'] not in columns_not_to_include and presentation_currency:
-            column['label'] = f"{column['label']} (<strong>{presentation_currency}</strong>)"
-    
-    return columns
+	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
+		"Company", filters.company, "default_currency"
+	)
+	value_qty=filters.get("value_quantity")
+	
+	# List of column labels to exclude from appending the currency
+	columns_not_to_include = ["Item", "UOM", "Item Name", "Customer Name", "Supplier Name", 
+							  "Territory", "Customer Group", "Supplier Group", 
+							  "Item Group", "Order Type", "Project","Customer", "Supplier"]
+	
+	# Loop through each column and update the label
+	if value_qty=="Value":
+		for column in columns:
+			if column['label'] not in columns_not_to_include and presentation_currency:
+				column['label'] = f"{column['label']} (<strong>{presentation_currency}</strong>)"
+		
+	return columns
 
+def convert_alternative_uom(data, filters):
+    alternative_uom = filters.get('alternative_uom')
+    
+    for row in data:
+        item_code = row.get('entity')
+        
+        if item_code:
+            conversion_factor = get_conversion_factor(item_code, alternative_uom)
+            
+            for key, value in row.items():
+                if isinstance(value, (int, float)):
+                    new_value = value / conversion_factor
+                    row[key] = new_value  # Update the value in the row
+    
+    return data
+
+
+# def convert_alternative_uom(data, filters):
+#     alternative_uom = filters.get('alternative_uom')
+    
+#     for row in data:
+#         item_code = row.get('entity')
+#         qty = row.get('total')
+        
+#         if item_code and qty:
+#             conversion_factor = get_conversion_factor(item_code, alternative_uom)
+#             new_qty = qty / conversion_factor
+#             row['total'] = new_qty  # Update the quantity in the row
+    
+#     return data
+
+def get_conversion_factor(item_code, alternative_uom):
+    uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+    return uom_conversion or 1
