@@ -115,6 +115,14 @@ frappe.query_reports["Sales Analytics Multicurrency"] = {
 			default: frappe.datetime.get_today(),
 			
 		},
+		{
+            fieldname: "alternative_uom",
+            label: __("Alternative UOM"),
+            fieldtype: "Link",
+            options: "UOM",
+            width: "100",
+            reqd: 0,
+        },
 	],
 	get_datatable_options(options) {
 		return Object.assign(options, {
