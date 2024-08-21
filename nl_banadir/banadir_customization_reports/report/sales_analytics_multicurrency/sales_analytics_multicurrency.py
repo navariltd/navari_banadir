@@ -601,24 +601,9 @@ def convert_alternative_uom(data, filters):
             for key, value in row.items():
                 if isinstance(value, (int, float)):
                     new_value = value / conversion_factor
-                    row[key] = new_value  # Update the value in the row
+                    row[key] = new_value 
     
     return data
-
-
-# def convert_alternative_uom(data, filters):
-#     alternative_uom = filters.get('alternative_uom')
-    
-#     for row in data:
-#         item_code = row.get('entity')
-#         qty = row.get('total')
-        
-#         if item_code and qty:
-#             conversion_factor = get_conversion_factor(item_code, alternative_uom)
-#             new_qty = qty / conversion_factor
-#             row['total'] = new_qty  # Update the quantity in the row
-    
-#     return data
 
 def get_conversion_factor(item_code, alternative_uom):
     uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
