@@ -1,8 +1,7 @@
 // Copyright (c) 2024, Navari Ltd and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Custom Serial No Ledger"] = {
-
+frappe.query_reports["Serial No Tracking"] = {
 	filters: [
 		{
 			label: __("Item Code"),
@@ -40,19 +39,7 @@ frappe.query_reports["Custom Serial No Ledger"] = {
 			fieldtype: "Link",
 			fieldname: "serial_no",
 			options: "Serial No",
-			// get_query: function () {
-			// 	let item_code = frappe.query_report.get_filter_value("item_code");
-			// 	let warehouse = frappe.query_report.get_filter_value("warehouse");
-
-			// 	let query_filters = { item_code: item_code };
-			// 	if (warehouse) {
-			// 		query_filters["warehouse"] = warehouse;
-			// 	}
-
-			// 	return {
-			// 		filters: query_filters,
-			// 	};
-			// },
+		
 		},
 		{
 			label: __("As On Date"),
