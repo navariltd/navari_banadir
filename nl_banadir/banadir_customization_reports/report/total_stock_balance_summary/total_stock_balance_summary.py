@@ -98,3 +98,4 @@ def get_conversion_factor(item_code, alternative_uom):
     uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	
     return uom_conversion or 1
+
