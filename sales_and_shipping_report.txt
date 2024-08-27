@@ -1,0 +1,97 @@
+# Define columns for the report
+columns = [
+    {"fieldname": "name", "label": "Invoice Name", "fieldtype": "Link", "options": "Sales Invoice", "width": 150},
+    {"fieldname": "custom_shipping_status", "label": "Status", "fieldtype": "Select", "width": 120},
+    {"fieldname": "customer", "label": "Customer", "fieldtype": "Link", "options": "Customer", "width": 150},
+    {"fieldname": "branch", "label": "Branch", "fieldtype": "Link", "options": "Branch", "width": 150},
+    {"fieldname": "custom_container_no", "label": "Container No", "fieldtype": "Data", "width": 150},
+    {"fieldname": "custom_bill_of_landing", "label": "Bill of Landing", "fieldtype": "Data", "width": 150},
+    {"fieldname": "custom_port_of_loading", "label": "Port of Loading", "fieldtype": "Link", "options": "Location", "width": 150},
+    {"fieldname": "custom_port_of_discharge", "label": "Port of Discharge", "fieldtype": "Data", "width": 150},
+    {"fieldname": "set_warehouse", "label": "Warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
+    {"fieldname": "custom_destination", "label": "Destination", "fieldtype": "Data", "width": 150},
+    {"fieldname": "custom_estimated_date_of_arrival", "label": "Estimated Arrival Date", "fieldtype": "Date", "width": 80},
+    {"fieldname": "custom_remaining_days", "label": "Remaining Days", "fieldtype": "Data", "width": 80},
+    {"fieldname": "grand_total", "label": "Total Amount", "fieldtype": "Float", "width": 120},
+    {"fieldname": "currency", "label": "Currency", "fieldtype": "Data", "width": 120},
+    {"fieldname": "custom_bil", "label": "Bill of Lading", "fieldtype": "Attach", "width": 120},
+    {"fieldname": "custom_total_containers", "label": "Container Qty", "fieldtype": "Float","width": 120},
+    {"fieldname": "transit_numbers", "label": "Transit Numbers", "fieldtype": "HTML", "width": 250},
+]
+
+# Get filter values
+start_date = filters.get('from_date') if filters else None
+end_date = filters.get('to_date') if filters else None
+sales_invoice = filters.get('sales_invoice')
+shipping_status = filters.get('custom_shipping_status') if filters else None
+currency = filters.get('currency') if filters else None
+company = filters.get('company') if filters else None
+branch = filters.get('branch') if filters else None
+
+# Construct SQL query to fetch sales invoice details including custom_remaining_days and transit numbers
+sql_query = f"""
+    SELECT
+        `name`,
+        `custom_shipping_status`,
+        `custom_estimated_date_of_arrival`,
+        `custom_remaining_days`,
+        `custom_container_no`,
+        `custom_port_of_loading`,
+        `custom_port_of_discharge`,
+        `custom_bill_of_landing`,
+        `customer`,
+        `branch`,
+        `set_warehouse`,
+        `custom_destination`,
+        ROUND(`grand_total`, 2) AS `grand_total`,
+        `currency`,
+        `custom_bil`,
+        `custom_total_containers`,
+        (SELECT GROUP_CONCAT(
+        CONCAT(
+            '<a href="/app/', 
+            LOWER(REPLACE(`document_type`, ' ', '-')), 
+            '/', 
+            `transit_no`, 
+            '">', 
+            `transit_no`, 
+            '</a>'
+        )
+        SEPARATOR ', ')
+         FROM `tabTransit Numbers`
+         WHERE `parent` = `tabSales Invoice`.`name`) AS `transit_numbers`
+    FROM
+        `tabSales Invoice`
+    WHERE
+        `docstatus` = 1
+        {'AND `posting_date` BETWEEN %s AND %s' if start_date and end_date else ''}
+        {'AND `name` = %s' if sales_invoice else ''}
+        {'AND `custom_shipping_status` = %s' if shipping_status else ''}
+        {'AND `currency` = %s' if currency else ''}
+        {'AND `custom_is_export_sale` = 1'}
+        {'AND `company` = %s' if company else ''}
+        {'AND `branch` = %s' if branch else ''}
+"""
+
+# Initialize SQL parameters with date filters
+sql_params = []
+if start_date and end_date:
+    sql_params.extend([start_date, end_date])
+if sales_invoice:
+    sql_params.append(sales_invoice)
+if shipping_status:
+    sql_params.append(shipping_status)
+if currency:
+    sql_params.append(currency)
+if company:
+    sql_params.append(company)
+if branch:
+    sql_params.append(branch)
+
+# Execute the SQL query
+data = frappe.db.sql(sql_query, tuple(sql_params), as_dict=True)
+
+# Assign columns and report_data to data
+report_data = data  # Use fetched data directly
+
+data = columns, report_data, None, None, None
