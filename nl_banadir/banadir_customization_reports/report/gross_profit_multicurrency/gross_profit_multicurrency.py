@@ -156,6 +156,9 @@ def execute(filters=None):
 
 	else:
 		get_data_when_not_grouped_by_invoice(gross_profit_data, filters, group_wise_columns, data)
+	#frappe.throw(str(data))
+	filters.column_order = group_wise_columns.get(filters.group_by.lower())
+
 	data=convert_currency_columns(data, filters)
 	return columns, data
 
@@ -262,35 +265,35 @@ def get_columns(group_wise_columns, filters):
 				"label": _(f"Avg. Selling Rate <strong>({presentation_currency})</strong>"),
 				"fieldname": "avg._selling_rate",
 				"fieldtype": "Float",
-    "precision":2,
+	"precision":2,
 				"width": 100,
 			},
 			"buying_rate": {
 				"label": _(f"Valuation Rate <strong>({presentation_currency})</strong>"),
 				"fieldname": "valuation_rate",
 				"fieldtype": "Float",
-    "precision":2,
+	"precision":2,
 				"width": 100,
 			},
 			"base_amount": {
 				"label": _(f"Selling Amount <strong>({presentation_currency})</strong>"),
 				"fieldname": "selling_amount",
 				"fieldtype": "Float",
-    "precision":2,
+	"precision":2,
 				"width": 100,
 			},
 			"buying_amount": {
 				"label": _(f"Buying Amount <strong>({presentation_currency})</strong>"),
 				"fieldname": "buying_amount",
 				"fieldtype": "Float",
-    "precision":2,
+	"precision":2,
 				"width": 100,
 			},
 			"gross_profit": {
 				"label": _(f"Gross Profit <strong>({presentation_currency})</strong>"),
 				"fieldname": "gross_profit",
 				"fieldtype": "Float",
-    "precision":2,
+	"precision":2,
 				"width": 100,
 			},
 			"gross_profit_percent": {
@@ -317,7 +320,7 @@ def get_columns(group_wise_columns, filters):
 				"label": _(f"Allocated Amount <strong>({presentation_currency})</strong>"),
 				"fieldname": "allocated_amount",
 				"fieldtype": "Float",
-    "precision":2,
+	"precision":2,
 				"width": 100,
 			},
 			"customer": {
@@ -1017,16 +1020,143 @@ class GrossProfitGenerator:
 			"""select name from tabItem
 			where is_stock_item=0"""
 		)
-  
-def convert_currency_columns(data, filters):
-	date = filters.get("to_date") or frappe.utils.now()
-	to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
-	from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
-	
-	currency_fields = ['buying_amount', 'selling_amount','gross_profit','valuation_rate','avg._selling_rate','allocated_amount', 'base_amount','base_rate']  # Add other fields as necessary
 
-	for entry in data:
-		for field in currency_fields:
-			entry[field] = convert(entry.get(field, 0), from_currency, to_currency, date)
-	
-	return data
+
+# def convert_currency_columns(data, filters):
+#     # Early exit if data is null or empty
+#     if not data:
+#         return data
+
+#     date = filters.get("to_date") or frappe.utils.now()
+#     to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+#     from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
+#     group_by = filters.get('group_by')
+
+#     # Initialize currency_fields or currency_indices based on group_by
+#     currency_fields = []
+#     currency_indices = []
+
+#     if group_by == "Invoice":
+#         currency_fields = ['buying_amount', 'selling_amount', 'gross_profit', 'valuation_rate', 
+#                            'avg._selling_rate', 'allocated_amount', 'base_amount', 'base_rate']
+#     else:
+#         if group_by == "Item Code":
+#             currency_indices = range(5, 10)
+#         elif group_by == "Customer":
+#             currency_indices = range(3, 8)
+#         elif group_by == "Territory":
+#             currency_indices = range(1, 4)
+#         elif group_by == "Monthly":
+#             currency_indices = range(2, 7)
+#         elif group_by == "Payment Term":
+#             currency_indices = range(1, 4)
+#         elif group_by == "Sales Person":
+#             currency_indices = range(2, 7)
+#         elif group_by == "Warehouse":
+#             currency_indices = range(2, 7)
+#         elif group_by == "Item Group":
+#             currency_indices = range(2, 7)
+#         elif group_by == "Brand":
+#             currency_indices = range(6, 11)
+#         elif group_by == "Customer Group":
+#             currency_indices = range(2, 7)
+#         elif group_by == "Project":
+#             currency_indices = range(1, 4)
+
+#     # Determine if data entries are lists or dicts
+#     is_dict_format = isinstance(data[0], dict)
+
+#     for entry in data:
+#         if is_dict_format and currency_fields:
+#             # Convert currency fields for dictionary format
+#             for field in currency_fields:
+#                 if field in entry:
+#                     entry[field] = convert(entry.get(field, 0), from_currency, to_currency, date)
+#         elif not is_dict_format and currency_indices:
+#             # Convert currency fields for list format
+#             for idx in currency_indices:
+#                 if idx < len(entry):
+#                     entry[idx] = convert(entry[idx], from_currency, to_currency, date)
+
+#     return data
+# # 
+
+def get_currency_fields(group_by):
+    """
+    Returns the list of currency fields or indices based on the group_by value.
+    """
+    currency_fields = []
+    currency_indices = []
+    
+    if group_by == "Invoice":
+        currency_fields = ['buying_amount', 'selling_amount', 'gross_profit', 'valuation_rate', 
+                           'avg._selling_rate', 'allocated_amount', 'base_amount', 'base_rate']
+    else:
+        if group_by == "Item Code":
+            currency_indices = range(5, 10)
+        elif group_by == "Customer":
+            currency_indices = range(3, 8)
+        elif group_by == "Territory":
+            currency_indices = range(1, 4)
+        elif group_by == "Monthly":
+            currency_indices = range(2, 7)
+        elif group_by == "Payment Term":
+            currency_indices = range(1, 4)
+        elif group_by == "Sales Person":
+            currency_indices = range(2, 7)
+        elif group_by == "Warehouse":
+            currency_indices = range(2, 7)
+        elif group_by == "Item Group":
+            currency_indices = range(2, 7)
+        elif group_by == "Brand":
+            currency_indices = range(6, 11)
+        elif group_by == "Customer Group":
+            currency_indices = range(2, 7)
+        elif group_by == "Project":
+            currency_indices = range(1, 4)
+
+    return currency_fields, currency_indices
+
+def convert_dict_entries(entry, currency_fields, from_currency, to_currency, date):
+    """
+    Converts currency fields for a dictionary entry.
+    """
+    for field in currency_fields:
+        if field in entry:
+            entry[field] = convert(entry.get(field, 0), from_currency, to_currency, date)
+
+def convert_list_entries(entry, currency_indices, from_currency, to_currency, date):
+    """
+    Converts currency fields for a list entry.
+    """
+    for idx in currency_indices:
+        if idx < len(entry):
+            entry[idx] = convert(entry[idx], from_currency, to_currency, date)
+
+def convert_currency_columns(data, filters):
+    """
+    Main function to convert currency columns based on the data format and filters.
+    """
+    # Early exit if data is null or empty
+    if not data:
+        return data
+
+    date = filters.get("to_date") or frappe.utils.now()
+    to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+    from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
+    group_by = filters.get('group_by')
+
+    # Get currency fields or indices based on group_by
+    currency_fields, currency_indices = get_currency_fields(group_by)
+
+    # Determine if data entries are lists or dicts
+    is_dict_format = isinstance(data[0], dict)
+
+    for entry in data:
+        if is_dict_format:
+            convert_dict_entries(entry, currency_fields, from_currency, to_currency, date)
+        else:
+            convert_list_entries(entry, currency_indices, from_currency, to_currency, date)
+
+    return data
+
