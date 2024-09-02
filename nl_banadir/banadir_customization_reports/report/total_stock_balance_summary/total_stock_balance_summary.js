@@ -45,6 +45,22 @@ frappe.query_reports["Total Stock Balance Summary"] = {
             fieldtype: "Date",
             default: frappe.datetime.now_date(),
             reqd: 0,
+            on_change: function() {
+                // Get the value of the current_date
+                var currentDate = frappe.query_report.get_filter_value('current_date');
+                if (currentDate) {
+                    var nextDay = frappe.datetime.add_days(currentDate, 1);
+                    frappe.query_report.set_filter_value('filter_date', nextDay);
+                }
+            }
+        },
+        {
+            fieldname: "filter_date",
+            label: __("Filter Date"),
+            fieldtype: "Date",
+            default: frappe.datetime.add_days(frappe.datetime.now_date(), 1),  // Sets to one day ahead
+            hidden: 1,
+            reqd: 0,
         },
         {
             fieldname: "alternative_uom",
