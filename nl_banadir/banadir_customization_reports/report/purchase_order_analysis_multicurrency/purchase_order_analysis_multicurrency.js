@@ -69,7 +69,7 @@ frappe.query_reports["Purchase Order Analysis MultiCurrency"] = {
 			fieldname: "group_by_po",
 			label: __("Group by Purchase Order"),
 			fieldtype: "Check",
-			default: 0,
+			default: 1,
 		},
 		{
 			fieldname: "presentation_currency",

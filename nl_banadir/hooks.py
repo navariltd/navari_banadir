@@ -125,7 +125,8 @@ doc_events = {
 # }
 #
 # has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
+#     "Sales Invoice": "nl_banadir.banadir_customization_reports.controllers.user_permision.custom_has_permission"
+
 # }
 
 # DocType Class

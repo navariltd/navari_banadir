@@ -52,8 +52,8 @@ def get_total_stock(filters):
     )
 
     # Apply date filter if provided
-    if filters.get("current_date"):
-        next_day = add_days(filters.get("current_date"), 1)
+    if filters.get("filter_date"):
+        next_day = add_days(filters.get("filter_date"), 1)
         query = query.where(bin.modified <= next_day)
 
     # Apply company filter if provided
