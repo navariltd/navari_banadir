@@ -6,9 +6,7 @@ def before_save(doc, method=None):
     for account in doc.accounts:
         # Check if the word "cash" is in the account field (case-insensitive)
         if "cash" in account.account.lower():
-            # Get the account balance as of today
             account_balance = abs(get_balance_on(account.account, date=today()))
-            # If a debit amount is provided, calculate balance after debit
             if account.debit is not None and account.debit > 0:
                 difference_balance = account_balance - account.debit
                 if difference_balance <= 0:

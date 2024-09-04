@@ -1,7 +1,7 @@
 {
- "add_total_row": 1,
+ "add_total_row": 0,
  "columns": [],
- "creation": "2024-08-28 19:17:46.800828",
+ "creation": "2024-09-03 09:05:33.827745",
  "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
@@ -10,14 +10,14 @@
  "is_standard": "Yes",
  "letter_head": "Banadir",
  "letterhead": null,
- "modified": "2024-08-28 19:17:46.800828",
+ "modified": "2024-09-03 12:12:01.804705",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
- "name": "Monthly Expense",
+ "name": "Monthly Expenses",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "GL Entry",
- "report_name": "Monthly Expense",
+ "report_name": "Monthly Expenses",
  "report_type": "Script Report",
  "roles": [
   {
