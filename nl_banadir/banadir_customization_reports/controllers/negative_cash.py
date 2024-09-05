@@ -9,7 +9,7 @@ def before_save(doc, method=None):
         if "cash" in account.account.lower():
             account_balance = abs(get_balance_on(account.account, date=today()))
             if account.account_currency!=company_currency:
-                account_balance = account_balance * account.exchange_rate
+                account_balance = float(account_balance)* float(account.exchange_rate)
             if account.debit is not None and account.debit > 0:
                 difference_balance = account_balance - account.debit
                 if difference_balance <= 0:
