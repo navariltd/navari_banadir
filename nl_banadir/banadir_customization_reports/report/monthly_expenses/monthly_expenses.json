@@ -1,5 +1,5 @@
 {
- "add_total_row": 0,
+ "add_total_row": 1,
  "columns": [],
  "creation": "2024-09-03 09:05:33.827745",
  "disabled": 0,
@@ -10,7 +10,7 @@
  "is_standard": "Yes",
  "letter_head": "Banadir",
  "letterhead": null,
- "modified": "2024-09-03 12:12:01.804705",
+ "modified": "2024-09-05 09:42:50.538133",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
  "name": "Monthly Expenses",

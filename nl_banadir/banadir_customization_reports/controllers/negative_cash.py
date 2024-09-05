@@ -3,10 +3,13 @@ from erpnext.accounts.utils import get_balance_on
 from frappe.utils import today
 
 def before_save(doc, method=None):
+    company_currency = frappe.get_cached_value('Company', doc.company, 'default_currency')
     for account in doc.accounts:
         # Check if the word "cash" is in the account field (case-insensitive)
         if "cash" in account.account.lower():
             account_balance = abs(get_balance_on(account.account, date=today()))
+            if account.account_currency!=company_currency:
+                account_balance = account_balance * account.exchange_rate
             if account.debit is not None and account.debit > 0:
                 difference_balance = account_balance - account.debit
                 if difference_balance <= 0:

@@ -28,6 +28,21 @@ frappe.query_reports["Monthly Expenses"] = {
 			"reqd": 1,
 			"width": "100px"
 		},
+		{
+				"fieldname":"account",
+				"label": __("Account"),
+				"fieldtype": "Link",
+				"options": "Account",
+				get_query: () => {
+					var company = frappe.query_report.get_filter_value("company");
+					return {
+					  filters: {
+						company: company,
+						is_group: 0,
+					  },
+					};
+				  },
+		},
 		
 		{
 			fieldname: "presentation_currency",

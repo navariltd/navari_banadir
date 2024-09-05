@@ -13,7 +13,6 @@ def execute(filters=None):
 	if not filters:
 		filters = {}
 
-	# Fetch columns using the get_columns function
 	columns = get_columns(filters)
 	
 	data = fetch_data(filters)
@@ -24,7 +23,15 @@ def get_columns(filters):
 	presentation_currency=filters.get("presentation_currency") or frappe.get_cached_value(
 		"Company", filters.company, "default_currency"
 	)
-	columns = []
+	columns = [
+		{
+			"label": "Account",
+			"fieldname": "account",
+			"fieldtype": "Link",
+			"options": "Account",
+			"width": 200
+		}
+	]
 
 	start_date = getdate(filters.get("from_date"))
 	end_date = getdate(filters.get("to_date"))
@@ -35,7 +42,7 @@ def get_columns(filters):
 		month_name = formatdate(current_date, "MMM yyyy")
 		columns.append({
 			"label": f"{month_name} <strong>({presentation_currency})</strong>",
-			"fieldname": month_name.lower().replace(" ", "_") + "_usd",
+			"fieldname": month_name.lower().replace(" ", "_") + "_currency",
 			"fieldtype": "Float",
 			'precision':2,
 			"width": 120
@@ -43,56 +50,92 @@ def get_columns(filters):
 		# Move to the next month
 		current_date += relativedelta(months=1)
 	columns += [
-	{"label": f"<strong>Total Amount ({presentation_currency})</strong>", "fieldname": "total_amount_usd", "fieldtype": "Float","precision":2, "width": 120},
+	{"label": f"<strong>Total Amount ({presentation_currency})</strong>", "fieldname": "total_amount_currency", "fieldtype": "Float","precision":2, "width": 120},
 	]
 	
 	return columns
 
 def fetch_data(filters):
-	data = []
-	start_date = getdate(filters.get("from_date"))
-	end_date = getdate(filters.get("to_date"))
-	company=filters.get("company")
-	presentation_currency=filters.get("presentation_currency") or frappe.get_cached_value(
-		"Company", filters.company, "default_currency"
-	)
+    """Main function to fetch data based on filters."""
+    start_date = getdate(filters.get("from_date"))
+    end_date = getdate(filters.get("to_date"))
+    company = filters.get("company")
+    account_filter = filters.get("account")
 
-	# Dictionary to store monthly sums of debit amounts
-	monthly_totals = {}
-	total_debit = 0  # Variable to track the total debit amount
+    account_monthly_totals, total_debits = calculate_totals_by_month(
+        start_date, end_date, company, account_filter
+    )
 
-	# Initialize the current_date to the start_date
-	current_date = start_date
+    # Prepare the final data rows
+    data = prepare_final_data(account_monthly_totals, total_debits)
 
-	while current_date <= end_date:
-		month_start = current_date.replace(day=1)
-		next_month_start = add_months(month_start, 1)
-		# Query to sum the debit amounts for the current month
-		month_name = formatdate(month_start, "MMM yyyy")
-		debit_sum = frappe.db.sql("""
-		SELECT COALESCE(SUM(debit), 0) FROM `tabGL Entry`
-		WHERE company=%s AND posting_date >= %s AND posting_date < %s
-		""", (company, month_start, next_month_start))
+    return data
 
-		# Calculate the sum and handle cases where no data is returned
-		monthly_debit = debit_sum[0][0] if debit_sum and debit_sum[0][0] else 0
-		monthly_totals[month_name] = monthly_debit
 
-		total_debit += monthly_debit
-		current_date = next_month_start
+def calculate_totals_by_month(start_date, end_date, company, account_filter):
+    """Calculates monthly totals for each account."""
+    current_date = start_date
+    account_monthly_totals = {}
+    total_debits = {}
 
-	# Create a single data row with the monthly sums and total
-	row = {}
-	for month, total in monthly_totals.items():
-		key = month.lower().replace(" ", "_") + "_usd"
-		row[key] = total
+    while current_date <= end_date:
+        month_start = current_date.replace(day=1)
+        next_month_start = add_months(month_start, 1)
+        month_name = formatdate(month_start, "MMM yyyy")
 
-	# Add the total column at the end
-	row["total_amount_usd"] = total_debit
+        # Fetch debit sums for the current month
+        debit_sums = fetch_monthly_debits(company, month_start, next_month_start, account_filter)
 
-	data.append(row)
+        # Update totals
+        for entry in debit_sums:
+            account = entry["account"]
+            monthly_debit = entry["monthly_debit"]
 
-	return data
+            if account not in account_monthly_totals:
+                account_monthly_totals[account] = {}
+                total_debits[account] = 0
+
+            account_monthly_totals[account][month_name] = monthly_debit
+            total_debits[account] += monthly_debit
+
+        current_date = next_month_start
+
+    return account_monthly_totals, total_debits
+
+
+def fetch_monthly_debits(company, month_start, next_month_start, account_filter):
+    """Fetches monthly debit sums for the given month and account filter."""
+    # Build query based on the account filter
+    query = """
+        SELECT account, COALESCE(SUM(debit), 0) as monthly_debit
+        FROM `tabGL Entry`
+        WHERE company=%s AND posting_date >= %s AND posting_date < %s
+    """
+    query_params = [company, month_start, next_month_start]
+
+    # Apply account filter if it exists
+    if account_filter:
+        query += " AND account = %s"
+        query_params.append(account_filter)
+
+    query += " GROUP BY account"
+
+    # Execute query and return results
+    return frappe.db.sql(query, query_params, as_dict=True)
+
+
+def prepare_final_data(account_monthly_totals, total_debits):
+    """Prepares the final data to be returned."""
+    data = []
+    for account, monthly_totals in account_monthly_totals.items():
+        row = {"account": account}
+        for month, total in monthly_totals.items():
+            key = month.lower().replace(" ", "_") + "_currency"
+            row[key] = total
+        row["total_amount_currency"] = total_debits[account]
+        data.append(row)
+
+    return data
 
 
 def convert_to_presentation_currency(filters, data):
@@ -104,7 +147,7 @@ def convert_to_presentation_currency(filters, data):
 	to_date = getdate(filters.get("to_date"))
 	for entry in data:
 		for field in entry.keys():
-			if field.endswith("_usd"):				
+			if field.endswith("_currency"):				
 				entry[field] = convert(entry.get(field, 0), presentation_currency, company_currency, to_date)
 
 	return data
