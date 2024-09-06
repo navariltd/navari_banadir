@@ -107,18 +107,22 @@ def fetch_monthly_debits(company, month_start, next_month_start, account_filter)
     """Fetches monthly debit sums for the given month and account filter."""
     # Build query based on the account filter
     query = """
-        SELECT account, COALESCE(SUM(debit), 0) as monthly_debit
-        FROM `tabGL Entry`
-        WHERE company=%s AND posting_date >= %s AND posting_date < %s
+        SELECT gl.account, COALESCE(SUM(gl.debit), 0) AS monthly_debit
+        FROM `tabGL Entry` AS gl
+        JOIN `tabAccount` AS acc ON gl.account = acc.name
+        WHERE gl.company = %s 
+        AND gl.posting_date >= %s 
+        AND gl.posting_date < %s
+        AND acc.root_type = 'Expense'
     """
     query_params = [company, month_start, next_month_start]
 
     # Apply account filter if it exists
     if account_filter:
-        query += " AND account = %s"
+        query += " AND gl.account = %s"
         query_params.append(account_filter)
 
-    query += " GROUP BY account"
+    query += " GROUP BY gl.account"
 
     # Execute query and return results
     return frappe.db.sql(query, query_params, as_dict=True)
