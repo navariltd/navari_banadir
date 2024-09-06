@@ -370,7 +370,7 @@ class StockBalanceReport:
 				"fieldname": "item_code",
 				"fieldtype": "Link",
 				"options": "Item",
-				"width": 100,
+				"width": 300,
 			},
 			{"label": _("Item Name"), "fieldname": "item_name", "width": 150, "hidden": 1},
 			{
@@ -378,7 +378,7 @@ class StockBalanceReport:
 				"fieldname": "item_group",
 				"fieldtype": "Link",
 				"options": "Item Group",
-				"width": 100,
+				"width": 200,
 				"hidden": 1
 			},
 			{
@@ -386,7 +386,7 @@ class StockBalanceReport:
 				"fieldname": "warehouse",
 				"fieldtype": "Link",
 				"options": "Warehouse",
-				"width": 100,
+				"width": 200,
 				"hidden": 1
 			},
 		]
@@ -410,13 +410,13 @@ class StockBalanceReport:
 					"fieldname": "stock_uom",
 					"fieldtype": "Link",
 					"options": "UOM",
-					"width": 90,
+					"width": 100,
 				},
 				{
 					"label": _("Balance Qty"),
 					"fieldname": "bal_qty",
 					"fieldtype": "Float",
-					"width": 100,
+					"width": 150,
 					"convertible": "qty",
 				},
 				{
