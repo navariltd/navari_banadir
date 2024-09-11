@@ -51,6 +51,13 @@ frappe.query_reports["Monthly Expense"] = {
 			options: erpnext.get_presentation_currency_list()
 			
 		},
+		{
+			fieldname:"parent_accounts",
+			label: __("Parent Accounts"),
+			fieldtype: "Check",
+			default: 0,
+			reqd: 0,
+		},
 		
 		{
 			"fieldname":"show_zero_values",
