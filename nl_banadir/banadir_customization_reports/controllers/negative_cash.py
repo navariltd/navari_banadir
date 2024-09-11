@@ -21,3 +21,4 @@ def before_save(doc, method=None):
                     difference_balance = account_balance - account.credit
                     if difference_balance <= 0:
                         frappe.throw(f"Transaction can't be completed for account {account.account}. Check your cash balance.")
+
