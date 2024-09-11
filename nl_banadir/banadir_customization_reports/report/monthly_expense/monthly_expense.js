@@ -1,8 +1,8 @@
 // Copyright (c) 2024, Navari Ltd and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Monthly Expenses"] = {
-	"filters": [
+frappe.query_reports["Monthly Expense"] = {
+"filters": [
 		{
 			"fieldname":"company",
 			"label": __("Company"),
