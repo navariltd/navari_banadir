@@ -85,6 +85,11 @@ frappe.query_reports["Purchase Order Analysis MultiCurrency"] = {
 			default: frappe.datetime.get_today(),
 			
 		},
+		{
+			fieldname: "in_party_currency",
+			label: __("In Party Currency"),
+			fieldtype: "Check",
+		},
 	],
 
 	formatter: function (value, row, column, data, default_formatter) {

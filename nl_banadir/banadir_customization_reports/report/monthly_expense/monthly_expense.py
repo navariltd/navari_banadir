@@ -51,7 +51,7 @@ def get_columns(filters):
 		})
 		current_date += relativedelta(months=1)
 	columns += [
-		{"label": f"<strong>Total Difference ({presentation_currency})</strong>", "fieldname": "total_difference_currency", "fieldtype": "Float", "precision": 2, "width": 120},
+		{"label": f"<strong>Total ({presentation_currency})</strong>", "fieldname": "total_difference_currency", "fieldtype": "Float", "precision": 2, "width": 120},
 	]
 
 	return columns
