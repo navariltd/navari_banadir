@@ -27,7 +27,10 @@ def execute(filters=None):
 		return [], [], None, []
 
 	data, chart_data = prepare_data(data, filters)
-	data=convert_currency_columns(data, filters)
+	if filters.get("in_party_currency")==1:
+		data=convert_to_party_currency(data, filters)
+	else:
+		data=convert_currency_columns(data, filters)
 	return columns, data, None, chart_data
 
 
@@ -67,7 +70,7 @@ def get_data(filters):
 			po_item.item_code,
 			po_item.qty,
 			po_item.received_qty,
-   po.custom_container_qty,
+            po.custom_container_qty,
 			
 			(po_item.qty - po_item.received_qty).as_("pending_qty"),
 			Sum(IfNull(pi_item.qty, 0)).as_("billed_qty"),
@@ -120,15 +123,14 @@ def prepare_data(data, filters):
 		row["qty_to_bill"] = flt(row["qty"]) - flt(row["billed_qty"])
 		#frappe.throw(str(row['base_grand_total']))
 		row["balance"] = flt(row["base_grand_total"]) - flt(row["advance_paid"])
-		#frappe.throw(str(row["balance"]))
-		# row['balance'] = convert_balance_currency(row['balance'], filters)
-		# row['advance_paid'] = convert_balance_currency(row['advance_paid'], filters)
-
+		
 		# Fetch additional fields if they exist
 		row["branch"] = row.get("branch", None)
 		row["order_confirmation_no"] = row.get("order_confirmation_no", None)
 		row["plc_conversion_rate"] = row.get("plc_conversion_rate", 1.0)
 		row["conversion_rate"] = row.get("conversion_rate", 1.0)
+		if filters.get("in_party_currency")==1:
+			row['billing_currency']=billing_currency(data, filters)
 
 		if filters.get("group_by_po"):
 			po_name = row["purchase_order"]
@@ -213,7 +215,16 @@ def get_columns(filters):
 			"width": 130,
 		},
 	]
-
+	if filters.get("in_party_currency")==1:
+		columns.append(
+			{
+				"label": _("Billing Currency"),
+				"fieldname": "billing_currency",
+				"fieldtype": "Data",
+				"width": 100,
+			}
+		)
+  
 	if not filters.get("group_by_po"):
 		columns.append(
 			{
@@ -277,7 +288,7 @@ def get_columns(filters):
 			},
   
 			{
-				"label": _(f"Amount(<strong>{presentation_currency}</strong>)"),
+				"label": _(f"Amount(<strong>{presentation_currency}</strong>)") if not filters.get("in_party_currency") else _("Amount"),
 				"fieldname": "amount",
 				"fieldtype": "Float",
 	"precision":2,
@@ -285,14 +296,14 @@ def get_columns(filters):
 				"convertible": "rate",
 			},
     {
-				"label":f"Advance Paid <strong>{presentation_currency}</strong>",
+				"label":f"Advance Paid (<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else _("Advance Paid"),
 				"fieldname":"advance_paid",
 				"fieldtype":"Float",
 					"precision":2,	
 						"width":100,	
 				},
     {
-				"label": f"Balance Amount(<strong>{presentation_currency}</strong>)",
+				"label": f"Balance Amount(<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else _("Balance Amount"),
 				"fieldname": "balance",
 				"fieldtype": "Float",
 				"precision": 2,
@@ -300,7 +311,7 @@ def get_columns(filters):
 				"convertible": "rate",
 			},
 			{
-				"label": _(f"Billed Amount(<strong>{presentation_currency}</strong>)"),
+				"label": _(f"Billed Amount(<strong>{presentation_currency}</strong>)") if not filters.get("in_party_currency") else _("Billed Amount"),
 				"fieldname": "billed_amount",
 				"fieldtype": "Float",
 	"precision":2,
@@ -310,7 +321,7 @@ def get_columns(filters):
    
 
 			{
-				"label": _(f"Pending Amount(<strong>{presentation_currency}</strong>)"),
+				"label": _(f"Pending Amount(<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else "Pending Amount"),
 				"fieldname": "pending_amount",
 				"fieldtype": "Float",
 	"precision":2,
@@ -319,7 +330,7 @@ def get_columns(filters):
 				"convertible": "rate",
 			},
 			{
-				"label": _(f"Received Qty Amount(<strong>{presentation_currency}</strong>)"),
+				"label": _(f"Received Qty Amount(<strong>{presentation_currency}</strong>)") if not filters.get("in_party_currency") else _("Received Qty Amount"),
 				"fieldname": "received_qty_amount",
 				"fieldtype": "Float",
 				"width": 130,
@@ -397,3 +408,24 @@ def calculate_advance_paid(purchase_order):
 		)
 		advance_paid = sum([amount['base_paid_amount'] for amount in base_paid_amounts])
 		return advance_paid
+
+def convert_to_party_currency(data, filters):
+	# if filters.get("in_party_currency")==1:
+		for entry in data:
+			entry["amount"] =  entry["amount"] / entry["conversion_rate"]
+			entry["received_qty_amount"] = entry["received_qty_amount"] / entry["conversion_rate"]
+			entry["billed_amount"] = entry["billed_amount"] / entry["conversion_rate"]
+			entry["pending_amount"] = entry["pending_amount"] / entry["conversion_rate"]
+			entry["advance_paid"] = entry["advance_paid"] / entry["conversion_rate"]
+			entry["balance"] = entry["balance"] / entry["conversion_rate"]
+		return data
+		
+def billing_currency(data, filters):
+    if filters.get("in_party_currency")==1:
+        
+        for entry in data:
+            supplier_currency = frappe.get_cached_value("Supplier", entry["supplier"], "default_currency")
+            if not supplier_currency:  # This checks for both None and empty string
+                supplier_currency = ""
+    return supplier_currency
+	
