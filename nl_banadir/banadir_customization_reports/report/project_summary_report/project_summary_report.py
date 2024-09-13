@@ -249,13 +249,13 @@ def get_data(filters):
                 'project': project_name,
                 'item_code': item_code,
                 'uom': uom,
-                'purchased_qty': f"{currency_symbol} {purchased_qty:,.2f}",
+                'purchased_qty': f"{purchased_qty:,.2f}",
                 'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}",
                 'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}",
                 'consumed_qty': consumed_qty,
                 'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate is not None else f"{currency_symbol} 0.00",
                 'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}",
-                'balance_qty': f"{currency_symbol} {balance_qty:,.2f}" if balance_qty is not None else f"{currency_symbol} 0.00",
+                'balance_qty': f"{balance_qty:,.2f}" if balance_qty is not None else f"0.00",
                 'currency': currency_symbol
             })
 
@@ -272,13 +272,13 @@ def get_data(filters):
             'project': f"Total for {project_name}",
             'item_code': "",
             'uom': "",
-            'purchased_qty': f"<b> {currency_symbol} {total_purchased_qty:,.2f}</b>",
+            'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
             'purchase_rate': "",
             'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
-            'consumed_qty': f"<b>{currency_symbol} {total_consumed_qty:,.2f}</b>",
+            'consumed_qty': f"<b{total_consumed_qty:,.2f}</b>",
             'stock_rate': "",
             'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
-            'balance_qty': f"<b>{currency_symbol} {balance_qty:,.2f}</b>",
+            'balance_qty': f"<b>{balance_qty:,.2f}</b>",
             'currency': currency_symbol
         })
 
