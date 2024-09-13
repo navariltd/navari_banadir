@@ -391,26 +391,26 @@ def convert_currency_columns(data, filters):
 	
 	return data
 
-
-
 def calculate_advance_paid(purchase_order):
-	advance_paid = 0
-	payment_references = frappe.get_all(
-		"Payment Entry Reference",
-		filters={"reference_doctype": "Purchase Order", "reference_name": purchase_order, "docstatus": 1},
-		fields=["parent"]
-	)
-	if payment_references:
-		base_paid_amounts = frappe.get_all(
-			"Payment Entry",
-			filters={"name": ["in", [pr['parent'] for pr in payment_references]]},
-			fields=["base_paid_amount"]
-		)
-		advance_paid = sum([amount['base_paid_amount'] for amount in base_paid_amounts])
-		return advance_paid
+    advance_paid = 0
+    payment_references = frappe.get_all(
+        "Payment Entry Reference",
+        filters={"reference_doctype": "Purchase Order", "reference_name": purchase_order, "docstatus": 1},
+        fields=["parent"]
+    )
+    
+    if payment_references:
+        base_paid_amounts = frappe.get_all(
+            "Payment Entry",
+            filters={"name": ["in", [pr['parent'] for pr in payment_references]]},
+            fields=["base_paid_amount"]
+        )
+        advance_paid = sum([amount['base_paid_amount'] for amount in base_paid_amounts]) or 0.0  # Ensures advance_paid is 0 if None
+
+    return advance_paid
+
 
 def convert_to_party_currency(data, filters):
-	# if filters.get("in_party_currency")==1:
 		for entry in data:
 			entry["amount"] =  entry["amount"] / entry["conversion_rate"]
 			entry["received_qty_amount"] = entry["received_qty_amount"] / entry["conversion_rate"]
@@ -418,6 +418,7 @@ def convert_to_party_currency(data, filters):
 			entry["pending_amount"] = entry["pending_amount"] / entry["conversion_rate"]
 			entry["advance_paid"] = entry["advance_paid"] / entry["conversion_rate"]
 			entry["balance"] = entry["balance"] / entry["conversion_rate"]
+		
 		return data
 		
 def billing_currency(data, filters):
