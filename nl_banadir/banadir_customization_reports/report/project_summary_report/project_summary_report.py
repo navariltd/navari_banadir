@@ -41,43 +41,43 @@ def get_columns(filters):
         {
             "label": "Purchased Qty", 
             "fieldname": "purchased_qty", 
-            "fieldtype": "Float", 
+            "fieldtype": "HTML", 
             "width": 100
         },
         {
             "label": "Consumed Qty", 
             "fieldname": "consumed_qty", 
-            "fieldtype": "Float", 
+            "fieldtype": "HTML", 
             "width": 100
         },
         {
             "label": "Balance", 
             "fieldname": "balance_qty", 
-            "fieldtype": "Float", 
+            "fieldtype": "HTML", 
             "width": 100
         },
         {
             "label": "Purchase Rate", 
             "fieldname": "purchase_rate", 
-            "fieldtype": "Float", 
+            "fieldtype": "HTML", 
             "width": 100
         },
         {
             "label": "Purchased Amount", 
             "fieldname": "purchased_amount", 
-            "fieldtype": "Float", 
+            "fieldtype": "HTML", 
             "width": 150
         },
         {
             "label": "Stock Rate", 
             "fieldname": "stock_rate",
-            "fieldtype": "Float", 
+            "fieldtype": "HTML", 
             "width": 100
         },
         {
             "label": "Consumed Amount", 
             "fieldname": "consumed_amount", 
-            "fieldtype": "Float", 
+            "fieldtype": "HTML", 
             "width": 150
         }
     ]
@@ -114,19 +114,19 @@ def get_columns(filters):
             {
                 "label": "Purchased Qty", 
                 "fieldname": "purchased_qty", 
-                "fieldtype": "Float", 
+                "fieldtype": "HTML", 
                 "width": 100
             },
             {
                 "label": "Purchase Rate", 
                 "fieldname": "purchase_rate", 
-                "fieldtype": "Currency", 
+                "fieldtype": "HTML", 
                 "width": 100
             },
             {
                 "label": "Purchased Amount", 
                 "fieldname": "purchased_amount", 
-                "fieldtype": "Currency", 
+                "fieldtype": "HTML", 
                 "width": 150
             }
         ]
@@ -249,13 +249,13 @@ def get_data(filters):
                 'project': project_name,
                 'item_code': item_code,
                 'uom': uom,
-                'purchased_qty': purchased_qty,
-                'purchase_rate': f"{currency_symbol} {purchase_rate:.2f}",
-                'purchased_amount': f"{currency_symbol} {purchased_amount:.2f}",
+                'purchased_qty': f"{currency_symbol} {purchased_qty:,.2f}",
+                'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}",
+                'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}",
                 'consumed_qty': consumed_qty,
-                'stock_rate': f"{currency_symbol} {stock_rate:.2f}" if stock_rate is not None else f"{currency_symbol} 0.00",
-                'consumed_amount': f"{currency_symbol} {consumed_amount:.2f}",
-                'balance_qty': balance_qty,
+                'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate is not None else f"{currency_symbol} 0.00",
+                'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}",
+                'balance_qty': f"{currency_symbol} {balance_qty:,.2f}" if balance_qty is not None else f"{currency_symbol} 0.00",
                 'currency': currency_symbol
             })
 
@@ -265,19 +265,21 @@ def get_data(filters):
             total_purchased_amount += purchased_amount
             total_consumed_amount += consumed_amount
 
+            balance_qty = total_purchased_qty - total_consumed_qty
+
         # Add a summary row for the project
         data.append({
             'project': f"Total for {project_name}",
             'item_code': "",
             'uom': "",
-            'purchased_qty': total_purchased_qty,
+            'purchased_qty': f"<b> {currency_symbol} {total_purchased_qty:,.2f}</b>",
             'purchase_rate': "",
-            'purchased_amount': total_purchased_amount,
-            'consumed_qty': total_consumed_qty,
+            'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
+            'consumed_qty': f"<b>{currency_symbol} {total_consumed_qty:,.2f}</b>",
             'stock_rate': "",
-            'consumed_amount': total_consumed_amount,
-            'balance_qty': total_purchased_qty - total_consumed_qty,
-            'currency': ""
+            'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
+            'balance_qty': f"<b>{currency_symbol} {balance_qty:,.2f}</b>",
+            'currency': currency_symbol
         })
 
     return data
