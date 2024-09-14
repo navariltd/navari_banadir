@@ -20,6 +20,19 @@ def get_columns(filters):
             "width": 200
         },
         {
+            "label": _("Task Name"),
+            "fieldname": "subject",
+            "fieldtype": "Link",
+            "options": "Task",
+            "width": 200
+        },
+        {
+            "label": _("Task Status"),
+            "fieldname": "task_status",
+            "fieldtype": "Data",
+            "width": 100
+        },
+        {
             "label": "Item Code", 
             "fieldname": "item_code", 
             "fieldtype": "Data", 
@@ -201,6 +214,17 @@ def get_stock_entry_details(project_name, company_filter=None):
     return stock_entry_details
 
 
+def get_tasks(project_name):
+
+    tasks = frappe.get_all(
+        "Task",
+        filters={"project": project_name},
+        fields=["subject", "status"],
+        order_by="subject asc"
+    )
+
+    return tasks
+
 def get_data(filters):
     data = []
 
@@ -219,6 +243,7 @@ def get_data(filters):
         # Initialize data containers
         purchase_data = {}
         stock_data = {}
+        tasks = get_tasks(project_name)
 
         # Fetch Purchase Invoice Items linked to the Project and Company
         purchase_invoice_items = get_purchase_invoice_items(project_name, company_filter)
@@ -263,8 +288,21 @@ def get_data(filters):
         # Combine Data
         item_codes = set(purchase_data.keys()).union(stock_data.keys())
 
-        if item_codes:
-            for item_code in item_codes:
+        # Determine the maximum length to iterate
+        max_length = max(len(item_codes), len(tasks))
+        item_code_list = list(item_codes)
+        
+        for i in range(max_length):
+            # Handle task data
+            if i < len(tasks):
+                subject = tasks[i].get("subject")
+                task_status = tasks[i].get("status")
+            else:
+                subject, task_status = "", ""
+
+            # Handle item data
+            if i < len(item_code_list):
+                item_code = item_code_list[i]
                 purchased_qty = purchase_data.get(item_code, {}).get('purchased_qty', 0)
                 purchase_rate = purchase_data.get(item_code, {}).get('rate', 0)
                 purchased_amount = purchase_data.get(item_code, {}).get('purchased_amount', 0)
@@ -276,59 +314,63 @@ def get_data(filters):
                 consumed_amount = stock_data.get(item_code, {}).get('consumed_amount', 0)
 
                 balance_qty = purchased_qty - consumed_qty
+            else:
+                # Empty item columns if there are more tasks than items
+                item_code = ""
+                purchased_qty = ""
+                purchase_rate = ""
+                purchased_amount = ""
+                uom = ""
+                currency_symbol = ""
+                consumed_qty = ""
+                stock_rate = ""
+                consumed_amount = ""
+                balance_qty = ""
 
-                # Add data row for this item
-                data.append({
-                    'project': project_name,
-                    'item_code': item_code,
-                    'uom': uom,
-                    'purchased_qty': f"{purchased_qty:,.2f}",
-                    'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}",
-                    'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}",
-                    'consumed_qty': consumed_qty,
-                    'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate is not None else f"{currency_symbol} 0.00",
-                    'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}",
-                    'balance_qty': f"{balance_qty:,.2f}" if balance_qty is not None else f"0.00",
-                    'currency': currency_symbol
-                })
-
-                # Accumulate totals for the project
-                total_purchased_qty += purchased_qty
-                total_consumed_qty += consumed_qty
-                total_purchased_amount += purchased_amount
-                total_consumed_amount += consumed_amount
-
-            # Add a summary row for the project
-            balance_qty = total_purchased_qty - total_consumed_qty
-            data.append({
-                'project': f"Total for {project_name}",
-                'item_code': "",
-                'uom': "",
-                'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
-                'purchase_rate': "",
-                'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
-                'consumed_qty': f"<b>{total_consumed_qty:,.2f}</b>",
-                'stock_rate': "",
-                'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
-                'balance_qty': f"<b>{balance_qty:,.2f}</b>",
-                'currency': currency_symbol
-            })
-        else:
-            # Add an empty row for the project if no purchase or stock data is found
+            # Add data row with both task and item data
             data.append({
                 'project': project_name,
-                'item_code': "",
-                'uom': "",
-                'purchased_qty': "",
-                'purchase_rate': "",
-                'purchased_amount': "",
-                'consumed_qty': "",
-                'stock_rate': "",
-                'consumed_amount': "",
-                'balance_qty': "",
-                'currency': ""
+                'item_code': item_code,
+                'uom': uom,
+                'purchased_qty': f"{purchased_qty:,.2f}" if purchased_qty else "",
+                'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}" if purchase_rate else "",
+                'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}" if purchased_amount else "",
+                'consumed_qty': f"{consumed_qty:,.2f}" if consumed_qty else "",
+                'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate else "",
+                'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}" if consumed_amount else "",
+                'balance_qty': f"{balance_qty:,.2f}" if balance_qty else "",
+                'subject': subject,
+                'task_status': task_status,
+                'currency': currency_symbol
             })
 
+            # Accumulate totals for the project
+            if purchased_qty:
+                total_purchased_qty += purchased_qty
+            if consumed_qty:
+                total_consumed_qty += consumed_qty
+            if purchased_amount:
+                total_purchased_amount += purchased_amount
+            if consumed_amount:
+                total_consumed_amount += consumed_amount
+
+        # Add a summary row for the project
+        balance_qty = total_purchased_qty - total_consumed_qty
+        data.append({
+            'project': f"Total for {project_name}",
+            'item_code': "",
+            'uom': "",
+            'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
+            'purchase_rate': "",
+            'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
+            'consumed_qty': f"<b>{total_consumed_qty:,.2f}</b>",
+            'stock_rate': "",
+            'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
+            'balance_qty': f"<b>{balance_qty:,.2f}</b>",
+            'subject': "",
+            'task_status': "",
+            'currency': currency_symbol
+        })
 
     return data
 
