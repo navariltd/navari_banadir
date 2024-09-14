@@ -15,7 +15,7 @@ def get_columns(filters):
         {
             "label": _("Project"), 
             "fieldname": "project", 
-            "fieldtype": "Link", 
+            "fieldtype": "HTML", 
             "options": "Project", 
             "width": 200
         },
@@ -101,9 +101,22 @@ def get_columns(filters):
             {
                 "label": _("Project"), 
                 "fieldname": "project", 
-                "fieldtype": "Link", 
+                "fieldtype": "HRML", 
                 "options": "Project", 
                 "width": 200
+            },
+            {
+                "label": _("Task Name"),
+                "fieldname": "subject",
+                "fieldtype": "Link",
+                "options": "Task",
+                "width": 200
+            },
+            {
+                "label": _("Task Status"),
+                "fieldname": "task_status",
+                "fieldtype": "HTML",
+                "width": 100
             },
             {
                 "label": "Item Code", 
@@ -329,7 +342,7 @@ def get_data(filters):
 
             # Add data row with both task and item data
             data.append({
-                'project': project_name,
+                'project': f"<a href='/app/project/{project_name}'>{project_name}</a>",
                 'item_code': item_code,
                 'uom': uom,
                 'purchased_qty': f"{purchased_qty:,.2f}" if purchased_qty else "",
@@ -357,7 +370,7 @@ def get_data(filters):
         # Add a summary row for the project
         balance_qty = total_purchased_qty - total_consumed_qty
         data.append({
-            'project': f"Total for {project_name}",
+            'project': f"<b><a href='/app/project/{project_name}'>Total for {project_name}</a></b>",
             'item_code': "",
             'uom': "",
             'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
