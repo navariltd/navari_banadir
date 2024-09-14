@@ -261,56 +261,74 @@ def get_data(filters):
         total_consumed_amount = 0
 
         # Combine Data
-        for item_code in set(purchase_data.keys()).union(stock_data.keys()):
-            purchased_qty = purchase_data.get(item_code, {}).get('purchased_qty', 0)
-            purchase_rate = purchase_data.get(item_code, {}).get('rate', 0)
-            purchased_amount = purchase_data.get(item_code, {}).get('purchased_amount', 0)
-            uom = purchase_data.get(item_code, {}).get('uom', stock_data.get(item_code, {}).get('uom', ''))
-            currency_symbol = purchase_data.get(item_code, {}).get('currency_symbol', '')
+        item_codes = set(purchase_data.keys()).union(stock_data.keys())
 
-            consumed_qty = stock_data.get(item_code, {}).get('consumed_qty', 0)
-            stock_rate = stock_data.get(item_code, {}).get('stock_rate', 0)
-            consumed_amount = stock_data.get(item_code, {}).get('consumed_amount', 0)
+        if item_codes:
+            for item_code in item_codes:
+                purchased_qty = purchase_data.get(item_code, {}).get('purchased_qty', 0)
+                purchase_rate = purchase_data.get(item_code, {}).get('rate', 0)
+                purchased_amount = purchase_data.get(item_code, {}).get('purchased_amount', 0)
+                uom = purchase_data.get(item_code, {}).get('uom', stock_data.get(item_code, {}).get('uom', ''))
+                currency_symbol = purchase_data.get(item_code, {}).get('currency_symbol', '')
 
-            balance_qty = purchased_qty - consumed_qty
-            
-            # Add data row for this item
+                consumed_qty = stock_data.get(item_code, {}).get('consumed_qty', 0)
+                stock_rate = stock_data.get(item_code, {}).get('stock_rate', 0)
+                consumed_amount = stock_data.get(item_code, {}).get('consumed_amount', 0)
+
+                balance_qty = purchased_qty - consumed_qty
+
+                # Add data row for this item
+                data.append({
+                    'project': project_name,
+                    'item_code': item_code,
+                    'uom': uom,
+                    'purchased_qty': f"{purchased_qty:,.2f}",
+                    'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}",
+                    'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}",
+                    'consumed_qty': consumed_qty,
+                    'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate is not None else f"{currency_symbol} 0.00",
+                    'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}",
+                    'balance_qty': f"{balance_qty:,.2f}" if balance_qty is not None else f"0.00",
+                    'currency': currency_symbol
+                })
+
+                # Accumulate totals for the project
+                total_purchased_qty += purchased_qty
+                total_consumed_qty += consumed_qty
+                total_purchased_amount += purchased_amount
+                total_consumed_amount += consumed_amount
+
+            # Add a summary row for the project
+            balance_qty = total_purchased_qty - total_consumed_qty
             data.append({
-                'project': project_name,
-                'item_code': item_code,
-                'uom': uom,
-                'purchased_qty': f"{purchased_qty:,.2f}",
-                'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}",
-                'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}",
-                'consumed_qty': consumed_qty,
-                'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate is not None else f"{currency_symbol} 0.00",
-                'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}",
-                'balance_qty': f"{balance_qty:,.2f}" if balance_qty is not None else f"0.00",
+                'project': f"Total for {project_name}",
+                'item_code': "",
+                'uom': "",
+                'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
+                'purchase_rate': "",
+                'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
+                'consumed_qty': f"<b>{total_consumed_qty:,.2f}</b>",
+                'stock_rate': "",
+                'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
+                'balance_qty': f"<b>{balance_qty:,.2f}</b>",
                 'currency': currency_symbol
             })
+        else:
+            # Add an empty row for the project if no purchase or stock data is found
+            data.append({
+                'project': project_name,
+                'item_code': "",
+                'uom': "",
+                'purchased_qty': "",
+                'purchase_rate': "",
+                'purchased_amount': "",
+                'consumed_qty': "",
+                'stock_rate': "",
+                'consumed_amount': "",
+                'balance_qty': "",
+                'currency': ""
+            })
 
-            # Accumulate totals for the project
-            total_purchased_qty += purchased_qty
-            total_consumed_qty += consumed_qty
-            total_purchased_amount += purchased_amount
-            total_consumed_amount += consumed_amount
-
-            balance_qty = total_purchased_qty - total_consumed_qty
-
-        # Add a summary row for the project
-        data.append({
-            'project': f"Total for {project_name}",
-            'item_code': "",
-            'uom': "",
-            'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
-            'purchase_rate': "",
-            'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
-            'consumed_qty': f"<b>{total_consumed_qty:,.2f}</b>",
-            'stock_rate': "",
-            'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
-            'balance_qty': f"<b>{balance_qty:,.2f}</b>",
-            'currency': currency_symbol
-        })
 
     return data
 
