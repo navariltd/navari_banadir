@@ -21,16 +21,10 @@ def get_columns(filters):
         },
         {
             "label": _("Task Name"),
-            "fieldname": "subject",
+            "fieldname": "name",
             "fieldtype": "Link",
             "options": "Task",
             "width": 200
-        },
-        {
-            "label": _("Task Status"),
-            "fieldname": "task_status",
-            "fieldtype": "Data",
-            "width": 100
         },
         {
             "label": "Item Code", 
@@ -107,16 +101,10 @@ def get_columns(filters):
             },
             {
                 "label": _("Task Name"),
-                "fieldname": "subject",
+                "fieldname": "name",
                 "fieldtype": "Link",
                 "options": "Task",
                 "width": 200
-            },
-            {
-                "label": _("Task Status"),
-                "fieldname": "task_status",
-                "fieldtype": "HTML",
-                "width": 100
             },
             {
                 "label": "Item Code", 
@@ -158,6 +146,29 @@ def get_columns(filters):
             }
         ]
     
+    if filters.get("task_status"):
+        columns = [
+            {
+                "label": _("Project"), 
+                "fieldname": "project", 
+                "fieldtype": "HTML", 
+                "options": "Project", 
+                "width": 200
+            },
+            {
+                "label": _("Task Name"),
+                "fieldname": "name",
+                "fieldtype": "Link",
+                "options": "Task",
+                "width": 200
+            },
+            {
+                "label": _("Task Status"),
+                "fieldname": "task_status",
+                "fieldtype": "HTML",
+                "width": 130
+            }
+        ]
     return columns
 
 def get_purchase_invoice_items(project_name, company_filter=None):
@@ -232,11 +243,27 @@ def get_tasks(project_name):
     tasks = frappe.get_all(
         "Task",
         filters={"project": project_name},
-        fields=["subject", "status"],
-        order_by="subject asc"
+        fields=["name", "subject", "status"],
+        order_by="name asc"
     )
 
     return tasks
+
+def format_task_status(status):
+    if status == "Open":
+        return f"<span class='label' style='background-color: #d9edf7; color: #31708f; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "Awaiting Approval":
+        return f"<span class='label' style='background-color: #f2dede; color: #a94442; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "Pending":
+        return f"<span class='label' style='background-color: #f2dede; color: #a94442; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "Completed":
+        return f"<span class='label' style='background-color: #dff0d8; color: #3c763d; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "On Hold":
+        return f"<span class='label' style='background-color: #f5deb3; color: #8b4513; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "On Process":
+        return f"<span class='label' style='background-color: #fcf8e3; color: #f0ad4e; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    else:
+        return f"<span class='label label-warning'>{status}</span>"
 
 def get_data(filters):
     data = []
@@ -308,10 +335,10 @@ def get_data(filters):
         for i in range(max_length):
             # Handle task data
             if i < len(tasks):
-                subject = tasks[i].get("subject")
+                name = tasks[i].get("name")
                 task_status = tasks[i].get("status")
             else:
-                subject, task_status = "", ""
+                name, task_status = "", ""
 
             # Handle item data
             if i < len(item_code_list):
@@ -352,8 +379,8 @@ def get_data(filters):
                 'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate else "",
                 'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}" if consumed_amount else "",
                 'balance_qty': f"{balance_qty:,.2f}" if balance_qty else "",
-                'subject': subject,
-                'task_status': task_status,
+                'name': name,
+                'task_status': f"{format_task_status(task_status)}" if task_status else "",
                 'currency': currency_symbol
             })
 
@@ -380,7 +407,7 @@ def get_data(filters):
             'stock_rate': "",
             'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
             'balance_qty': f"<b>{balance_qty:,.2f}</b>",
-            'subject': "",
+            'name': "",
             'task_status': "",
             'currency': currency_symbol
         })
