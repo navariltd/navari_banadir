@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.query_builder import DocType
 
 def execute(filters=None):
     if not filters:
@@ -133,6 +134,73 @@ def get_columns(filters):
     
     return columns
 
+def get_purchase_invoice_items(project_name, company_filter=None):
+
+    PurchaseInvoice = DocType("Purchase Invoice")
+    PurchaseInvoiceItem = DocType("Purchase Invoice Item")
+    
+    # Build the query
+    query = (
+        frappe.qb.from_(PurchaseInvoiceItem)
+        .inner_join(PurchaseInvoice)
+        .on(PurchaseInvoiceItem.parent == PurchaseInvoice.name)
+        .select(
+            PurchaseInvoiceItem.item_code,
+            PurchaseInvoiceItem.uom,
+            PurchaseInvoiceItem.qty,
+            PurchaseInvoiceItem.rate,
+            PurchaseInvoiceItem.amount,
+            PurchaseInvoice.currency,
+        )
+        .where(
+            (PurchaseInvoice.project == project_name) &
+            (PurchaseInvoice.docstatus == 1)
+        )
+    )
+    
+    # Add company filter conditionally
+    if company_filter:
+        query = query.where(PurchaseInvoice.company == company_filter)
+
+    # Execute the query and return as a list of dictionaries
+    purchase_invoice_items = query.run(as_dict=True)
+    
+    return purchase_invoice_items
+
+
+def get_stock_entry_details(project_name, company_filter=None):
+    StockEntry = DocType("Stock Entry")
+    StockEntryDetail = DocType("Stock Entry Detail")
+
+    # Build the query
+    query = (
+        frappe.qb.from_(StockEntryDetail)
+        .inner_join(StockEntry)
+        .on(StockEntryDetail.parent == StockEntry.name)
+        .select(
+            StockEntryDetail.item_code,
+            StockEntryDetail.uom,
+            StockEntryDetail.qty,
+            StockEntryDetail.basic_rate.as_("rate"),
+            StockEntryDetail.amount,
+        )
+        .where(
+            (StockEntry.project == project_name) &
+            (StockEntry.docstatus == 1) &
+            (StockEntry.stock_entry_type == 'Material Transfer')
+        )
+    )
+    
+    # Add company filter conditionally
+    if company_filter:
+        query = query.where(StockEntry.company == company_filter)
+
+    # Execute the query and return as a list of dictionaries
+    stock_entry_details = query.run(as_dict=True)
+    
+    return stock_entry_details
+
+
 def get_data(filters):
     data = []
 
@@ -153,26 +221,7 @@ def get_data(filters):
         stock_data = {}
 
         # Fetch Purchase Invoice Items linked to the Project and Company
-        purchase_invoice_items = frappe.db.sql("""
-            SELECT 
-                `pi_item`.`item_code`, 
-                `pi_item`.`uom`, 
-                `pi_item`.`qty`, 
-                `pi_item`.`rate`, 
-                `pi_item`.`amount`, 
-                `pi`.`currency`
-            FROM 
-                `tabPurchase Invoice Item` `pi_item`
-            INNER JOIN 
-                `tabPurchase Invoice` `pi`
-            ON 
-                `pi_item`.`parent` = `pi`.`name`
-            WHERE 
-                `pi`.`project` = %s AND `pi`.`docstatus` = 1
-                {company_condition}
-        """.format(company_condition="AND `pi`.`company` = %s" if company_filter else ""), 
-        (project_name, company_filter) if company_filter else (project_name,), 
-        as_dict=True)
+        purchase_invoice_items = get_purchase_invoice_items(project_name, company_filter)
 
         for pi in purchase_invoice_items:
             item_code = pi.item_code
@@ -190,33 +239,14 @@ def get_data(filters):
             purchase_data[item_code]['purchased_amount'] += pi.amount
 
         # Fetch Stock Entries of type Material Transfer linked to the Project and Company
-        stock_entry_details = frappe.db.sql("""
-            SELECT 
-                `se_detail`.`item_code`, 
-                `se_detail`.`uom`, 
-                `se_detail`.`qty`, 
-                `se_detail`.`basic_rate` AS rate, 
-                `se_detail`.`amount`
-            FROM 
-                `tabStock Entry Detail` `se_detail`
-            INNER JOIN 
-                `tabStock Entry` `se`
-            ON 
-                `se_detail`.`parent` = `se`.`name`
-            WHERE 
-                `se`.`project` = %s AND `se`.`docstatus` = 1 
-                AND `se`.`stock_entry_type` = 'Material Transfer'
-                {company_condition}
-        """.format(company_condition="AND `se`.`company` = %s" if company_filter else ""), 
-        (project_name, company_filter) if company_filter else (project_name,), 
-        as_dict=True)
+        stock_entry_details = get_stock_entry_details(project_name, company_filter)
 
         for se in stock_entry_details:
             item_code = se.item_code
             if item_code not in stock_data:
                  stock_data[item_code] = {
                     'consumed_qty': 0, 
-                    'stock_rate': se.basic_rate, 
+                    'stock_rate': se.rate, 
                     'consumed_amount': 0, 
                     'uom': se.uom
                  }
@@ -275,7 +305,7 @@ def get_data(filters):
             'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
             'purchase_rate': "",
             'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
-            'consumed_qty': f"<b{total_consumed_qty:,.2f}</b>",
+            'consumed_qty': f"<b>{total_consumed_qty:,.2f}</b>",
             'stock_rate': "",
             'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
             'balance_qty': f"<b>{balance_qty:,.2f}</b>",
