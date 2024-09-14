@@ -16,8 +16,20 @@ frappe.query_reports["Project Summary Report"] = {
             "options": "Company",
         },
         {
+            "fieldname": "task",
+            "label": __("Task"),
+            "fieldtype": "Link",
+            "options": "Task",
+        },
+        {
             "fieldname": "purchased_only",
             "label": __("Purchased Only"),
+            "fieldtype": "Check",
+            "default": 0
+        },
+        {
+            "fieldname": "task_status",
+            "label": __("Task Status"),
             "fieldtype": "Check",
             "default": 0
         }

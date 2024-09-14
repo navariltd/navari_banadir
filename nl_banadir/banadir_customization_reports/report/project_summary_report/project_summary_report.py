@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.query_builder import DocType
 
 def execute(filters=None):
     if not filters:
@@ -14,8 +15,15 @@ def get_columns(filters):
         {
             "label": _("Project"), 
             "fieldname": "project", 
-            "fieldtype": "Link", 
+            "fieldtype": "HTML", 
             "options": "Project", 
+            "width": 200
+        },
+        {
+            "label": _("Task Name"),
+            "fieldname": "name",
+            "fieldtype": "Link",
+            "options": "Task",
             "width": 200
         },
         {
@@ -87,8 +95,15 @@ def get_columns(filters):
             {
                 "label": _("Project"), 
                 "fieldname": "project", 
-                "fieldtype": "Link", 
+                "fieldtype": "HRML", 
                 "options": "Project", 
+                "width": 200
+            },
+            {
+                "label": _("Task Name"),
+                "fieldname": "name",
+                "fieldtype": "Link",
+                "options": "Task",
                 "width": 200
             },
             {
@@ -131,16 +146,139 @@ def get_columns(filters):
             }
         ]
     
+    if filters.get("task_status"):
+        columns = [
+            {
+                "label": _("Project"), 
+                "fieldname": "project", 
+                "fieldtype": "HTML", 
+                "options": "Project", 
+                "width": 200
+            },
+            {
+                "label": _("Task Name"),
+                "fieldname": "name",
+                "fieldtype": "Link",
+                "options": "Task",
+                "width": 200
+            },
+            {
+                "label": _("Task Status"),
+                "fieldname": "task_status",
+                "fieldtype": "HTML",
+                "width": 130
+            }
+        ]
     return columns
+
+def get_purchase_invoice_items(project_name, company_filter=None):
+
+    PurchaseInvoice = DocType("Purchase Invoice")
+    PurchaseInvoiceItem = DocType("Purchase Invoice Item")
+    
+    # Build the query
+    query = (
+        frappe.qb.from_(PurchaseInvoiceItem)
+        .inner_join(PurchaseInvoice)
+        .on(PurchaseInvoiceItem.parent == PurchaseInvoice.name)
+        .select(
+            PurchaseInvoiceItem.item_code,
+            PurchaseInvoiceItem.uom,
+            PurchaseInvoiceItem.qty,
+            PurchaseInvoiceItem.rate,
+            PurchaseInvoiceItem.amount,
+            PurchaseInvoice.currency,
+        )
+        .where(
+            (PurchaseInvoice.project == project_name) &
+            (PurchaseInvoice.docstatus == 1)
+        )
+    )
+    
+    # Add company filter conditionally
+    if company_filter:
+        query = query.where(PurchaseInvoice.company == company_filter)
+
+    # Execute the query and return as a list of dictionaries
+    purchase_invoice_items = query.run(as_dict=True)
+    
+    return purchase_invoice_items
+
+
+def get_stock_entry_details(project_name, company_filter=None):
+    StockEntry = DocType("Stock Entry")
+    StockEntryDetail = DocType("Stock Entry Detail")
+
+    # Build the query
+    query = (
+        frappe.qb.from_(StockEntryDetail)
+        .inner_join(StockEntry)
+        .on(StockEntryDetail.parent == StockEntry.name)
+        .select(
+            StockEntryDetail.item_code,
+            StockEntryDetail.uom,
+            StockEntryDetail.qty,
+            StockEntryDetail.basic_rate.as_("rate"),
+            StockEntryDetail.amount,
+        )
+        .where(
+            (StockEntry.project == project_name) &
+            (StockEntry.docstatus == 1) &
+            (StockEntry.stock_entry_type == 'Material Transfer')
+        )
+    )
+    
+    # Add company filter conditionally
+    if company_filter:
+        query = query.where(StockEntry.company == company_filter)
+
+    # Execute the query and return as a list of dictionaries
+    stock_entry_details = query.run(as_dict=True)
+    
+    return stock_entry_details
+
+
+def get_tasks(project_name):
+
+    tasks = frappe.get_all(
+        "Task",
+        filters={"project": project_name},
+        fields=["name", "subject", "status"],
+        order_by="name asc"
+    )
+
+    return tasks
+
+def format_task_status(status):
+    if status == "Open":
+        return f"<span class='label' style='background-color: #d9edf7; color: #31708f; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "Awaiting Approval":
+        return f"<span class='label' style='background-color: #f2dede; color: #a94442; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "Pending":
+        return f"<span class='label' style='background-color: #f2dede; color: #a94442; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "Completed":
+        return f"<span class='label' style='background-color: #dff0d8; color: #3c763d; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "On Hold":
+        return f"<span class='label' style='background-color: #f5deb3; color: #8b4513; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    elif status == "On Process":
+        return f"<span class='label' style='background-color: #fcf8e3; color: #f0ad4e; padding: 3px 12px; border-radius: 30px;'>{status}</span>"
+    else:
+        return f"<span class='label label-warning'>{status}</span>"
 
 def get_data(filters):
     data = []
 
     project_filter = filters.get("project")
     company_filter = filters.get("company")
+    task_filter = filters.get("task")
+
+    if task_filter:
+        # Fetch the project associated with the selected task
+        task_doc = frappe.get_doc("Task", task_filter)
+        project_filter = task_doc.project if task_doc.project else None
 
     if not project_filter:
-        # Fetch all Projects
+        # Fetch all Projects if no project filter
         projects = frappe.get_all("Project", fields=["name"])
     else:
         projects = frappe.get_all("Project", filters={"name": project_filter}, fields=["name"])
@@ -151,28 +289,10 @@ def get_data(filters):
         # Initialize data containers
         purchase_data = {}
         stock_data = {}
+        tasks = get_tasks(project_name)
 
         # Fetch Purchase Invoice Items linked to the Project and Company
-        purchase_invoice_items = frappe.db.sql("""
-            SELECT 
-                `pi_item`.`item_code`, 
-                `pi_item`.`uom`, 
-                `pi_item`.`qty`, 
-                `pi_item`.`rate`, 
-                `pi_item`.`amount`, 
-                `pi`.`currency`
-            FROM 
-                `tabPurchase Invoice Item` `pi_item`
-            INNER JOIN 
-                `tabPurchase Invoice` `pi`
-            ON 
-                `pi_item`.`parent` = `pi`.`name`
-            WHERE 
-                `pi`.`project` = %s AND `pi`.`docstatus` = 1
-                {company_condition}
-        """.format(company_condition="AND `pi`.`company` = %s" if company_filter else ""), 
-        (project_name, company_filter) if company_filter else (project_name,), 
-        as_dict=True)
+        purchase_invoice_items = get_purchase_invoice_items(project_name, company_filter)
 
         for pi in purchase_invoice_items:
             item_code = pi.item_code
@@ -190,33 +310,14 @@ def get_data(filters):
             purchase_data[item_code]['purchased_amount'] += pi.amount
 
         # Fetch Stock Entries of type Material Transfer linked to the Project and Company
-        stock_entry_details = frappe.db.sql("""
-            SELECT 
-                `se_detail`.`item_code`, 
-                `se_detail`.`uom`, 
-                `se_detail`.`qty`, 
-                `se_detail`.`basic_rate` AS rate, 
-                `se_detail`.`amount`
-            FROM 
-                `tabStock Entry Detail` `se_detail`
-            INNER JOIN 
-                `tabStock Entry` `se`
-            ON 
-                `se_detail`.`parent` = `se`.`name`
-            WHERE 
-                `se`.`project` = %s AND `se`.`docstatus` = 1 
-                AND `se`.`stock_entry_type` = 'Material Transfer'
-                {company_condition}
-        """.format(company_condition="AND `se`.`company` = %s" if company_filter else ""), 
-        (project_name, company_filter) if company_filter else (project_name,), 
-        as_dict=True)
+        stock_entry_details = get_stock_entry_details(project_name, company_filter)
 
         for se in stock_entry_details:
             item_code = se.item_code
             if item_code not in stock_data:
                  stock_data[item_code] = {
                     'consumed_qty': 0, 
-                    'stock_rate': se.basic_rate, 
+                    'stock_rate': se.rate, 
                     'consumed_amount': 0, 
                     'uom': se.uom
                  }
@@ -231,54 +332,89 @@ def get_data(filters):
         total_consumed_amount = 0
 
         # Combine Data
-        for item_code in set(purchase_data.keys()).union(stock_data.keys()):
-            purchased_qty = purchase_data.get(item_code, {}).get('purchased_qty', 0)
-            purchase_rate = purchase_data.get(item_code, {}).get('rate', 0)
-            purchased_amount = purchase_data.get(item_code, {}).get('purchased_amount', 0)
-            uom = purchase_data.get(item_code, {}).get('uom', stock_data.get(item_code, {}).get('uom', ''))
-            currency_symbol = purchase_data.get(item_code, {}).get('currency_symbol', '')
+        item_codes = set(purchase_data.keys()).union(stock_data.keys())
 
-            consumed_qty = stock_data.get(item_code, {}).get('consumed_qty', 0)
-            stock_rate = stock_data.get(item_code, {}).get('stock_rate', 0)
-            consumed_amount = stock_data.get(item_code, {}).get('consumed_amount', 0)
+        # Determine the maximum length to iterate
+        max_length = max(len(item_codes), len(tasks))
+        item_code_list = list(item_codes)
+        
+        for i in range(max_length):
+            # Handle task data
+            if i < len(tasks):
+                name = tasks[i].get("name")
+                task_status = tasks[i].get("status")
+            else:
+                name, task_status = "", ""
 
-            balance_qty = purchased_qty - consumed_qty
-            
-            # Add data row for this item
+            # Handle item data
+            if i < len(item_code_list):
+                item_code = item_code_list[i]
+                purchased_qty = purchase_data.get(item_code, {}).get('purchased_qty', 0)
+                purchase_rate = purchase_data.get(item_code, {}).get('rate', 0)
+                purchased_amount = purchase_data.get(item_code, {}).get('purchased_amount', 0)
+                uom = purchase_data.get(item_code, {}).get('uom', stock_data.get(item_code, {}).get('uom', ''))
+                currency_symbol = purchase_data.get(item_code, {}).get('currency_symbol', '')
+
+                consumed_qty = stock_data.get(item_code, {}).get('consumed_qty', 0)
+                stock_rate = stock_data.get(item_code, {}).get('stock_rate', 0)
+                consumed_amount = stock_data.get(item_code, {}).get('consumed_amount', 0)
+
+                balance_qty = purchased_qty - consumed_qty
+            else:
+                # Empty item columns if there are more tasks than items
+                item_code = ""
+                purchased_qty = ""
+                purchase_rate = ""
+                purchased_amount = ""
+                uom = ""
+                currency_symbol = ""
+                consumed_qty = ""
+                stock_rate = ""
+                consumed_amount = ""
+                balance_qty = ""
+
+            # Add data row with both task and item data
             data.append({
-                'project': project_name,
+                'project': f"<a href='/app/project/{project_name}'>{project_name}</a>",
                 'item_code': item_code,
                 'uom': uom,
-                'purchased_qty': f"{purchased_qty:,.2f}",
-                'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}",
-                'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}",
-                'consumed_qty': consumed_qty,
-                'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate is not None else f"{currency_symbol} 0.00",
-                'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}",
-                'balance_qty': f"{balance_qty:,.2f}" if balance_qty is not None else f"0.00",
+                'purchased_qty': f"{purchased_qty:,.2f}" if purchased_qty else "",
+                'purchase_rate': f"{currency_symbol} {purchase_rate:,.2f}" if purchase_rate else "",
+                'purchased_amount': f"{currency_symbol} {purchased_amount:,.2f}" if purchased_amount else "",
+                'consumed_qty': f"{consumed_qty:,.2f}" if consumed_qty else "",
+                'stock_rate': f"{currency_symbol} {stock_rate:,.2f}" if stock_rate else "",
+                'consumed_amount': f"{currency_symbol} {consumed_amount:,.2f}" if consumed_amount else "",
+                'balance_qty': f"{balance_qty:,.2f}" if balance_qty else "",
+                'name': name,
+                'task_status': f"{format_task_status(task_status)}" if task_status else "",
                 'currency': currency_symbol
             })
 
             # Accumulate totals for the project
-            total_purchased_qty += purchased_qty
-            total_consumed_qty += consumed_qty
-            total_purchased_amount += purchased_amount
-            total_consumed_amount += consumed_amount
-
-            balance_qty = total_purchased_qty - total_consumed_qty
+            if purchased_qty:
+                total_purchased_qty += purchased_qty
+            if consumed_qty:
+                total_consumed_qty += consumed_qty
+            if purchased_amount:
+                total_purchased_amount += purchased_amount
+            if consumed_amount:
+                total_consumed_amount += consumed_amount
 
         # Add a summary row for the project
+        balance_qty = total_purchased_qty - total_consumed_qty
         data.append({
-            'project': f"Total for {project_name}",
+            'project': f"<b><a href='/app/project/{project_name}'>Total for {project_name}</a></b>",
             'item_code': "",
             'uom': "",
             'purchased_qty': f"<b>{total_purchased_qty:,.2f}</b>",
             'purchase_rate': "",
             'purchased_amount': f"<b> {currency_symbol} {total_purchased_amount:,.2f}</b>",
-            'consumed_qty': f"<b{total_consumed_qty:,.2f}</b>",
+            'consumed_qty': f"<b>{total_consumed_qty:,.2f}</b>",
             'stock_rate': "",
             'consumed_amount': f"<b>{currency_symbol} {total_consumed_amount:,.2f}</b>",
             'balance_qty': f"<b>{balance_qty:,.2f}</b>",
+            'name': "",
+            'task_status': "",
             'currency': currency_symbol
         })
 
