@@ -270,9 +270,15 @@ def get_data(filters):
 
     project_filter = filters.get("project")
     company_filter = filters.get("company")
+    task_filter = filters.get("task")
+
+    if task_filter:
+        # Fetch the project associated with the selected task
+        task_doc = frappe.get_doc("Task", task_filter)
+        project_filter = task_doc.project if task_doc.project else None
 
     if not project_filter:
-        # Fetch all Projects
+        # Fetch all Projects if no project filter
         projects = frappe.get_all("Project", fields=["name"])
     else:
         projects = frappe.get_all("Project", filters={"name": project_filter}, fields=["name"])
