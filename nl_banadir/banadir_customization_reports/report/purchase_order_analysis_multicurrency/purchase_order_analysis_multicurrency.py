@@ -425,7 +425,7 @@ def billing_currency(data, filters):
     if filters.get("in_party_currency")==1:
         
         for entry in data:
-            supplier_currency = frappe.get_cached_value("Supplier", entry["supplier"], "default_currency")
+            supplier_currency = frappe.db.get_value("Supplier", entry["supplier"], "default_currency")
             if not supplier_currency:  # This checks for both None and empty string
                 supplier_currency = ""
     return supplier_currency
