@@ -10,6 +10,7 @@ frappe.query_reports["Stock Balance Summary"] = {
 			width: "80",
 			options: "Company",
 			default: frappe.defaults.get_default("company"),
+			reqd: 1,
 		},
 		{
 			fieldname: "from_date",
