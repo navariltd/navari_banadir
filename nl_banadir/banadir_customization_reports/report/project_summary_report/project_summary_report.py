@@ -249,9 +249,9 @@ def get_tasks(company, project_name):
 
     task_order = [
         "FLOORING PLAN",
-        "BUILDING MANAGEMENT",
+        "BUILDING MEASUREMENT",
         "2D PLAN",
-        "FINALISED 2D PLAN",
+        "FINALISE 2D PLAN",
         "3D PLAN",
         "APPROVAL 3D PLAN",
         "LIST OF MATERIALS",
