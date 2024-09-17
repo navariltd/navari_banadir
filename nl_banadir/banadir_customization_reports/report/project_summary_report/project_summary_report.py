@@ -294,6 +294,14 @@ def get_data(filters):
         # Fetch Purchase Invoice Items linked to the Project and Company
         purchase_invoice_items = get_purchase_invoice_items(project_name, company_filter)
 
+        # Fetch Stock Entries of type Material Transfer linked to the Project and Company
+        stock_entry_details = get_stock_entry_details(project_name, company_filter)
+
+        # Early return if no data exists for the project
+        if not purchase_invoice_items and not stock_entry_details:
+            continue
+        
+        
         for pi in purchase_invoice_items:
             item_code = pi.item_code
             currency_symbol = get_currency(pi.currency)
@@ -309,8 +317,6 @@ def get_data(filters):
             purchase_data[item_code]['purchased_qty'] += pi.qty
             purchase_data[item_code]['purchased_amount'] += pi.amount
 
-        # Fetch Stock Entries of type Material Transfer linked to the Project and Company
-        stock_entry_details = get_stock_entry_details(project_name, company_filter)
 
         for se in stock_entry_details:
             item_code = se.item_code

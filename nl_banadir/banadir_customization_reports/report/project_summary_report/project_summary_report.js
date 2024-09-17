@@ -14,6 +14,7 @@ frappe.query_reports["Project Summary Report"] = {
             "label": __("Company"),
             "fieldtype": "Link",
             "options": "Company",
+            "reqd": 1,
         },
         {
             "fieldname": "task",
