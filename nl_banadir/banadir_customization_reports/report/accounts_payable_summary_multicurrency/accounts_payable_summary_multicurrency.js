@@ -9,6 +9,7 @@ frappe.query_reports["Accounts Payable Summary MultiCurrency"] = {
 			fieldtype: "Link",
 			options: "Company",
 			default: frappe.defaults.get_user_default("Company"),
+			reqd: 1
 		},
 		{
 			fieldname: "report_date",
