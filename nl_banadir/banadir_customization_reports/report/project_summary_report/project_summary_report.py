@@ -238,14 +238,35 @@ def get_stock_entry_details(project_name, company_filter=None):
     return stock_entry_details
 
 
-def get_tasks(project_name):
+def get_tasks(company, project_name):
 
     tasks = frappe.get_all(
         "Task",
-        filters={"project": project_name},
+        filters={"project": project_name, "company": company},
         fields=["name", "subject", "status"],
         order_by="name asc"
     )
+
+    task_order = [
+        "FLOORING PLAN",
+        "BUILDING MANAGEMENT",
+        "2D PLAN",
+        "FINALISED 2D PLAN",
+        "3D PLAN",
+        "APPROVAL 3D PLAN",
+        "LIST OF MATERIALS",
+        "PROCUREMENT PLAN",
+        "DISPATCH PROCESS",
+        "CONSTRUCTION DRAWING"
+    ]
+
+    def get_task_position(task_name):
+        if task_name in task_order:
+            return task_order.index(task_name)
+        else:
+            return len(task_order)
+        
+    tasks.sort(key=lambda task: get_task_position(task.name))
 
     return tasks
 
@@ -289,7 +310,7 @@ def get_data(filters):
         # Initialize data containers
         purchase_data = {}
         stock_data = {}
-        tasks = get_tasks(project_name)
+        tasks = get_tasks(company_filter, project_name)
 
         # Fetch Purchase Invoice Items linked to the Project and Company
         purchase_invoice_items = get_purchase_invoice_items(project_name, company_filter)
@@ -298,7 +319,7 @@ def get_data(filters):
         stock_entry_details = get_stock_entry_details(project_name, company_filter)
 
         # Early return if no data exists for the project
-        if not purchase_invoice_items and not stock_entry_details:
+        if not purchase_invoice_items and not stock_entry_details and not tasks:
             continue
         
         
