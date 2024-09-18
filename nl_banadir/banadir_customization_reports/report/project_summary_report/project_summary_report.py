@@ -20,13 +20,6 @@ def get_columns(filters):
             "width": 200
         },
         {
-            "label": _("Task Name"),
-            "fieldname": "name",
-            "fieldtype": "Link",
-            "options": "Task",
-            "width": 200
-        },
-        {
             "label": "Item Code", 
             "fieldname": "item_code", 
             "fieldtype": "Data", 
@@ -100,13 +93,6 @@ def get_columns(filters):
                 "width": 200
             },
             {
-                "label": _("Task Name"),
-                "fieldname": "name",
-                "fieldtype": "Link",
-                "options": "Task",
-                "width": 200
-            },
-            {
                 "label": "Item Code", 
                 "fieldname": "item_code", 
                 "fieldtype": "Data", 
@@ -167,6 +153,18 @@ def get_columns(filters):
                 "fieldname": "task_status",
                 "fieldtype": "HTML",
                 "width": 130
+            },
+            {
+                "label": _("Date"),
+                "fieldname": "comment_date",
+                "fieldtype": "Date",
+                "width": 130
+            },
+            {
+                "label": _("Comment"),
+                "fieldname": "last_comment",
+                "fieldtype": "HTML",
+                "width": 300
             }
         ]
     return columns
@@ -268,6 +266,16 @@ def get_tasks(company, project_name):
         
     tasks.sort(key=lambda task: get_task_position(task.name))
 
+    # Fetch the last comment from the comments child table
+    for task in tasks:
+        last_comment = frappe.db.get_value(
+            "Task Comments",
+            filters={"parent": task.name},
+            fieldname=["date", "comment"],
+            order_by="date desc", 
+            as_dict=True
+        )
+        task["last_comment"] = last_comment if last_comment else {}
     return tasks
 
 def format_task_status(status):
@@ -370,8 +378,10 @@ def get_data(filters):
             if i < len(tasks):
                 name = tasks[i].get("name")
                 task_status = tasks[i].get("status")
+                comment_date = tasks[i].get("last_comment", {}).get("date", "")
+                last_comment = tasks[i].get("last_comment", {}).get("comment", "")
             else:
-                name, task_status = "", ""
+                name, task_status, last_comment = "", "", ""
 
             # Handle item data
             if i < len(item_code_list):
@@ -414,6 +424,8 @@ def get_data(filters):
                 'balance_qty': f"{balance_qty:,.2f}" if balance_qty else "",
                 'name': name,
                 'task_status': f"{format_task_status(task_status)}" if task_status else "",
+                'comment_date': comment_date,
+                'last_comment': last_comment,
                 'currency': currency_symbol
             })
 
@@ -442,6 +454,8 @@ def get_data(filters):
             'balance_qty': f"<b>{balance_qty:,.2f}</b>",
             'name': "",
             'task_status': "",
+            'comment_date': "",
+            'last_comment': "",
             'currency': currency_symbol
         })
 
