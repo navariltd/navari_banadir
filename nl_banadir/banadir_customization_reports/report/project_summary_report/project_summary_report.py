@@ -24,7 +24,8 @@ def get_columns(filters):
         {
             "label": "Item Code", 
             "fieldname": "item_code", 
-            "fieldtype": "Data", 
+            "fieldtype": "Link",
+            "options": "Item",
             "width": 200
         },
         {
@@ -97,7 +98,8 @@ def get_columns(filters):
             {
                 "label": "Item Code", 
                 "fieldname": "item_code", 
-                "fieldtype": "Data", 
+                "fieldtype": "Link",
+                "options": "Item",
                 "width": 200
             },
             {
