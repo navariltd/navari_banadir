@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 from frappe.query_builder import DocType
+from erpnext.accounts.report.utils import convert
+import frappe.utils
 
 def execute(filters=None):
     if not filters:
@@ -17,13 +19,6 @@ def get_columns(filters):
             "fieldname": "project", 
             "fieldtype": "HTML", 
             "options": "Project", 
-            "width": 200
-        },
-        {
-            "label": _("Task Name"),
-            "fieldname": "name",
-            "fieldtype": "Link",
-            "options": "Task",
             "width": 200
         },
         {
@@ -100,13 +95,6 @@ def get_columns(filters):
                 "width": 200
             },
             {
-                "label": _("Task Name"),
-                "fieldname": "name",
-                "fieldtype": "Link",
-                "options": "Task",
-                "width": 200
-            },
-            {
                 "label": "Item Code", 
                 "fieldname": "item_code", 
                 "fieldtype": "Data", 
@@ -167,6 +155,18 @@ def get_columns(filters):
                 "fieldname": "task_status",
                 "fieldtype": "HTML",
                 "width": 130
+            },
+            {
+                "label": _("Date"),
+                "fieldname": "comment_date",
+                "fieldtype": "Date",
+                "width": 130
+            },
+            {
+                "label": _("Comment"),
+                "fieldname": "last_comment",
+                "fieldtype": "HTML",
+                "width": 300
             }
         ]
     return columns
@@ -249,9 +249,9 @@ def get_tasks(company, project_name):
 
     task_order = [
         "FLOORING PLAN",
-        "BUILDING MANAGEMENT",
+        "BUILDING MEASUREMENT",
         "2D PLAN",
-        "FINALISED 2D PLAN",
+        "FINALISE 2D PLAN",
         "3D PLAN",
         "APPROVAL 3D PLAN",
         "LIST OF MATERIALS",
@@ -268,6 +268,16 @@ def get_tasks(company, project_name):
         
     tasks.sort(key=lambda task: get_task_position(task.name))
 
+    # Fetch the last comment from the comments child table
+    for task in tasks:
+        last_comment = frappe.db.get_value(
+            "Task Comments",
+            filters={"parent": task.name},
+            fieldname=["date", "comment"],
+            order_by="date desc", 
+            as_dict=True
+        )
+        task["last_comment"] = last_comment if last_comment else {}
     return tasks
 
 def format_task_status(status):
@@ -286,9 +296,45 @@ def format_task_status(status):
     else:
         return f"<span class='label label-warning'>{status}</span>"
 
+def get_conversion_rate(from_currency, to_currency, date):
+
+    if from_currency == to_currency:
+        return (1, None)
+
+    conversion_rate = frappe.db.get_value(
+        "Currency Exchange",
+        {"from_currency": from_currency, "to_currency": to_currency},
+        ["exchange_rate", "date"]
+    )
+
+    if conversion_rate:
+        return conversion_rate[0], conversion_rate[1]
+    else:
+        # Try fetching the inverse exchange rate
+        inverse_conversion_rate = frappe.db.get_value(
+            "Currency Exchange",
+            {"from_currency": to_currency, "to_currency": from_currency},
+            ["exchange_rate", "date"]
+        )
+
+        if inverse_conversion_rate:
+            inverse_exchange_rate = inverse_conversion_rate[0]
+            return 1 / inverse_exchange_rate, inverse_conversion_rate[1]
+        else:
+            frappe.throw(
+                _("Exchange rate not found for {0} to {1}").format(
+                    from_currency, to_currency
+                )
+            )
+
+def convert_currency(amount, from_currency, to_currency, date):
+    conversion_rate, conversion_date = get_conversion_rate(from_currency, to_currency, date)
+    return amount * conversion_rate
+
 def get_data(filters):
     data = []
 
+    currency_filter = filters.get("currency")
     project_filter = filters.get("project")
     company_filter = filters.get("company")
     task_filter = filters.get("task")
@@ -326,6 +372,16 @@ def get_data(filters):
         for pi in purchase_invoice_items:
             item_code = pi.item_code
             currency_symbol = get_currency(pi.currency)
+
+            if currency_filter and currency_filter != pi.currency:
+                
+                transaction_date = pi.posting_date if pi.posting_date else frappe.utils.nowdate()
+
+                pi.rate = convert_currency(pi.rate, pi.currency, currency_filter, transaction_date)
+                pi.amount = convert_currency(pi.amount, pi.currency, currency_filter, transaction_date)
+
+                currency_symbol = get_currency(currency_filter)
+
             if item_code not in purchase_data:
                 purchase_data[item_code] = {
                     'purchased_qty': 0, 
@@ -341,6 +397,14 @@ def get_data(filters):
 
         for se in stock_entry_details:
             item_code = se.item_code
+
+            if currency_filter and currency_filter != se.currency:
+
+                transaction_date = se.posting_date if se.posting_date else frappe.utils.nowdate()
+
+                se.rate = convert_currency(se.rate, se.currency, currency_filter, transaction_date)
+                se.amount = convert_currency(se.amount, se.currency, currency_filter, transaction_date)
+
             if item_code not in stock_data:
                  stock_data[item_code] = {
                     'consumed_qty': 0, 
@@ -370,8 +434,10 @@ def get_data(filters):
             if i < len(tasks):
                 name = tasks[i].get("name")
                 task_status = tasks[i].get("status")
+                comment_date = tasks[i].get("last_comment", {}).get("date", "")
+                last_comment = tasks[i].get("last_comment", {}).get("comment", "")
             else:
-                name, task_status = "", ""
+                name, task_status, comment_date, last_comment = "", "", "", ""
 
             # Handle item data
             if i < len(item_code_list):
@@ -414,6 +480,8 @@ def get_data(filters):
                 'balance_qty': f"{balance_qty:,.2f}" if balance_qty else "",
                 'name': name,
                 'task_status': f"{format_task_status(task_status)}" if task_status else "",
+                'comment_date': comment_date,
+                'last_comment': last_comment,
                 'currency': currency_symbol
             })
 
@@ -442,6 +510,8 @@ def get_data(filters):
             'balance_qty': f"<b>{balance_qty:,.2f}</b>",
             'name': "",
             'task_status': "",
+            'comment_date': "",
+            'last_comment': "",
             'currency': currency_symbol
         })
 
