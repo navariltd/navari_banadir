@@ -8,6 +8,26 @@ app_license = "agpl-3.0"
 
 # Includes in <head>
 # ------------------
+
+fixtures = [
+    {
+        "doctype": "Custom Field",
+        "filters": [
+            [
+                "name",
+                "in",
+                (
+                    "Material Request-task",
+                    "Employee-nhif_no",
+                    "Employee-nssf_no",
+                    "Employee-tax_id",
+                    "Salary Component-p9a_tax_deduction_card_type",
+                ),
+            ]
+        ],
+    },
+]
+
 doc_events = {
 	"Sales Invoice": {
 		"before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.sales_invoice_before_submit",
