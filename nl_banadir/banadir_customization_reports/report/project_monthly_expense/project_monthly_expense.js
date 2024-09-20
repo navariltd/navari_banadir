@@ -17,6 +17,7 @@ frappe.query_reports["Project Monthly Expense"]["filters"].push({
 	],
 	default: "Report",
 	reqd: 1,
+    hidden: 1,
 });
 
 frappe.query_reports["Project Monthly Expense"]["filters"].push({
@@ -32,3 +33,14 @@ frappe.query_reports["Project Monthly Expense"]["filters"].push({
 	fieldtype: "Check",
 	default: 1,
 });
+
+frappe.query_reports["Project Monthly Expense"].onload = function (report) {
+    report.page.menu.find('[data-label="Financial"]').parent().remove();
+    
+    // Remove the Finance Book filter
+    const financeBookFilter = report.get_filter("finance_book");
+    if (financeBookFilter) {
+        financeBookFilter.df.hidden = true;
+        financeBookFilter.refresh();
+    }
+}
