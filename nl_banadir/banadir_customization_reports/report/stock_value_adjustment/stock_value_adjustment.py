@@ -26,45 +26,38 @@ def get_current_exchange_rate(from_currency, to_currency):
 	return exchange_rate
 
 def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
-    date = frappe.utils.today()
-    for entry in data:
-        # In dollars
-        old_rate_in_usd = entry['rate'] / entry['exchange_rate']
-        # In AED (or chosen currency)
-        current_rate_chosen_currency = get_current_exchange_rate(from_currency, to_currency) * old_rate_in_usd
-        current_rate_in_usd = convert(current_rate_chosen_currency, "USD", to_currency, date)
+	date = frappe.utils.today()
+	for entry in data:
+		# In dollars
+		old_rate_in_usd = entry['rate'] / entry['exchange_rate']
+		old_rate_plus_landed_cost_in_usd = entry['rate_plus_landed_cost'] / entry['exchange_rate']
+  
+		# In AED (or chosen currency)
+		current_rate_chosen_currency = get_current_exchange_rate(from_currency, to_currency) * old_rate_in_usd
+		current_rate_plus_landed_cost_chosen_currency = get_current_exchange_rate(from_currency, to_currency) * old_rate_plus_landed_cost_in_usd
+		current_rate_in_usd = convert(current_rate_chosen_currency, "USD", to_currency, date)
+		current_rate_plus_landed_cost_in_usd = convert(current_rate_plus_landed_cost_chosen_currency, "USD", to_currency, date)
+		# frappe.throw(str(current_rate_chosen_currency))
+		# Calculate current_rate
+		if filters.get('presentation_currency') == 'USD':
+			entry['current_rate'] = current_rate_in_usd
+			entry['current_rate_plus_landed_cost'] = current_rate_plus_landed_cost_in_usd
+		else:
+			entry['current_rate'] = current_rate_chosen_currency
+			entry['current_rate_plus_landed_cost'] = current_rate_plus_landed_cost_chosen_currency
+		
+		# Calculate current_total
+		old_total_in_usd = entry['amount'] / entry['exchange_rate']
+		current_total_chosen_currency = get_current_exchange_rate(from_currency, to_currency) * old_total_in_usd
+		current_total_in_usd = convert(current_total_chosen_currency, "USD", to_currency, date)
+		
+		if filters.get('presentation_currency') == 'USD':
+			entry['current_total'] = current_total_in_usd
+		else:
+			entry['current_total'] = current_total_chosen_currency
+		entry['current_exchange_rate'] = get_current_exchange_rate(from_currency, to_currency)
+	return data
 
-        # Calculate current_rate
-        if filters.get('presentation_currency') == 'USD':
-            entry['current_rate'] = current_rate_in_usd
-        else:
-            entry['current_rate'] = current_rate_chosen_currency
-        
-        # Calculate current_total
-        old_total_in_usd = entry['amount'] / entry['exchange_rate']
-        current_total_chosen_currency = get_current_exchange_rate(from_currency, to_currency) * old_total_in_usd
-        current_total_in_usd = convert(current_total_chosen_currency, "USD", to_currency, date)
-        
-        if filters.get('presentation_currency') == 'USD':
-            entry['current_total'] = current_total_in_usd
-        else:
-            entry['current_total'] = current_total_chosen_currency
-
-    return data
-
-# def convert_as_per_current_exchange_rate(data,filters, from_currency, to_currency):
-# 	date=frappe.utils.today()
-# 	for entry in data:
-# 		#In dollars
-# 		old_rate_in_usd = entry['rate']/entry['exchange_rate']
-# 		#In AED
-# 		current_rate_chosen_currency = get_current_exchange_rate(from_currency, to_currency) * old_rate_in_usd
-# 		current_rate_in_usd = convert(current_rate_chosen_currency, "USD", to_currency, date)
-# 		if filters.get('presentation_currency')=='USD':
-# 			entry['current_rate'] = current_rate_in_usd
-# 		else:
-# 			entry['current_rate'] = current_rate_chosen_currency
-# 	return data
 
 def execute(filters=None):
 	return _execute(filters)
@@ -77,6 +70,8 @@ def _execute(filters=None, additional_table_columns=None):
 	company_currency = erpnext.get_company_currency(filters.company)
 	item_list = get_items(filters, additional_table_columns)
 	aii_account_map = get_aii_accounts()
+	presentation_currency= filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
+	currency_symbol = frappe.db.get_value("Currency", presentation_currency, "symbol") or presentation_currency
 	if item_list:
 		itemised_tax, tax_columns = get_tax_accounts(
 			item_list,
@@ -139,7 +134,9 @@ def _execute(filters=None, additional_table_columns=None):
 			"rate": d.base_net_amount / d.stock_qty if d.stock_qty else d.base_net_amount,
 			"amount": d.base_net_amount,
 			"exchange_rate": d.conversion_rate,
-		}
+			"landed_cost_voucher_amount": d.landed_cost_voucher_amount,
+        "rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount)
+			}
 
 		total_tax = 0
 		for tax in tax_columns:
@@ -153,7 +150,7 @@ def _execute(filters=None, additional_table_columns=None):
 			total_tax += flt(item_tax.get("tax_amount"))
 
 		row.update(
-			{"total_tax": total_tax, "total": d.base_net_amount + total_tax, "currency": company_currency}
+			{"total_tax": total_tax, "total": d.base_net_amount + total_tax, "currency": presentation_currency}
 		)
 
 		if filters.get("group_by"):
@@ -182,7 +179,7 @@ def _execute(filters=None, additional_table_columns=None):
 		data.append(total_row_map.get("total_row"))
 		skip_total_row = 1
 
-	data=convert_as_per_current_exchange_rate(data,filters, "USD", "CDF")
+	data=convert_as_per_current_exchange_rate(data,filters, "USD", presentation_currency)
 	return columns, data, None, None, None, skip_total_row
 
 
@@ -191,6 +188,7 @@ def get_columns(additional_table_columns, filters):
 		"Company", filters.company, "default_currency"
 	)
 	columns = []
+ 
 
 	if filters.get("group_by") != ("Item"):
 		columns.extend(
@@ -314,35 +312,70 @@ def get_columns(additional_table_columns, filters):
 		"fieldtype": "Float",
 		"width": 100,
 		},
+  {
+	  "label":"Current Exchange Rate",
+ 		"fieldname":"current_exchange_rate",
+		"fieldtype":"Float",
+  
+		"width":100,
+   		
+  },
 		{
-			"label": _("Rate"),
+			"label": _(f"Rate({presentation_currency})"),
 			"fieldname": "rate",
 			"fieldtype": "Float",
-			"options": "currency",
+   			"precision": 2,
 			"width": 100,
 		},
   {
 "label": _(f"Current Rate ({presentation_currency})"),
 		"fieldname": "current_rate",
 		"fieldtype": "Float",
+  			"precision": 2,
 		"width": 100,
   },
-  
+  {
+  "label": _(f"Landed Cost ({presentation_currency})"),
+  "fieldname":"landed_cost_voucher_amount",
+  "fieldtype":"Float",
+  			"precision": 2,
+
+  "width":100,
+  },
+  {
+	  "label":f"Rate + LC({presentation_currency})",
+	  "fieldname":"rate_plus_landed_cost",
+	  "fieldtype":"Float",
+   			"precision": 2,
+
+	"width":100,
+ 
+  },
+    {
+	  "label":"Current Rate + LC({presentation_currency})",
+	  "fieldname":"current_rate_plus_landed_cost",
+	  "fieldtype":"Float",
+   			"precision": 2,
+
+	"width":100,
+ 
+  },
 		{
-			"label": _("Amount"),
+			"label": _(f"Amount ({presentation_currency})"),
 			"fieldname": "amount",
-			"fieldtype": "Currency",
-			"options": "currency",
+			"fieldtype": "Float",
+   			"precision": 2,
+
 			"width": 100,
 		},
 	]
  
 	columns.append(
 		{
-			"label": _("Current Total"),
+			"label": _(f"Current Total ({presentation_currency})"),
 			"fieldname": "current_total",
-			"fieldtype": "Currency",
-			"options": "currency",
+			"fieldtype": "Float",
+			"precision": 2,
 		}
 	)
 
@@ -408,6 +441,7 @@ def get_items(filters, additional_table_columns):
 			pii.item_group.as_("pi_item_group"),
 			Item.item_name.as_("i_item_name"),
 			Item.item_group.as_("i_item_group"),
+			pii.landed_cost_voucher_amount,
 			pii.project,
 			pii.purchase_order,
 			pii.purchase_receipt,
