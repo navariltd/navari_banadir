@@ -17,13 +17,16 @@ from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register i
 )
 from erpnext.accounts.report.utils import get_query_columns, get_values_for_columns, convert, get_rate_as_at
 
-
 def get_current_exchange_rate(from_currency, to_currency, date):
-	
-	exchange_rate = get_rate_as_at(date, from_currency, to_currency)
-	if exchange_rate==1 and from_currency!=to_currency:
-		pass
-	return exchange_rate
+	if to_currency in ["CDF","KES","TZS","UGX", "NGN","ETB","GNF", "SDG","XAF","AED"]:
+		currency_exchanges=frappe.get_all("Currency Exchange", filters={"from_currency": from_currency, "to_currency": to_currency}, fields=["exchange_rate"])
+		if currency_exchanges:
+			return currency_exchanges[0].exchange_rate
+	else:
+		exchange_rate = get_rate_as_at(date, from_currency, to_currency)
+		if exchange_rate==1 and from_currency!=to_currency:
+			pass
+		return exchange_rate
 
 def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
 	date = frappe.utils.today()
@@ -37,8 +40,8 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
 		current_rate_in_usd = convert(current_rate_chosen_currency, "USD", to_currency, date)
 		current_rate_plus_landed_cost_in_usd = convert(current_rate_plus_landed_cost_chosen_currency, "USD", to_currency, date)
 
-		if filters.get('presentation_currency') == 'USDD':
-			# entry['current_rate'] = current_rate_in_usd
+		if filters.get('presentation_currency') == 'USD':
+			entry['current_rate'] = current_rate_in_usd
 			entry['current_rate_plus_landed_cost'] = current_rate_plus_landed_cost_in_usd
 		else:
 			entry['current_rate'] = current_rate_chosen_currency
@@ -69,24 +72,26 @@ def _execute(filters=None, additional_table_columns=None):
 	item_list = get_items(filters, additional_table_columns)
 	aii_account_map = get_aii_accounts()
 	presentation_currency= filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
-	if item_list:
-		itemised_tax, tax_columns = get_tax_accounts(
-			item_list,
-			columns,
-			company_currency,
-			doctype="Purchase Invoice",
-			tax_doctype="Purchase Taxes and Charges",
-		)
+	
+	# if item_list:
+	# 	itemised_tax, tax_columns = get_tax_accounts(
+	# 		item_list,
+	# 		columns,
+	# 		company_currency,
+	# 		doctype="Purchase Invoice",
+	# 		tax_doctype="Purchase Taxes and Charges",
+	# 	)
+	# 	# frappe.throw(str(columns))
+	
+	# 	scrubbed_tax_fields = {}
 
-		scrubbed_tax_fields = {}
-
-		for tax in tax_columns:
-			scrubbed_tax_fields.update(
-				{
-					tax + " Rate": frappe.scrub(tax + " Rate"),
-					tax + " Amount": frappe.scrub(tax + " Amount"),
-				}
-			)
+	# 	for tax in tax_columns:
+	# 		scrubbed_tax_fields.update(
+	# 			{
+	# 				tax + " Rate": frappe.scrub(tax + " Rate"),
+	# 				tax + " Amount": frappe.scrub(tax + " Amount"),
+	# 			}
+	# 		)
 
 	po_pr_map = get_purchase_receipts_against_purchase_order(item_list)
 
@@ -94,6 +99,7 @@ def _execute(filters=None, additional_table_columns=None):
 	total_row_map = {}
 	skip_total_row = 0
 	prev_group_by_value = ""
+	tax_columns=[]
 
 	if filters.get("group_by"):
 		grand_total = get_grand_total(filters, "Purchase Invoice")
@@ -108,7 +114,6 @@ def _execute(filters=None, additional_table_columns=None):
 		expense_account = (
 			d.unrealized_profit_loss_account or d.expense_account or aii_account_map.get(d.company)
 		)
-
 		row = {
 			"item_code": d.item_code,
 			"item_name": d.pi_item_name if d.pi_item_name else d.i_item_name,
@@ -131,24 +136,24 @@ def _execute(filters=None, additional_table_columns=None):
 			"rate": d.base_net_amount / d.stock_qty if d.stock_qty else d.base_net_amount,
 			"amount": d.base_net_amount,
 			"exchange_rate": d.conversion_rate if d.conversion_rate !=1 else get_current_exchange_rate("USD", company_currency, d.posting_date),
-			"landed_cost_voucher_amount": d.landed_cost_voucher_amount,
-        "rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount)
+			"landed_cost_voucher_amount": flt(d.landed_cost_voucher_amount/ d.stock_qty),
+		"rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount / d.stock_qty),
 			}
 
-		total_tax = 0
-		for tax in tax_columns:
-			item_tax = itemised_tax.get(d.name, {}).get(tax, {})
-			row.update(
-				{
-					scrubbed_tax_fields[tax + " Rate"]: item_tax.get("tax_rate", 0),
-					scrubbed_tax_fields[tax + " Amount"]: item_tax.get("tax_amount", 0),
-				}
-			)
-			total_tax += flt(item_tax.get("tax_amount"))
+		# total_tax = 0
+		# for tax in tax_columns:
+		# 	item_tax = itemised_tax.get(d.name, {}).get(tax, {})
+		# 	row.update(
+		# 		{
+		# 			scrubbed_tax_fields[tax + " Rate"]: item_tax.get("tax_rate", 0),
+		# 			scrubbed_tax_fields[tax + " Amount"]: item_tax.get("tax_amount", 0),
+		# 		}
+		# 	)
+		# 	total_tax += flt(item_tax.get("tax_amount"))
 
-		row.update(
-			{"total_tax": total_tax, "total": d.base_net_amount + total_tax, "currency": presentation_currency}
-		)
+		# row.update(
+		# 	{"total_tax": total_tax, "total": d.base_net_amount + total_tax}
+		# )
 
 		if filters.get("group_by"):
 			row.update({"percent_gt": flt(row["total"] / grand_total) * 100})
@@ -175,7 +180,6 @@ def _execute(filters=None, additional_table_columns=None):
 		add_sub_total_row(total_row, total_row_map, "total_row", tax_columns)
 		data.append(total_row_map.get("total_row"))
 		skip_total_row = 1
-
 	data=convert_as_per_current_exchange_rate(data,filters, "USD", presentation_currency)
 	data=convert_currency_fields(data, filters)
 	return columns, data, None, None, None, skip_total_row
@@ -349,7 +353,7 @@ def get_columns(additional_table_columns, filters):
 	"width":100,
  
   },
-    {
+	{
 	  "label":"Current Rate + LC({presentation_currency})",
 	  "fieldname":"current_rate_plus_landed_cost",
 	  "fieldtype":"Float",
@@ -381,7 +385,6 @@ def get_columns(additional_table_columns, filters):
 		columns.append(
 			{"label": _("% Of Grand Total"), "fieldname": "percent_gt", "fieldtype": "Float", "width": 80}
 		)
-
 	return columns
 
 
@@ -512,9 +515,10 @@ def convert_currency_fields(data, filters):
 			entry['rate_plus_landed_cost'] = convert(entry.get('rate_plus_landed_cost', 0), from_currency, to_currency, date)
 			entry['total_tax']=convert(entry.get('total_tax',0), from_currency, to_currency, date)
 			entry['total'] = convert(entry.get('total', 0), from_currency, to_currency, date)
-			entry['current_rate'] = convert(entry.get('current_rate', 0), from_currency, to_currency, date)
-			entry['current_rate_plus_landed_cost'] = convert(entry.get('current_rate_plus_landed_cost', 0), from_currency, to_currency, date)
-			entry['current_total'] = convert(entry.get('current_total', 0), from_currency, to_currency, date)
-			
+			if filters.get('presentation_currency') != 'USD':
+				entry['current_rate'] = convert(entry.get('current_rate', 0), from_currency, to_currency, date)
+				entry['current_rate_plus_landed_cost'] = convert(entry.get('current_rate_plus_landed_cost', 0), from_currency, to_currency, date)
+				entry['current_total'] = convert(entry.get('current_total', 0), from_currency, to_currency, date)
+				
 
 		return data
