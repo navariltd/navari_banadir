@@ -2,14 +2,14 @@
  "add_total_row": 1,
  "columns": [],
  "creation": "2024-09-20 15:16:39.994460",
- "disabled": 0,
+ "disabled": 1,
  "docstatus": 0,
  "doctype": "Report",
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2024-09-20 15:24:55.267739",
+ "modified": "2024-09-24 08:16:37.913428",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
  "name": "Project Expense",
@@ -28,5 +28,6 @@
   {
    "role": "Auditor"
   }
- ]
+ ],
+ "timeout": 0
 }
