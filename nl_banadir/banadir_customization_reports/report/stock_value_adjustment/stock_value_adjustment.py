@@ -34,18 +34,23 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
 		# In dollars
 		old_rate_in_usd = entry['rate'] / entry['exchange_rate']
 		old_rate_plus_landed_cost_in_usd = entry['rate_plus_landed_cost'] / entry['exchange_rate']
+		old_landed_cost=entry['landed_cost_voucher_amount'] / entry['exchange_rate']
   
 		current_rate_chosen_currency = get_current_exchange_rate(from_currency, to_currency, date) * old_rate_in_usd
 		current_rate_plus_landed_cost_chosen_currency = get_current_exchange_rate(from_currency, to_currency, date) * old_rate_plus_landed_cost_in_usd
 		current_rate_in_usd = convert(current_rate_chosen_currency, "USD", to_currency, date)
 		current_rate_plus_landed_cost_in_usd = convert(current_rate_plus_landed_cost_chosen_currency, "USD", to_currency, date)
+		current_landed_cost_chosen_currency=get_current_exchange_rate(from_currency, to_currency, date) * old_landed_cost
+		current_landed_cost_in_usd=convert(current_landed_cost_chosen_currency, "USD", to_currency, date)
 
 		if filters.get('presentation_currency') == 'USD':
 			entry['current_rate'] = current_rate_in_usd
 			entry['current_rate_plus_landed_cost'] = current_rate_plus_landed_cost_in_usd
+			entry['current_landed_cost'] = current_landed_cost_in_usd
 		else:
 			entry['current_rate'] = current_rate_chosen_currency
 			entry['current_rate_plus_landed_cost'] = current_rate_plus_landed_cost_chosen_currency
+			entry['current_landed_cost'] = current_landed_cost_chosen_currency
 		
 		# Calculate current_total
 		old_total_in_usd = entry['amount'] / entry['exchange_rate']
@@ -73,25 +78,6 @@ def _execute(filters=None, additional_table_columns=None):
 	aii_account_map = get_aii_accounts()
 	presentation_currency= filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 	
-	# if item_list:
-	# 	itemised_tax, tax_columns = get_tax_accounts(
-	# 		item_list,
-	# 		columns,
-	# 		company_currency,
-	# 		doctype="Purchase Invoice",
-	# 		tax_doctype="Purchase Taxes and Charges",
-	# 	)
-	# 	# frappe.throw(str(columns))
-	
-	# 	scrubbed_tax_fields = {}
-
-	# 	for tax in tax_columns:
-	# 		scrubbed_tax_fields.update(
-	# 			{
-	# 				tax + " Rate": frappe.scrub(tax + " Rate"),
-	# 				tax + " Amount": frappe.scrub(tax + " Amount"),
-	# 			}
-	# 		)
 
 	po_pr_map = get_purchase_receipts_against_purchase_order(item_list)
 
@@ -140,20 +126,6 @@ def _execute(filters=None, additional_table_columns=None):
 		"rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount / d.stock_qty),
 			}
 
-		# total_tax = 0
-		# for tax in tax_columns:
-		# 	item_tax = itemised_tax.get(d.name, {}).get(tax, {})
-		# 	row.update(
-		# 		{
-		# 			scrubbed_tax_fields[tax + " Rate"]: item_tax.get("tax_rate", 0),
-		# 			scrubbed_tax_fields[tax + " Amount"]: item_tax.get("tax_amount", 0),
-		# 		}
-		# 	)
-		# 	total_tax += flt(item_tax.get("tax_amount"))
-
-		# row.update(
-		# 	{"total_tax": total_tax, "total": d.base_net_amount + total_tax}
-		# )
 
 		if filters.get("group_by"):
 			row.update({"percent_gt": flt(row["total"] / grand_total) * 100})
@@ -343,6 +315,13 @@ def get_columns(additional_table_columns, filters):
   			"precision": 2,
 
   "width":100,
+  },
+  {
+	"label": _(f"Current Landed Cost ({presentation_currency})"),
+	"fieldname":"current_landed_cost",
+	"fieldtype":"Float",
+  			"precision": 2,
+     "width":100,
   },
   {
 	  "label":f"Rate + LC({presentation_currency})",
