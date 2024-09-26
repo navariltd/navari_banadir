@@ -68,7 +68,6 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
 def execute(filters=None):
 	return _execute(filters)
 
-
 def _execute(filters=None, additional_table_columns=None):
 	if not filters:
 		filters = {}
