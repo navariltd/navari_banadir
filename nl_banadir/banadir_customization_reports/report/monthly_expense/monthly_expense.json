@@ -1,22 +1,23 @@
 {
- "add_total_row": 0,
+ "add_total_row": 1,
  "columns": [],
- "creation": "2024-09-20 09:50:09.789544",
- "disabled": 1,
+ "creation": "2024-09-10 11:32:26.960792",
+ "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
+ "letter_head": "Banadir",
  "letterhead": null,
- "modified": "2024-09-24 08:16:48.119353",
+ "modified": "2024-09-10 11:32:26.960792",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
- "name": "Project Monthly Expense",
+ "name": "Monthly Expense",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "GL Entry",
- "report_name": "Project Monthly Expense",
+ "report_name": "Monthly Expense",
  "report_type": "Script Report",
  "roles": [
   {
@@ -28,6 +29,5 @@
   {
    "role": "Auditor"
   }
- ],
- "timeout": 0
+ ]
 }
