@@ -45,6 +45,8 @@ def execute(filters=None):
 				"gross_profit",
 				"gross_profit_percent",
 				"project",
+				"branch",
+				"cost_center",
 			],
 			"item_code": [
 				"item_code",
@@ -121,6 +123,7 @@ def execute(filters=None):
 				"gross_profit",
 				"gross_profit_percent",
 			],
+   
 			"project": ["project", "base_amount", "buying_amount", "gross_profit", "gross_profit_percent"],
 			"territory": [
 				"territory",
@@ -260,6 +263,21 @@ def get_columns(group_wise_columns, filters):
 				"options": "Warehouse",
 				"width": 100,
 			},
+   	"branch": {
+				"label": _("Branch"),
+				"fieldname": "branch",
+				"fieldtype": "Link",
+				"options": "Branch",
+				"width": 100,
+			},
+    "cost_center": {
+				"label": _("Cost Center"),
+				"fieldname": "cost_center",
+				"fieldtype": "Link",
+				"options": "Cost Center",
+				"width": 100,
+			},
+
 			"qty": {"label": _("Qty"), "fieldname": "qty", "fieldtype": "Float", "width": 80},
 			"base_rate": {
 				"label": _(f"Avg. Selling Rate <strong>({presentation_currency})</strong>"),
@@ -344,6 +362,9 @@ def get_columns(group_wise_columns, filters):
 				"options": "Territory",
 				"width": 100,
 			},
+   
+		
+              
 			"monthly": {
 				"label": _("Monthly"),
 				"fieldname": "monthly",
@@ -397,6 +418,8 @@ def get_column_names():
 			"gross_profit": "gross_profit",
 			"gross_profit_percent": "gross_profit_%",
 			"project": "project",
+			"branch": "branch",
+			"cost_center": "cost_center",
 		}
 	)
 
@@ -756,6 +779,12 @@ class GrossProfitGenerator:
 			conditions += " and posting_date >= %(from_date)s"
 		if self.filters.to_date:
 			conditions += " and posting_date <= %(to_date)s"
+		if self.filters.branch:
+			conditions += " and `tabSales Invoice`.branch = %(branch)s"
+		if self.filters.project:
+			conditions += " and `tabSales Invoice`.project = %(project)s"
+		if self.filters.cost_center:
+			conditions += " and `tabSales Invoice Item`.cost_center = %(cost_center)s"
 
 		conditions += " and (is_return = 0 or (is_return=1 and return_against is null))"
 
@@ -801,7 +830,6 @@ class GrossProfitGenerator:
 			)
 			if warehouse_details:
 				conditions += f" and `tabSales Invoice Item`.warehouse in (select name from `tabWarehouse` wh where wh.lft >= {warehouse_details.lft} and wh.rgt <= {warehouse_details.rgt} and warehouse = wh.name)"
-
 		self.si_list = frappe.db.sql(
 			"""
 			select
@@ -810,6 +838,7 @@ class GrossProfitGenerator:
 				`tabSales Invoice`.project, `tabSales Invoice`.update_stock,
 				`tabSales Invoice`.customer, `tabSales Invoice`.customer_group,
 				`tabSales Invoice`.territory, `tabSales Invoice Item`.item_code,
+				`tabSales Invoice`.branch,	`tabSales Invoice`.cost_center,
 				`tabSales Invoice Item`.item_name, `tabSales Invoice Item`.description,
 				`tabSales Invoice Item`.warehouse, `tabSales Invoice Item`.item_group,
 				`tabSales Invoice Item`.brand, `tabSales Invoice Item`.so_detail,
@@ -901,6 +930,8 @@ class GrossProfitGenerator:
 				"parent": None,
 				"posting_date": row.posting_date,
 				"posting_time": row.posting_time,
+				"branch": row.branch,
+				"cost_center": row.cost_center,
 				"project": row.project,
 				"update_stock": row.update_stock,
 				"customer": row.customer,
@@ -939,6 +970,8 @@ class GrossProfitGenerator:
 				"posting_time": product_bundle.posting_time,
 				"project": product_bundle.project,
 				"customer": product_bundle.customer,
+				"branch": product_bundle.branch,
+				"cost_center": product_bundle.cost_center,
 				"customer_group": product_bundle.customer_group,
 				"item_code": item.item_code,
 				"item_name": item_name,
@@ -1022,64 +1055,6 @@ class GrossProfitGenerator:
 		)
 
 
-# def convert_currency_columns(data, filters):
-#     # Early exit if data is null or empty
-#     if not data:
-#         return data
-
-#     date = filters.get("to_date") or frappe.utils.now()
-#     to_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
-#     from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
-#     group_by = filters.get('group_by')
-
-#     # Initialize currency_fields or currency_indices based on group_by
-#     currency_fields = []
-#     currency_indices = []
-
-#     if group_by == "Invoice":
-#         currency_fields = ['buying_amount', 'selling_amount', 'gross_profit', 'valuation_rate', 
-#                            'avg._selling_rate', 'allocated_amount', 'base_amount', 'base_rate']
-#     else:
-#         if group_by == "Item Code":
-#             currency_indices = range(5, 10)
-#         elif group_by == "Customer":
-#             currency_indices = range(3, 8)
-#         elif group_by == "Territory":
-#             currency_indices = range(1, 4)
-#         elif group_by == "Monthly":
-#             currency_indices = range(2, 7)
-#         elif group_by == "Payment Term":
-#             currency_indices = range(1, 4)
-#         elif group_by == "Sales Person":
-#             currency_indices = range(2, 7)
-#         elif group_by == "Warehouse":
-#             currency_indices = range(2, 7)
-#         elif group_by == "Item Group":
-#             currency_indices = range(2, 7)
-#         elif group_by == "Brand":
-#             currency_indices = range(6, 11)
-#         elif group_by == "Customer Group":
-#             currency_indices = range(2, 7)
-#         elif group_by == "Project":
-#             currency_indices = range(1, 4)
-
-#     # Determine if data entries are lists or dicts
-#     is_dict_format = isinstance(data[0], dict)
-
-#     for entry in data:
-#         if is_dict_format and currency_fields:
-#             # Convert currency fields for dictionary format
-#             for field in currency_fields:
-#                 if field in entry:
-#                     entry[field] = convert(entry.get(field, 0), from_currency, to_currency, date)
-#         elif not is_dict_format and currency_indices:
-#             # Convert currency fields for list format
-#             for idx in currency_indices:
-#                 if idx < len(entry):
-#                     entry[idx] = convert(entry[idx], from_currency, to_currency, date)
-
-#     return data
-# # 
 
 def get_currency_fields(group_by):
     """
@@ -1137,7 +1112,7 @@ def convert_currency_columns(data, filters):
     """
     Main function to convert currency columns based on the data format and filters.
     """
-    # Early exit if data is null or empty
+    # Early exit if dta is null or empty
     if not data:
         return data
 
@@ -1146,7 +1121,6 @@ def convert_currency_columns(data, filters):
     from_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
     group_by = filters.get('group_by')
 
-    # Get currency fields or indices based on group_by
     currency_fields, currency_indices = get_currency_fields(group_by)
 
     # Determine if data entries are lists or dicts
