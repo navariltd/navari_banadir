@@ -48,7 +48,8 @@ frappe.query_reports["Monthly Expense"] = {
 			fieldname: "presentation_currency",
 			label: __("Currency"),
 			fieldtype: "Select",
-			options: erpnext.get_presentation_currency_list()
+			options: erpnext.get_presentation_currency_list(),
+			width: "80px",
 			
 		},
 		{

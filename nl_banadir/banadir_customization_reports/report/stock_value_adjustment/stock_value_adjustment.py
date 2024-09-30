@@ -227,8 +227,7 @@ def _execute(filters=None, additional_table_columns=None):
 
 	data=convert_as_per_current_exchange_rate(data, filters, "USD", presentation_currency)
 	data=convert_currency_fields(data, filters)
-	# data=convert_as_per_current_exchange_rate(data,filters, "USD", presentation_currency)
-	# data=convert_currency_fields(data, filters)
+
 	return columns, data, None, None, None, skip_total_row
 
 
@@ -573,6 +572,6 @@ def convert_currency_fields(data, filters):
 				entry['current_rate'] = convert(entry.get('current_rate', 0), from_currency, to_currency, date)
 				entry['current_rate_plus_landed_cost'] = convert(entry.get('current_rate_plus_landed_cost', 0), from_currency, to_currency, date)
 				entry['current_total'] = convert(entry.get('current_total', 0), from_currency, to_currency, date)
+				entry['current_landed_cost'] = convert(entry.get('current_landed_cost', 0), from_currency, to_currency, date)
 				
-
 		return data
