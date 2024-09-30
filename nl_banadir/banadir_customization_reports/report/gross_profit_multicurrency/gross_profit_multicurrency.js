@@ -64,6 +64,38 @@ frappe.query_reports["Gross Profit MultiCurrency"] = {
 			},
 		},
 		{
+				"fieldname": "cost_center",
+				"label": __("Cost Center"),
+				"fieldtype": "Link",
+				"options": "Cost Center",
+				get_query: function () {
+					var company = frappe.query_report.get_filter_value("company");
+					return {
+						filters: [["Cost Center", "company", "=", company]],
+					};
+				}
+		},
+		{
+				"fieldname":"project",
+				"label": __("Project"),
+				"fieldtype": "Link",
+				"options": "Project",
+				get_query: function () {
+					var company = frappe.query_report.get_filter_value("company");
+					return {
+						filters: [["Project", "company", "=", company]],
+					};
+				}
+
+		},
+		{
+				"fieldname":"branch",
+				"label": __("Branch"),
+				"fieldtype": "Link",
+				"options": "Branch",
+		},
+
+		{
 			fieldname: "presentation_currency",
 			label: __("Currency"),
 			fieldtype: "Select",
