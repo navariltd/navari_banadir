@@ -15,10 +15,11 @@ def execute(filters=None):
 def get_columns():
     return [
         {
-            "label": "Expense Booked", 
-            "fieldname": "expense_booked", 
-            "fieldtype": "Currency",
-            "options": "currency"
+            "label": "Invoice Number", 
+            "fieldname": "invoice_number", 
+            "fieldtype": "Link", 
+            "options": "Purchase Invoice",
+            "width": "220"
         },
         {
             "label": "Landed Cost", 
@@ -28,11 +29,30 @@ def get_columns():
             "width": "220"
         },
         {
-            "label": "Invoice Number", 
-            "fieldname": "invoice_number", 
+            "label": "Expense Account", 
+            "fieldname": "expense_account", 
             "fieldtype": "Link", 
-            "options": "Purchase Invoice",
-            "width": "220"
+            "options": "Account",
+            "width": "200"
+        },
+        {
+            "label": "Expense Booked", 
+            "fieldname": "expense_booked", 
+            "fieldtype": "Currency",
+            "options": "currency"
+        },
+        {
+            "label": "Amount", 
+            "fieldname": "amount", 
+            "fieldtype": "Currency",
+            "options": "currency"
+        },
+        {
+            "label": "Currency", 
+            "fieldname": "currency", 
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": "70"
         },
         {
             "label": "Container No", 
@@ -47,28 +67,9 @@ def get_columns():
             "width": "140"
         },
         {
-            "label": "Expense Account", 
-            "fieldname": "expense_account", 
-            "fieldtype": "Link", 
-            "options": "Account",
-            "width": "200"
-        },
-        {
             "label": "Description", 
             "fieldname": "description", 
             "fieldtype": "Data"
-        },
-        {
-            "label": "Amount", 
-            "fieldname": "amount", 
-            "fieldtype": "Currency",
-            "options": "currency"
-        },
-        {
-            "label": "Currency", 
-            "fieldname": "currency", 
-            "fieldtype": "Link",
-            "options": "Currency"
         }
     ]
 
@@ -151,7 +152,7 @@ def get_data(filters):
             "expense_booked": totals["total_expense_booked"],
             "amount": totals["total_amount"],
             "currency": totals["currency"],
-            "expense_account": "Total",
+            "expense_account": "",
             "container_no": "",
             "bl_number": "",
             "landed_cost": "",
