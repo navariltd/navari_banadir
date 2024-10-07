@@ -149,6 +149,14 @@ def execute(filters=None):
 				"gross_profit",
 				"gross_profit_percent",
 			],
+			"branch": [
+				"branch",
+				"qty",
+				"base_amount",
+				"buying_amount",
+				"gross_profit",
+				"gross_profit_percent",
+			]
 		}
 	)
 
