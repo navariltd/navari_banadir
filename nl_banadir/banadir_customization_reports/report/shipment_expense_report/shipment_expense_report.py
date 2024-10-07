@@ -18,22 +18,15 @@ def get_columns():
             "label": "Invoice Number", 
             "fieldname": "invoice_number", 
             "fieldtype": "Link", 
-            "options": "Purchase Invoice",
+            "options": "Sales Invoice",
             "width": "220"
         },
         {
             "label": "Landed Cost", 
             "fieldname": "landed_cost", 
             "fieldtype": "Link",
-            "options": "Landed Cost Voucher",
+            "options": "Sales Shipment Cost",
             "width": "220"
-        },
-        {
-            "label": "Expense Account", 
-            "fieldname": "expense_account", 
-            "fieldtype": "Link", 
-            "options": "Account",
-            "width": "200"
         },
         {
             "label": "Expense Booked", 
@@ -54,7 +47,7 @@ def get_columns():
             "fieldname": "currency", 
             "fieldtype": "Link",
             "options": "Currency",
-            "width": "70"
+            "width": "100"
         },
         {
             "label": "Container No", 
@@ -77,40 +70,40 @@ def get_columns():
 
 def get_data(filters):
     # Define the DocTypes
-    PurchaseInvoice = DocType("Purchase Invoice")
-    LandedCostVoucher = DocType("Landed Cost Voucher")
-    LandedCostPurchaseReceipt = DocType("Landed Cost Purchase Receipt")
-    LandedCostTaxesAndCharges = DocType("Landed Cost Taxes and Charges")
+    SalesInvoice = DocType("Sales Invoice")
+    SalesShipmentCost = DocType("Sales Shipment Cost")
+    LandedCostSalesInvoice = DocType("Landed Cost Sales Invoice")
+    LandedCostTaxesAndCharges = DocType("Sales Landed Cost Taxes and Charges")
 
     query = (
-        frappe.qb.from_(LandedCostVoucher)
-        .left_join(LandedCostPurchaseReceipt)
-        .on(LandedCostVoucher.name == LandedCostPurchaseReceipt.parent)
-        .join(PurchaseInvoice)
-        .on(LandedCostPurchaseReceipt.receipt_document == PurchaseInvoice.name)
+        frappe.qb.from_(SalesShipmentCost)
+        .left_join(LandedCostSalesInvoice)
+        .on(SalesShipmentCost.name == LandedCostSalesInvoice.parent)
+        .join(SalesInvoice)
+        .on(LandedCostSalesInvoice.receipt_document == SalesInvoice.name)
         .left_join(LandedCostTaxesAndCharges)
-        .on(LandedCostVoucher.name == LandedCostTaxesAndCharges.parent)
+        .on(SalesShipmentCost.name == LandedCostTaxesAndCharges.parent)
         .select(
-            LandedCostVoucher.name.as_("landed_cost"),
-            PurchaseInvoice.name.as_("invoice_number"),
+            SalesShipmentCost.name.as_("landed_cost"),
+            SalesInvoice.name.as_("invoice_number"),
             LandedCostTaxesAndCharges.account_currency.as_("currency"),
             LandedCostTaxesAndCharges.expense_account.as_("expense_account"),
-            PurchaseInvoice.custom_container_no.as_("container_no"),
-            PurchaseInvoice.custom_bill_of_lading.as_("bl_number"),
+            SalesInvoice.custom_container_no.as_("container_no"),
+            SalesInvoice.custom_bill_of_landing.as_("bl_number"),
             LandedCostTaxesAndCharges.amount.as_("amount"),
             LandedCostTaxesAndCharges.amount.as_("expense_booked"),
             LandedCostTaxesAndCharges.description.as_("description")
         )
-        .where(PurchaseInvoice.docstatus == 1)
-        .where(LandedCostVoucher.docstatus == 1)
+        .where(SalesInvoice.docstatus == 1)
+        .where(SalesShipmentCost.docstatus == 1)
     )
 
     # Apply filters if provided
     if filters.get("company"):
-        query = query.where(LandedCostVoucher.company == filters.get("company"))
+        query = query.where(SalesShipmentCost.company == filters.get("company"))
     
-    if filters.get("purchase_invoice"):
-        query = query.where(PurchaseInvoice.name == filters.get("purchase_invoice"))
+    if filters.get("sales_invoice"):
+        query = query.where(SalesInvoice.name == filters.get("sales_invoice"))
 
     # Fetch data
     data = query.run(as_dict=True)
