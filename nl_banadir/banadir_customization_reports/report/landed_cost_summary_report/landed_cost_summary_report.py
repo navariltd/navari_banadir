@@ -39,13 +39,15 @@ def get_columns():
             "label": "Expense Booked", 
             "fieldname": "expense_booked", 
             "fieldtype": "Currency",
-            "options": "currency"
+            "options": "currency",
+            "width": "100"
         },
         {
             "label": "Amount", 
             "fieldname": "amount", 
             "fieldtype": "Currency",
-            "options": "currency"
+            "options": "currency",
+            "width": "100"
         },
         {
             "label": "Currency", 
@@ -148,7 +150,7 @@ def get_data(filters):
     # Add totals to final data
     for invoice_number, totals in totals_dict.items():
         total_row = {
-            "invoice_number": invoice_number,
+            "invoice_number": f"Total - {invoice_number}",
             "expense_booked": totals["total_expense_booked"],
             "amount": totals["total_amount"],
             "currency": totals["currency"],
@@ -156,12 +158,13 @@ def get_data(filters):
             "container_no": "",
             "bl_number": "",
             "landed_cost": "",
-            "description": ""
+            "description": "",
+            "is_total": True,
         }
         final_data.append(total_row)
 
     # Sort data by invoice number
-    final_data = sorted(final_data, key=lambda x: x["invoice_number"])
+    final_data = sorted(final_data, key=lambda x: x["invoice_number"][8:] if x["invoice_number"].startswith("Total - ") else x["invoice_number"])
 
     return final_data
 
