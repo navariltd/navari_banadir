@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import nowdate
 from frappe.query_builder import DocType
+from frappe.query_builder.functions import IfNull
 
 def execute(filters=None):
     columns = get_columns()
@@ -40,21 +41,21 @@ def get_columns():
             "fieldname": "expense_booked", 
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "100"
+            "width": "150"
         },
         {
             "label": "Amount", 
             "fieldname": "amount", 
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "100"
+            "width": "150"
         },
         {
             "label": "Currency", 
             "fieldname": "currency", 
             "fieldtype": "Link",
             "options": "Currency",
-            "width": "70"
+            "width": "100"
         },
         {
             "label": "Container No", 
@@ -93,7 +94,7 @@ def get_data(filters):
         .select(
             LandedCostVoucher.name.as_("landed_cost"),
             PurchaseInvoice.name.as_("invoice_number"),
-            LandedCostTaxesAndCharges.account_currency.as_("currency"),
+            IfNull(LandedCostTaxesAndCharges.account_currency, "USD").as_("currency"),
             LandedCostTaxesAndCharges.expense_account.as_("expense_account"),
             PurchaseInvoice.custom_container_no.as_("container_no"),
             PurchaseInvoice.custom_bill_of_lading.as_("bl_number"),
