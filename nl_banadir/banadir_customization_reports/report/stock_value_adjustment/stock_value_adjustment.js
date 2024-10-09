@@ -41,6 +41,7 @@ frappe.query_reports["Stock Value Adjustment"] = {
 			fieldtype: "Link",
 			options: "Company",
 			default: frappe.defaults.get_user_default("Company"),
+			reqd: 1,
 		},
 		{
 			fieldname: "mode_of_payment",
