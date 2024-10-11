@@ -9,7 +9,7 @@ frappe.query_reports["Shipment Expense Report"] = {
 			fieldtype: "Link",
 			options: "Company",
 			default: frappe.defaults.get_user_default("Company"),
-			reqd: 1,
+			// reqd: 1,
 		},
         {
             fieldname: "currency",

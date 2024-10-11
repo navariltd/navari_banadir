@@ -5,7 +5,8 @@ import frappe
 from frappe import _
 from frappe.utils import nowdate
 from frappe.query_builder import DocType
-from frappe.query_builder.functions import IfNull
+from erpnext.accounts.report.utils import convert
+
 
 def execute(filters=None):
     columns = get_columns()
@@ -87,7 +88,8 @@ def get_data(filters):
         .select(
             SalesShipmentCost.name.as_("landed_cost"),
             SalesInvoice.name.as_("invoice_number"),
-            IfNull(LandedCostTaxesAndCharges.account_currency, "USD").as_("currency"),
+            SalesInvoice.currency.as_("currency"),
+            SalesInvoice.posting_date.as_("posting_date"),
             LandedCostTaxesAndCharges.expense_account.as_("expense_account"),
             SalesInvoice.custom_container_no.as_("container_no"),
             SalesInvoice.custom_bill_of_landing.as_("bl_number"),
@@ -96,7 +98,7 @@ def get_data(filters):
             LandedCostTaxesAndCharges.description.as_("description")
         )
         .where(SalesInvoice.docstatus == 1)
-        .where(SalesShipmentCost.docstatus == 1)
+        # .where(SalesShipmentCost.docstatus == 1)
     )
 
     # Apply filters if provided
@@ -118,11 +120,12 @@ def get_data(filters):
         original_currency = row["currency"]
         original_expense_booked = row["expense_booked"]
         original_amount = row["amount"]
+        date = row["posting_date"]
 
         # Convert currency if necessary
         if selected_currency and selected_currency != original_currency:
-            row["expense_booked"] = convert_currency(original_expense_booked, original_currency, selected_currency, nowdate())
-            row["amount"] = convert_currency(original_amount, original_currency, selected_currency, nowdate())
+            row["expense_booked"] = convert_currency(original_expense_booked, original_currency, selected_currency,  date)
+            row["amount"] = convert_currency(original_amount, original_currency, selected_currency,  date)
             row["currency"] = selected_currency
 
         # Add row to final data
