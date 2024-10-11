@@ -15,7 +15,6 @@ frappe.query_reports["Landed Cost Summary Report"] = {
             fieldname: "currency",
             label: __("Currency"),
             fieldtype: "Link",
-            default: frappe.defaults.get_user_default("Currency"),
             options: "Currency",
         },
         {
