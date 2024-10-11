@@ -132,8 +132,8 @@ def get_data(filters):
             LandedCostTaxesAndCharges.expense_account.as_("expense_account"),
             PurchaseInvoice.custom_container_no.as_("container_no"),
             PurchaseInvoice.custom_bill_of_lading.as_("bl_number"),
-            LandedCostTaxesAndCharges.amount.as_("amount"),
-            LandedCostTaxesAndCharges.amount.as_("expense_booked"),
+            LandedCostTaxesAndCharges.base_amount.as_("amount"),
+            LandedCostTaxesAndCharges.base_amount.as_("expense_booked"),
             LandedCostTaxesAndCharges.description.as_("description")
         )
         .where(PurchaseInvoice.docstatus == 1)
