@@ -256,7 +256,7 @@ def get_conversion_rate(from_currency, to_currency, date):
             inverse_exchange_rate = inverse_conversion_rate[0]["exchange_rate"]
             return 1 / inverse_exchange_rate, inverse_conversion_rate[0]["date"]
         else:
-            frappe.throw(
+            frappe.msgprint(
                 _("Exchange rate not found for {0} to {1}").format(
                     from_currency, to_currency
                 )
