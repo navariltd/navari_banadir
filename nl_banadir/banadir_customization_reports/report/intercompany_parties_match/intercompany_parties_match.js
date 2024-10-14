@@ -9,7 +9,8 @@ frappe.query_reports["Intercompany Parties Match"] = {
       fieldtype: "Link",
       width: "80",
       options: "Company",
-      default: frappe.defaults.get_default("company"),
+      reqd: 1,
+      //   default: frappe.defaults.get_default("company"),
     },
     {
       fieldname: "to_company",
@@ -17,7 +18,7 @@ frappe.query_reports["Intercompany Parties Match"] = {
       fieldtype: "Link",
       width: "80",
       options: "Company",
-      // default: frappe.defaults.get_default("company"),
+      //   default: frappe.defaults.get_default("company"),
     },
     {
       fieldname: "from_date",

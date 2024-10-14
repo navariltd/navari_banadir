@@ -4,6 +4,7 @@
 from typing import TypedDict
 
 import frappe
+import erpnext
 from frappe.query_builder import DocType
 from frappe.utils import getdate
 
@@ -61,14 +62,21 @@ class InterCompanyPartiesMatchReport:
                 "width": "200",
             },
             {
+                "label": "Customer Journal",
+                "fieldname": "customer_journal",
+                "fieldtype": "Link",
+                "options": "Journal Entry",
+                "width": "200",
+            },
+            {
                 "label": "Total Credit",
-                "fieldname": "total_credit",
+                "fieldname": "total_amount",
                 "fieldtype": "Currency",
                 "width": "200",
             },
             {
                 "label": "Total Debit",
-                "fieldname": "total_debit",
+                "fieldname": "total",
                 "fieldtype": "Currency",
                 "width": "200",
             },
@@ -79,50 +87,101 @@ class InterCompanyPartiesMatchReport:
     def fetch_data(self):
         Journal_Entry = DocType("Journal Entry")
 
+        if self.filters.get("from_company"):
+
+            query = (
+                frappe.qb.from_(Journal_Entry)
+                .select(
+                    Journal_Entry.company.as_("from_company"),
+                    Journal_Entry.name.as_("journal"),
+                    Journal_Entry.inter_company_journal_entry_reference.as_(
+                        "customer_journal"
+                    ),
+                    "total_amount",
+                    "posting_date",
+                )
+                .where(
+                    (Journal_Entry.posting_date >= self.from_date)
+                    & (Journal_Entry.posting_date <= self.to_date)
+                )
+                .where(
+                    (Journal_Entry.company == self.filters.get("from_company"))
+                    & (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                    & (Journal_Entry.docstatus == 1)
+                )
+            )
+
+        journals = query.run(as_dict=True)
+
+        for journal in journals:
+
+            if journal.customer_journal:
+
+                new_journal = (
+                    frappe.qb.from_(Journal_Entry)
+                    .select(
+                        Journal_Entry.company.as_("to_company"),
+                        Journal_Entry.total_amount.as_("total"),
+                    )
+                    .where((Journal_Entry.name == journal.customer_journal))
+                    .run(as_dict=True)
+                )
+
+                journal.update(new_journal[0])
+                self.data.append(journal)
+
+            else:
+                self.data.append(journal)
+
+        if self.filters.get("from_company") and self.filters.get("to_company"):
+            # Reset self.data
+            self.data = []
+            self.filter_by_to_company()
+
+        return self.data
+
+    def filter_by_to_company(self):
+        Journal_Entry = DocType("Journal Entry")
+
         query = (
             frappe.qb.from_(Journal_Entry)
             .select(
                 Journal_Entry.company.as_("from_company"),
                 Journal_Entry.name.as_("journal"),
-                "total_credit",
-                "inter_company_journal_entry_reference",
+                Journal_Entry.inter_company_journal_entry_reference.as_(
+                    "customer_journal"
+                ),
+                "total_amount",
                 "posting_date",
-            )
-            .where(
-                (Journal_Entry.inter_company_journal_entry_reference != "")
-                & (Journal_Entry.voucher_type == "Inter Company Journal Entry")
-                & (Journal_Entry.docstatus == 1)
             )
             .where(
                 (Journal_Entry.posting_date >= self.from_date)
                 & (Journal_Entry.posting_date <= self.to_date)
             )
+            .where(
+                (Journal_Entry.company == self.filters.get("from_company"))
+                & (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                & (Journal_Entry.docstatus == 1)
+                & (Journal_Entry.inter_company_journal_entry_reference != "")
+            )
         )
 
-        # data = []
         journals = query.run(as_dict=True)
-
-        print(journals)
 
         for journal in journals:
             new_journal = (
                 frappe.qb.from_(Journal_Entry)
                 .select(
                     Journal_Entry.company.as_("to_company"),
-                    Journal_Entry.total_debit.as_("total_debit"),
+                    Journal_Entry.total_amount.as_("total"),
                 )
                 .where(
-                    Journal_Entry.name == journal.inter_company_journal_entry_reference
+                    (Journal_Entry.name == journal.customer_journal)
+                    & (Journal_Entry.company == self.filters.get("to_company"))
                 )
                 .run(as_dict=True)
             )
-            journal.update(new_journal[0])
-            self.data.append(journal)
 
-        print(self.from_date)
-        return self.data
-
-    def get_journals(self, filters):
-        J_Entry = DocType("Journal Entry")
-
-        # query = frappe.qb.from_(J_Entry).
+            if len(new_journal) > 0:
+                journal.update(new_journal[0])
+                self.data.append(journal)
