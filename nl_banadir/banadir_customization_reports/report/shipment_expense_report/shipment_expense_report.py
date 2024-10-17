@@ -49,7 +49,8 @@ def get_columns(filters=None):
             "fieldname": "currency", 
             "fieldtype": "Link",
             "options": "Currency",
-            "width": "100"
+            "width": "100",
+            "hidden": 1
         },
         {
             "label": "Container No", 
@@ -72,7 +73,18 @@ def get_columns(filters=None):
 
     if filters.get("currency"):
         convert_currency = filters.get("currency")
-        
+        columns.insert(5, {
+            "label": f"Exchange Rate",
+            "fieldname": "exchange_rate",
+            "fieldtype": "Float",
+            "width": "150"
+        })
+        # columns.insert(7, {
+        #     "label": f"Exchange Date",
+        #     "fieldname": "exchange_date",
+        #     "fieldtype": "Date",
+        #     "width": "150"
+        # })
         columns.insert(4, {
             "label": f"Amount ({convert_currency})",
             "fieldname": "amount_in_currency",
@@ -169,6 +181,15 @@ def get_data(filters):
             row["expense_booked_in_currency"] = convert_currency(original_expense_booked, original_currency, selected_currency, date)
             row["amount_in_currency"] = convert_currency(original_amount, original_currency, selected_currency, date)
             row["selected_currency"] = selected_currency
+            exchange_rate, conversion_date = get_conversion_rate(original_currency, selected_currency, date)
+            
+            if original_currency != selected_currency and exchange_rate < 1:
+                # Display the rate as USD -> CDF, not the inverse
+                row["exchange_rate"] = 1 / exchange_rate
+            else:
+                row["exchange_rate"] = exchange_rate
+
+            # row["exchange_date"] = conversion_date
 
             if "total_expense_booked_in_currency" not in totals_dict[invoice_number]:
                 totals_dict[invoice_number]["total_expense_booked_in_currency"] = 0

@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import nowdate
 from frappe.query_builder import DocType
 from frappe.query_builder.functions import IfNull
+from erpnext.accounts.report.utils import convert
 
 def execute(filters=None):
     columns = get_columns(filters)
@@ -95,6 +96,18 @@ def get_columns(filters=None):
             "options": "selected_currency",
             "width": "170"
         })
+        columns.insert(7, {
+            "label": f"Exchange Rate",
+            "fieldname": "exchange_rate",
+            "fieldtype": "Float",
+            "width": "150"
+        })
+        # columns.insert(7, {
+        #     "label": f"Exchange Date",
+        #     "fieldname": "exchange_date",
+        #     "fieldtype": "Date",
+        #     "width": "150"
+        # })
         columns.append({
             "label": "Selected Currency",
             "fieldname": "selected_currency",
@@ -176,9 +189,18 @@ def get_data(filters):
         # Convert currency if necessary
         if selected_currency:
 
-            row["expense_booked_in_currency"] = convert_currency(original_expense_booked, original_currency, selected_currency, date)
+            row["expense_booked_in_currency"] = convert(original_expense_booked, selected_currency, original_currency, date)
             row["amount_in_currency"] = convert_currency(original_amount, original_currency, selected_currency, date)
             row["selected_currency"] = selected_currency
+            exchange_rate, conversion_date = get_conversion_rate(original_currency, selected_currency, date)
+            
+            if original_currency != selected_currency and exchange_rate < 1:
+                # Display the rate as USD -> CDF, not the inverse
+                row["exchange_rate"] = 1 / exchange_rate
+            else:
+                row["exchange_rate"] = exchange_rate
+
+            # row["exchange_date"] = conversion_date
 
             if "total_expense_booked_in_currency" not in totals_dict[invoice_number]:
                 totals_dict[invoice_number]["total_expense_booked_in_currency"] = 0
