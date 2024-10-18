@@ -251,7 +251,7 @@ class InterCompanyPartiesMatchReport:
 
             if to_company_journals:
                 to_company_journals = self.convert_currency_fields(
-                    to_company_journals, self.filters, "from_company", "total_debit"
+                    to_company_journals, self.filters, "to_company", "total_credit"
                 )
 
             for from_journal in from_company_journals:
