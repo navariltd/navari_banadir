@@ -4,13 +4,19 @@
 frappe.query_reports["Intercompany Parties Match"] = {
   filters: [
     {
+      fieldname: "presentation_currency",
+      label: __("Multi-Currency"),
+      fieldtype: "Select",
+      options: erpnext.get_presentation_currency_list(),
+      reqd: 1,
+    },
+    {
       fieldname: "from_company",
       label: __("From Company"),
       fieldtype: "Link",
       width: "80",
       options: "Company",
       reqd: 1,
-      //   default: frappe.defaults.get_default("company"),
     },
     {
       fieldname: "to_company",
@@ -18,7 +24,7 @@ frappe.query_reports["Intercompany Parties Match"] = {
       fieldtype: "Link",
       width: "80",
       options: "Company",
-      //   default: frappe.defaults.get_default("company"),
+      reqd: 1,
     },
     {
       fieldname: "from_date",
@@ -48,6 +54,12 @@ frappe.query_reports["Intercompany Parties Match"] = {
           },
         };
       },
+    },
+    {
+      fieldname: "compare_by_amount",
+      label: __("Compare By Amount"),
+      fieldtype: "Check",
+      default: 0,
     },
   ],
 };
