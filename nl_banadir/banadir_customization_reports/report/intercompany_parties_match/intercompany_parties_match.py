@@ -257,6 +257,9 @@ class InterCompanyPartiesMatchReport:
             for from_journal in from_company_journals:
                 for to_journal in to_company_journals:
                     if from_journal.total_debit == to_journal.total_credit:
-                        merged_journal = {**from_journal, **to_journal}
+                        merged_journal = from_journal.copy()
+                        merged_journal["to_company"] = to_journal.to_company
+                        merged_journal["customer_journal"] = to_journal.customer_journal
+                        merged_journal["total_credit"] = to_journal.total_credit
                         self.data.append(merged_journal)
             return self.data
