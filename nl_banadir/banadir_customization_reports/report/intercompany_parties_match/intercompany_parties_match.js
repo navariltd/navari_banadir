@@ -4,13 +4,6 @@
 frappe.query_reports["Intercompany Parties Match"] = {
   filters: [
     {
-      fieldname: "presentation_currency",
-      label: __("Multi-Currency"),
-      fieldtype: "Select",
-      options: erpnext.get_presentation_currency_list(),
-      reqd: 1,
-    },
-    {
       fieldname: "from_company",
       label: __("From Company"),
       fieldtype: "Link",
@@ -42,19 +35,19 @@ frappe.query_reports["Intercompany Parties Match"] = {
       reqd: 1,
       default: frappe.datetime.get_today(),
     },
-    {
-      fieldname: "journal",
-      label: __("Journal"),
-      fieldtype: "Link",
-      options: "Journal Entry",
-      get_query: function () {
-        return {
-          filters: {
-            voucher_type: "Inter Company Journal Entry",
-          },
-        };
-      },
-    },
+    // {
+    //   fieldname: "journal",
+    //   label: __("Journal"),
+    //   fieldtype: "Link",
+    //   options: "Journal Entry",
+    //   get_query: function () {
+    //     return {
+    //       filters: {
+    //         voucher_type: "Inter Company Journal Entry",
+    //       },
+    //     };
+    //   },
+    // },
     {
       fieldname: "compare_by_amount",
       label: __("Compare By Amount"),
