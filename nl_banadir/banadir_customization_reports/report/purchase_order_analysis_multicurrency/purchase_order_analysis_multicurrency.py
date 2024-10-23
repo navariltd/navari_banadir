@@ -11,6 +11,7 @@ from frappe import _
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import date_diff, flt, getdate
 from erpnext.accounts.report.utils import convert, get_rate_as_at
+from nl_banadir.banadir_customization_reports.report.utils import format_in_lakhs
 
 
 def execute(filters=None):
@@ -70,7 +71,7 @@ def get_data(filters):
 			po_item.item_code,
 			po_item.qty,
 			po_item.received_qty,
-            po.custom_container_qty,
+			po.custom_container_qty,
 			
 			(po_item.qty - po_item.received_qty).as_("pending_qty"),
 			Sum(IfNull(pi_item.qty, 0)).as_("billed_qty"),
@@ -107,6 +108,11 @@ def get_data(filters):
 
 
 def prepare_data(data, filters):
+	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
+		"Company", filters.company, "default_currency"
+	)
+ 
+	is_inr = True if presentation_currency == "INR" else False
 	completed, pending = 0, 0
 	pending_field = "pending_amount"
 	completed_field = "billed_amount"
@@ -132,6 +138,14 @@ def prepare_data(data, filters):
 		if filters.get("in_party_currency")==1:
 			row['billing_currency']=billing_currency(data, filters)
 
+		# Convert amount to lakhs if currency is INR
+		if is_inr:
+			row["amount"] = format_in_lakhs(row["amount"])
+			row["received_qty_amount"] = format_in_lakhs(row["received_qty_amount"])
+			row["billed_amount"] = format_in_lakhs(row["billed_amount"])
+			row["pending_amount"] = format_in_lakhs(row["pending_amount"])
+			row["advance_paid"] = format_in_lakhs(row["advance_paid"])
+			row["balance"] = format_in_lakhs(row["balance"])
 		if filters.get("group_by_po"):
 			po_name = row["purchase_order"]
 
@@ -295,14 +309,14 @@ def get_columns(filters):
 				"width": 110,
 				"convertible": "rate",
 			},
-    {
+	{
 				"label":f"Advance Paid (<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else _("Advance Paid"),
 				"fieldname":"advance_paid",
 				"fieldtype":"Float",
 					"precision":2,	
 						"width":100,	
 				},
-    {
+	{
 				"label": f"Balance Amount(<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else _("Balance Amount"),
 				"fieldname": "balance",
 				"fieldtype": "Float",
@@ -392,22 +406,22 @@ def convert_currency_columns(data, filters):
 	return data
 
 def calculate_advance_paid(purchase_order):
-    advance_paid = 0
-    payment_references = frappe.get_all(
-        "Payment Entry Reference",
-        filters={"reference_doctype": "Purchase Order", "reference_name": purchase_order, "docstatus": 1},
-        fields=["parent"]
-    )
-    
-    if payment_references:
-        base_paid_amounts = frappe.get_all(
-            "Payment Entry",
-            filters={"name": ["in", [pr['parent'] for pr in payment_references]]},
-            fields=["base_paid_amount"]
-        )
-        advance_paid = sum([amount['base_paid_amount'] for amount in base_paid_amounts]) or 0.0  # Ensures advance_paid is 0 if None
+	advance_paid = 0
+	payment_references = frappe.get_all(
+		"Payment Entry Reference",
+		filters={"reference_doctype": "Purchase Order", "reference_name": purchase_order, "docstatus": 1},
+		fields=["parent"]
+	)
+	
+	if payment_references:
+		base_paid_amounts = frappe.get_all(
+			"Payment Entry",
+			filters={"name": ["in", [pr['parent'] for pr in payment_references]]},
+			fields=["base_paid_amount"]
+		)
+		advance_paid = sum([amount['base_paid_amount'] for amount in base_paid_amounts]) or 0.0  # Ensures advance_paid is 0 if None
 
-    return advance_paid
+	return advance_paid
 
 
 def convert_to_party_currency(data, filters):
@@ -422,11 +436,12 @@ def convert_to_party_currency(data, filters):
 		return data
 		
 def billing_currency(data, filters):
-    if filters.get("in_party_currency")==1:
-        
-        for entry in data:
-            supplier_currency = frappe.db.get_value("Supplier", entry["supplier"], "default_currency")
-            if not supplier_currency:  # This checks for both None and empty string
-                supplier_currency = ""
-    return supplier_currency
+	if filters.get("in_party_currency")==1:
+		
+		for entry in data:
+			supplier_currency = frappe.db.get_value("Supplier", entry["supplier"], "default_currency")
+			if not supplier_currency:  # This checks for both None and empty string
+				supplier_currency = ""
+	return supplier_currency
 	
+
