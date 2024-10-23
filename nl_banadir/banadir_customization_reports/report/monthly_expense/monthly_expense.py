@@ -4,6 +4,7 @@ from frappe.utils import getdate, add_months, formatdate
 from dateutil.relativedelta import relativedelta
 from erpnext.accounts.report.utils import convert
 from frappe.query_builder import DocType, functions as fn
+# from nl_banadir.nl_banadir.banadir_customization_reports.report.utils import convert_to_party_currency, convert_currency_columns
 
 def execute(filters=None):
 	if not filters:
@@ -33,6 +34,13 @@ def get_columns(filters):
 		"fieldtype": "Link",
 		"options": "Account",
 	 },
+   {
+		"label":"Currency",
+		"fieldname":"currency",
+		"fieldtype":"Link",
+		"options":"Currency",
+  "hidden":1,
+   }
 
 	]
 
@@ -45,8 +53,9 @@ def get_columns(filters):
 		columns.append({
 			"label": f"{month_name} <strong>({presentation_currency})</strong>",
 			"fieldname": month_name.lower().replace(" ", "_") + "_currency",
-			"fieldtype": "Float",
+			"fieldtype": "Currency",
 			'precision': 2,
+			'options':"currency",
 			"width": 120
 		})
 		current_date += relativedelta(months=1)
@@ -62,6 +71,7 @@ def fetch_data(filters):
 	company = filters.get("company")
 	account_filter = filters.get("account")
 	show_parent_accounts = filters.get("parent_accounts")
+	currency= filters.get("currency") or frappe.get_cached_value("Company", company, "default_currency")
 
 	# Fetch monthly differences for both debit and credit
 	account_monthly_differences, total_differences = calculate_differences_by_month(
@@ -72,7 +82,7 @@ def fetch_data(filters):
 		# Fetch parent-child relationships and aggregate data for parent accounts
 		data = aggregate_parent_accounts(account_monthly_differences, total_differences, company)
 	else:
-		data = prepare_final_data(account_monthly_differences, total_differences)
+		data = prepare_final_data(account_monthly_differences, total_differences, filters)
 	return data
 
 def calculate_differences_by_month(start_date, end_date, company, account_filter):
@@ -121,6 +131,7 @@ def fetch_monthly_sums(company, month_start, next_month_start, account_filter):
 			& (GL_Entry.posting_date >= month_start)
 			& (GL_Entry.posting_date < next_month_start)
 			& (Account.root_type == 'Expense')
+			& (~Account.parent_account.like(f'Stock Expenses%'))
 		)
 		.groupby(GL_Entry.account)
 	)
@@ -131,11 +142,12 @@ def fetch_monthly_sums(company, month_start, next_month_start, account_filter):
 	data=query.run(as_dict=True)
 	return data
 
-def prepare_final_data(account_monthly_differences, total_differences):
+def prepare_final_data(account_monthly_differences, total_differences, filters):
 	data = []
 	for account, monthly_differences in account_monthly_differences.items():
 		row = {"account": account,
-		 							"parent_account": monthly_differences.get("parent_account", "")  # Include parent_account
+		 							"parent_account": monthly_differences.get("parent_account", ""),  # Include parent_account
+          "currency": filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 }
 		for month, difference in monthly_differences.items():
 			key = month.lower().replace(" ", "_") + "_currency"
