@@ -116,6 +116,21 @@ def get_columns(filters=None):
             "width": "120",
             "hidden": 1
         })
+        columns.append({
+            "label": "Invoice Currency",
+            "fieldname": "invoice_currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": "120",
+            "hidden": 1
+        })
+        columns.append({
+            "label": "Conversion Rate",
+            "fieldname": "conversion_rate",
+            "fieldtype": "Float",
+            "width": "120",
+            "hidden": 1
+        })
 
     return columns
 
@@ -142,6 +157,8 @@ def get_data(filters):
             PurchaseInvoice.name.as_("invoice_number"),
             Company.default_currency.as_("currency"),
             PurchaseInvoice.posting_date.as_("posting_date"),
+            PurchaseInvoice.currency.as_("invoice_currency"),
+            PurchaseInvoice.conversion_rate.as_("conversion_rate"),
             LandedCostTaxesAndCharges.expense_account.as_("expense_account"),
             PurchaseInvoice.custom_container_no.as_("container_no"),
             PurchaseInvoice.custom_bill_of_lading.as_("bl_number"),
@@ -167,14 +184,13 @@ def get_data(filters):
     final_data = []
     totals_dict = {}
 
-
     for row in data:
         original_currency = row["currency"]
         original_expense_booked = row["expense_booked"]
         original_amount = row["amount"]
         date = row["posting_date"]
 
-         # Accumulate totals in the dictionary
+        # Accumulate totals in the dictionary
         invoice_number = row["invoice_number"]
         if invoice_number not in totals_dict:
             totals_dict[invoice_number] = {
@@ -189,10 +205,20 @@ def get_data(filters):
         # Convert currency if necessary
         if selected_currency:
 
-            row["expense_booked_in_currency"] = convert(original_expense_booked, selected_currency, original_currency, date)
-            row["amount_in_currency"] = convert_currency(original_amount, original_currency, selected_currency, date)
-            row["selected_currency"] = selected_currency
-            exchange_rate, conversion_date = get_conversion_rate(original_currency, selected_currency, date)
+            if original_currency != selected_currency and selected_currency == row["invoice_currency"]:
+
+                exchange_rate = 1 / row["conversion_rate"] if row["conversion_rate"] > 1 else exchange_rate
+
+                row["expense_booked_in_currency"] = original_expense_booked * exchange_rate
+                row["amount_in_currency"] = original_amount * exchange_rate
+                row["selected_currency"] = selected_currency
+
+            else:
+
+                row["expense_booked_in_currency"] = convert(original_expense_booked, selected_currency, original_currency, date)
+                row["amount_in_currency"] = convert_currency(original_amount, original_currency, selected_currency, date)
+                row["selected_currency"] = selected_currency
+                exchange_rate, conversion_date = get_conversion_rate(original_currency, selected_currency, date)
             
             if original_currency != selected_currency and exchange_rate < 1:
                 # Display the rate as USD -> CDF, not the inverse
