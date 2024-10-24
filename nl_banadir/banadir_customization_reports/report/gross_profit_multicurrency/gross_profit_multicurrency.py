@@ -318,7 +318,7 @@ def get_columns(group_wise_columns, filters):
                 ),
                 "fieldname": "avg._selling_rate",
                 "fieldtype": "Currency",
-                "options": presentation_currency,
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
@@ -328,7 +328,7 @@ def get_columns(group_wise_columns, filters):
                 ),
                 "fieldname": "valuation_rate",
                "fieldtype": "Currency",
-                "options": presentation_currency,
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
@@ -338,7 +338,7 @@ def get_columns(group_wise_columns, filters):
                 ),
                 "fieldname": "selling_amount",
                 "fieldtype": "Currency",
-                "options": presentation_currency,
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
@@ -346,16 +346,16 @@ def get_columns(group_wise_columns, filters):
                 "label": _(f"Buying Amount <strong>({presentation_currency})</strong>"),
                 "fieldname": "buying_amount",
                 "fieldtype": "Currency",
-                "options": presentation_currency,
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
             "gross_profit": {
                 "label": _(f"Gross Profit <strong>({presentation_currency})</strong>"),
                 "fieldname": "gross_profit",
-                "fieldtype": "currency",
-                "options": presentation_currency,   
-                "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
+                # "precision": 2,
                 "width": 100,
             },
             "gross_profit_percent": {
@@ -384,7 +384,7 @@ def get_columns(group_wise_columns, filters):
                 ),
                 "fieldname": "allocated_amount",
                 "fieldtype": "Currency",
-                "options": presentation_currency,
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
@@ -422,6 +422,15 @@ def get_columns(group_wise_columns, filters):
                 "options": "Payment Term",
                 "width": 170,
             },
+            "currency":
+            {
+              "label": _("Currency"),
+              "fieldname":"currency",
+              "fieldtype":"Link",
+              "options":"Currency",
+              "hidden":1,
+            },
+            
         }
     )
 
@@ -1278,9 +1287,12 @@ def convert_currency_columns(data, filters):
             convert_dict_entries(
                 entry, currency_fields, from_currency, to_currency, date
             )
+            entry["currency"] = from_currency
         else:
             convert_list_entries(
                 entry, currency_indices, from_currency, to_currency, date
             )
-
+            entry.append(from_currency)
+    # frappe.throw(str(dta))
+    # data.append({"currency":from_currency})
     return data

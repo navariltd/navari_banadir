@@ -304,7 +304,8 @@ def get_columns(filters):
 			{
 				"label": _(f"Amount(<strong>{presentation_currency}</strong>)") if not filters.get("in_party_currency") else _("Amount"),
 				"fieldname": "amount",
-				"fieldtype": "Float",
+				"fieldtype": "Currency",
+				"options": "currency",
 	"precision":2,
 				"width": 110,
 				"convertible": "rate",
@@ -312,14 +313,16 @@ def get_columns(filters):
 	{
 				"label":f"Advance Paid (<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else _("Advance Paid"),
 				"fieldname":"advance_paid",
-				"fieldtype":"Float",
+				"fieldtype": "Currency",
+				"options": "currency",
 					"precision":2,	
 						"width":100,	
 				},
 	{
 				"label": f"Balance Amount(<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else _("Balance Amount"),
 				"fieldname": "balance",
-				"fieldtype": "Float",
+				"fieldtype": "Currency",
+				"options": "currency",
 				"precision": 2,
 				"width": 130,
 				"convertible": "rate",
@@ -327,7 +330,8 @@ def get_columns(filters):
 			{
 				"label": _(f"Billed Amount(<strong>{presentation_currency}</strong>)") if not filters.get("in_party_currency") else _("Billed Amount"),
 				"fieldname": "billed_amount",
-				"fieldtype": "Float",
+				"fieldtype": "Currency",
+				"options": "currency",
 	"precision":2,
 				"width": 110,
 				"convertible": "rate",
@@ -337,7 +341,8 @@ def get_columns(filters):
 			{
 				"label": _(f"Pending Amount(<strong>{presentation_currency}</strong>)" if not filters.get("in_party_currency") else "Pending Amount"),
 				"fieldname": "pending_amount",
-				"fieldtype": "Float",
+				"fieldtype": "Currency",
+				"options": "currency",
 	"precision":2,
 				"width": 130,
 	
@@ -346,7 +351,8 @@ def get_columns(filters):
 			{
 				"label": _(f"Received Qty Amount(<strong>{presentation_currency}</strong>)") if not filters.get("in_party_currency") else _("Received Qty Amount"),
 				"fieldname": "received_qty_amount",
-				"fieldtype": "Float",
+				"fieldtype": "Currency",
+				"options": "currency",
 				"width": 130,
 				"precision":2,
 				"convertible": "rate",
@@ -386,6 +392,12 @@ def get_columns(filters):
 			"precision":4,
 			"width": 100,
 		},
+		{
+		"label": _("Currency"),
+		"fieldname": "currency",
+		"fieldtype": "Currency",
+		"width": 100,
+		},
  
 
 		]
@@ -401,6 +413,7 @@ def convert_currency_columns(data, filters):
 
 	for entry in data:
 		for field in currency_fields:
+			entry["currency"]=from_currency
 			entry[field] = convert(entry.get(field, 0), from_currency, to_currency, date)
 	
 	return data
