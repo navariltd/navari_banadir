@@ -246,6 +246,7 @@ def get_columns(group_wise_columns, filters):
                 "fieldtype": "Date",
                 "width": 100,
             },
+            
             "posting_time": {
                 "label": _("Posting Time"),
                 "fieldname": "posting_time",
@@ -316,7 +317,8 @@ def get_columns(group_wise_columns, filters):
                     f"Avg. Selling Rate <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "avg._selling_rate",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": presentation_currency,
                 "precision": 2,
                 "width": 100,
             },
@@ -325,7 +327,8 @@ def get_columns(group_wise_columns, filters):
                     f"Valuation Rate <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "valuation_rate",
-                "fieldtype": "Float",
+               "fieldtype": "Currency",
+                "options": presentation_currency,
                 "precision": 2,
                 "width": 100,
             },
@@ -334,21 +337,24 @@ def get_columns(group_wise_columns, filters):
                     f"Selling Amount <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "selling_amount",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": presentation_currency,
                 "precision": 2,
                 "width": 100,
             },
             "buying_amount": {
                 "label": _(f"Buying Amount <strong>({presentation_currency})</strong>"),
                 "fieldname": "buying_amount",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": presentation_currency,
                 "precision": 2,
                 "width": 100,
             },
             "gross_profit": {
                 "label": _(f"Gross Profit <strong>({presentation_currency})</strong>"),
                 "fieldname": "gross_profit",
-                "fieldtype": "Float",
+                "fieldtype": "currency",
+                "options": presentation_currency,   
                 "precision": 2,
                 "width": 100,
             },
@@ -377,7 +383,8 @@ def get_columns(group_wise_columns, filters):
                     f"Allocated Amount <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "allocated_amount",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": presentation_currency,
                 "precision": 2,
                 "width": 100,
             },
