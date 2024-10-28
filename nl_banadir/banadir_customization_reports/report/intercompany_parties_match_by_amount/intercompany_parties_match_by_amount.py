@@ -530,13 +530,11 @@ class InterCompanyPartiesMatchReport:
                             journal.total_debit_or_credit
                             == amount.total_credit_or_debit
                         ):
-                            # print("MATCH", amount)
                             merged_journal = journal.copy()
                             merged_journal["total_credit_or_debit"] = (
                                 amount.total_credit_or_debit
                             )
                             merged_journal["party_journal"] = amount.party_journal
-                            # print("JOURNALS", merged_journal)
                             self.data.append(merged_journal)
 
 
