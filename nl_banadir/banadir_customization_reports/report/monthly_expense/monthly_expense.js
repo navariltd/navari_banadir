@@ -43,7 +43,38 @@ frappe.query_reports["Monthly Expense"] = {
 					};
 				  },
 		},
-		
+		{
+			"fieldname":"hide_account",
+			"label": __("Hide Account"),
+			"fieldtype": "Link",
+			"options": "Account",
+			get_query: () => {
+				var company = frappe.query_report.get_filter_value("company");
+				return {
+				  filters: {
+					company: company,
+					is_group: 0,
+				  },
+				};
+			  },
+	},
+	{
+		"fieldname":"hide_parent_account",
+		"label": __("Hide Parent Account"),
+		"fieldtype": "Link",
+		"options": "Account",
+		get_query: () => {
+			var company = frappe.query_report.get_filter_value("company");
+			return {
+			  filters: {
+				company: company,
+				is_group: 1,
+			  },
+			};
+		  },
+},
+
+	
 		{
 			fieldname: "presentation_currency",
 			label: __("Currency"),
