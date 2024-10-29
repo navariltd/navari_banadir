@@ -70,12 +70,15 @@ def fetch_data(filters):
 	end_date = getdate(filters.get("to_date"))
 	company = filters.get("company")
 	account_filter = filters.get("account")
+	hide_account_filter=filters.get("hide_account")
+	hide_parent_account_filter = filters.get('hide_parent_account')
+	
 	show_parent_accounts = filters.get("parent_accounts")
 	currency= filters.get("currency") or frappe.get_cached_value("Company", company, "default_currency")
 
 	# Fetch monthly differences for both debit and credit
 	account_monthly_differences, total_differences = calculate_differences_by_month(
-		start_date, end_date, company, account_filter
+		start_date, end_date, company, account_filter, hide_account_filter, hide_parent_account_filter
 	)
 
 	if show_parent_accounts:
@@ -85,7 +88,7 @@ def fetch_data(filters):
 		data = prepare_final_data(account_monthly_differences, total_differences, filters)
 	return data
 
-def calculate_differences_by_month(start_date, end_date, company, account_filter):
+def calculate_differences_by_month(start_date, end_date, company, account_filter, hide_account_filter, hide_parent_account_filter):
 	current_date = start_date
 	account_monthly_differences = {}
 	total_differences = {}
@@ -95,7 +98,7 @@ def calculate_differences_by_month(start_date, end_date, company, account_filter
 		next_month_start = add_months(month_start, 1)
 		month_name = formatdate(month_start, "MMM yyyy")
 
-		monthly_sums = fetch_monthly_sums(company, month_start, next_month_start, account_filter)
+		monthly_sums = fetch_monthly_sums(company, month_start, next_month_start, account_filter, hide_account_filter, hide_parent_account_filter)
 		for entry in monthly_sums:
 			account = entry["account"]
 			parent_account = entry.get("parent_account")  
@@ -112,7 +115,7 @@ def calculate_differences_by_month(start_date, end_date, company, account_filter
 		current_date = next_month_start
 	return account_monthly_differences, total_differences
 
-def fetch_monthly_sums(company, month_start, next_month_start, account_filter):
+def fetch_monthly_sums(company, month_start, next_month_start, account_filter, hide_account, hide_parent_account):
 	GL_Entry = DocType('GL Entry')
 	Account = DocType('Account')
 
@@ -132,6 +135,8 @@ def fetch_monthly_sums(company, month_start, next_month_start, account_filter):
 			& (GL_Entry.posting_date < next_month_start)
 			& (Account.root_type == 'Expense')
 			& (~Account.parent_account.like(f'Stock Expenses%'))
+			& (~Account.parent_account.like(f'{hide_parent_account}'))
+			& (~Account.name.like(f'{hide_account}'))
 		)
 		.groupby(GL_Entry.account)
 	)
