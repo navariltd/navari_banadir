@@ -283,6 +283,7 @@ class InterCompanyPartiesMatchReport:
 
     #     return self.data
 
+    ######################################## Consider removing this code
     def filter_by_to_company(self):
         Journal_Entry = DocType("Journal Entry")
 
@@ -376,6 +377,8 @@ class InterCompanyPartiesMatchReport:
                         self.data.append(merged_journal)
             return self.data
 
+    ############################################ Upto here
+
     def compare_journals_by_amount2(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
         Journal_Entry = DocType("Journal Entry")
@@ -435,11 +438,10 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry_Account.party == self.filters.get("party")[0]
                 )
 
-            # Loop through the data, if it has a party journal, get the value of the debit/credit
             journals = query.run(as_dict=True)
 
             if self.filters.get("compare_by_amount"):
-                party_type = "supplier" if party_type == "Customer" else "Customer"
+                party_type = "Supplier" if party_type == "Customer" else "Customer"
 
                 # amount_journals = []
 
@@ -525,17 +527,24 @@ class InterCompanyPartiesMatchReport:
                     self.amount_journals = amount_query.run(as_dict=True)
             if self.amount_journals:
                 for journal in journals:
-                    for amount in self.amount_journals:
+                    matched = False
+                    for amount_journal in self.amount_journals:
                         if (
                             journal.total_debit_or_credit
-                            == amount.total_credit_or_debit
+                            == amount_journal.total_credit_or_debit
                         ):
                             merged_journal = journal.copy()
                             merged_journal["total_credit_or_debit"] = (
-                                amount.total_credit_or_debit
+                                amount_journal.total_credit_or_debit
                             )
-                            merged_journal["party_journal"] = amount.party_journal
+                            merged_journal["party_journal"] = (
+                                amount_journal.party_journal
+                            )
                             self.data.append(merged_journal)
+                            matched = True
+                            break
+                    if not matched:
+                        self.data.append(journal)
 
 
 def convert_currency_fields(self, data, filters, company_key, amount_field):
