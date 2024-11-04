@@ -332,6 +332,7 @@ def get_accounts_with_children(accounts):
 
 
 def get_data_with_opening_closing(filters, account_details, accounting_dimensions, gl_entries):
+	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.get("company"), "default_currency")
 	data = []
 
 	gle_map = initialize_gle_map(gl_entries, filters)
@@ -368,6 +369,8 @@ def get_data_with_opening_closing(filters, account_details, accounting_dimension
 
 	# closing
 	data.append(totals.closing)
+	for record in data:
+		record["currency"]=presentation_currency
 
 	return data
 
@@ -577,20 +580,31 @@ def get_columns(filters):
 		{
 			"label": _("Debit ({0})").format(currency),
 			"fieldname": "debit",
-			"fieldtype": "Float",
+				"fieldtype": "Currency",
+			"options": "currency",
 			"width": 130,
 		},
 		{
 			"label": _("Credit ({0})").format(currency),
 			"fieldname": "credit",
-			"fieldtype": "Float",
+			"fieldtype": "Currency",
+			"options": "currency",
 			"width": 130,
 		},
 		{
 			"label": _("Balance ({0})").format(currency),
 			"fieldname": "balance",
-			"fieldtype": "Float",
+				"fieldtype": "Currency",
+			"options": "currency",
 			"width": 130,
+		},
+		{
+		"label": _("Currency"),
+		"fieldname": "currency",
+		"fieldtype": "Link",
+		"options": "Currency",
+		"hidden":1,
+		
 		},
 	]
 
@@ -599,16 +613,16 @@ def get_columns(filters):
 			{
 				"label": _("Debit (Transaction)"),
 				"fieldname": "debit_in_transaction_currency",
-				"fieldtype": "Currency",
+					"fieldtype": "Currency",
+			"options": "currency",
 				"width": 130,
-				"options": "transaction_currency",
 			},
 			{
 				"label": _("Credit (Transaction)"),
 				"fieldname": "credit_in_transaction_currency",
-				"fieldtype": "Currency",
+					"fieldtype": "Currency",
+			"options": "currency",
 				"width": 130,
-				"options": "transaction_currency",
 			},
 			{
 				"label": "Transaction Currency",
