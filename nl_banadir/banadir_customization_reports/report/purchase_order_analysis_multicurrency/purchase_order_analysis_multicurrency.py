@@ -127,7 +127,6 @@ def prepare_data(data, filters):
 		# prepare data for report view
 		row["advance_paid"] = calculate_advance_paid(row["purchase_order"])
 		row["qty_to_bill"] = flt(row["qty"]) - flt(row["billed_qty"])
-		#frappe.throw(str(row['base_grand_total']))
 		row["balance"] = flt(row["base_grand_total"]) - flt(row["advance_paid"])
 		
 		# Fetch additional fields if they exist

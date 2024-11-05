@@ -102,12 +102,7 @@ def get_columns(filters=None):
             "fieldtype": "Float",
             "width": "150"
         })
-        # columns.insert(7, {
-        #     "label": f"Exchange Date",
-        #     "fieldname": "exchange_date",
-        #     "fieldtype": "Date",
-        #     "width": "150"
-        # })
+     
         columns.append({
             "label": "Selected Currency",
             "fieldname": "selected_currency",

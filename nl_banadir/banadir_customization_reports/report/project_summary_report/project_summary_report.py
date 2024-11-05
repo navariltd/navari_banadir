@@ -197,11 +197,9 @@ def get_purchase_invoice_items(project_name, company_filter=None):
         )
     )
     
-    # Add company filter conditionally
     if company_filter:
         query = query.where(PurchaseInvoice.company == company_filter)
 
-    # Execute the query and return as a list of dictionaries
     purchase_invoice_items = query.run(as_dict=True)
     
     return purchase_invoice_items
@@ -230,11 +228,9 @@ def get_stock_entry_details(project_name, company_filter=None):
         )
     )
     
-    # Add company filter conditionally
     if company_filter:
         query = query.where(StockEntry.company == company_filter)
 
-    # Execute the query and return as a list of dictionaries
     stock_entry_details = query.run(as_dict=True)
     
     return stock_entry_details
@@ -360,13 +356,10 @@ def get_data(filters):
         stock_data = {}
         tasks = get_tasks(company_filter, project_name)
 
-        # Fetch Purchase Invoice Items linked to the Project and Company
         purchase_invoice_items = get_purchase_invoice_items(project_name, company_filter)
 
-        # Fetch Stock Entries of type Material Transfer linked to the Project and Company
         stock_entry_details = get_stock_entry_details(project_name, company_filter)
 
-        # Early return if no data exists for the project
         if not purchase_invoice_items and not stock_entry_details and not tasks:
             continue
         
