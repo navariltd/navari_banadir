@@ -7,7 +7,6 @@ import frappe
 from frappe import _
 
 from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos as get_serial_nos_from_sle
-# from erpnext.stock.stock_ledger import get_stock_ledger_entries
 from frappe.utils import cstr, flt, get_link_to_form, get_time, getdate, nowdate, nowtime
 
 
@@ -142,8 +141,7 @@ def get_data(filters):
 				if filters.get("serial_no") and filters.get("serial_no") != serial_no:
 					continue
 
-				# Fetch Engine No from Serial No doctype
-				#engine_no = frappe.db.get_value("Serial No", serial_no, "custom_engine_no")
+				
 				serial_nos.append(
 					{
 						"serial_no": serial_no,
@@ -216,7 +214,6 @@ def get_stock_ledger_entries(
 		conditions += " and " + previous_sle.get("warehouse_condition")
 
 	if check_serial_no and previous_sle.get("serial_no"):
-		# conditions += " and serial_no like {}".format(frappe.db.escape('%{0}%'.format(previous_sle.get("serial_no"))))
 		serial_no = previous_sle.get("serial_no")
 		conditions += (
 			""" and
