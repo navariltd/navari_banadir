@@ -1022,7 +1022,6 @@ class GrossProfitGenerator:
         grouped = OrderedDict()
 
         for row in self.si_list:
-            # initialize list with a header row for each new parent
             grouped.setdefault(row.parent, [self.get_invoice_row(row)]).append(
                 row.update(
                     {
@@ -1030,10 +1029,9 @@ class GrossProfitGenerator:
                         "parent_invoice": row.parent,
                         "invoice_or_item": row.item_code,
                     }
-                )  # descendant rows will have indent: 1.0 or greater
+                )  
             )
 
-            # if item is a bundle, add it's components as seperate rows
             if frappe.db.exists("Product Bundle", row.item_code):
                 bundled_items = self.get_bundle_items(row)
                 for x in bundled_items:
@@ -1293,6 +1291,4 @@ def convert_currency_columns(data, filters):
                 entry, currency_indices, from_currency, to_currency, date
             )
             entry.append(from_currency)
-    # frappe.throw(str(dta))
-    # data.append({"currency":from_currency})
     return data

@@ -63,48 +63,8 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
 			else:
 				entry['current_total'] = current_total_chosen_currency
 			entry['current_exchange_rate'] = get_current_exchange_rate(from_currency, to_currency, date)
-		# else:
-		# 	# Handle the case where 'rate' or 'exchange_rate' is missing
-		# 	frappe.throw(_("Missing 'rate' or 'exchange_rate' in one of the entries"))
+
 	return data
-
-# def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
-# 	date = frappe.utils.today()
-# 	for entry in data:
-# 		# In dollars
-		
-# 		old_rate_in_usd = entry['rate'] / entry['exchange_rate']
-# 		old_rate_plus_landed_cost_in_usd = entry['rate_plus_landed_cost'] / entry['exchange_rate']
-# 		old_landed_cost=entry['landed_cost_voucher_amount'] / entry['exchange_rate']
-  
-# 		current_rate_chosen_currency = get_current_exchange_rate(from_currency, to_currency, date) * old_rate_in_usd
-# 		current_rate_plus_landed_cost_chosen_currency = get_current_exchange_rate(from_currency, to_currency, date) * old_rate_plus_landed_cost_in_usd
-# 		current_rate_in_usd = convert(current_rate_chosen_currency, "USD", to_currency, date)
-# 		current_rate_plus_landed_cost_in_usd = convert(current_rate_plus_landed_cost_chosen_currency, "USD", to_currency, date)
-# 		current_landed_cost_chosen_currency=get_current_exchange_rate(from_currency, to_currency, date) * old_landed_cost
-# 		current_landed_cost_in_usd=convert(current_landed_cost_chosen_currency, "USD", to_currency, date)
-
-# 		if filters.get('presentation_currency') == 'USD':
-# 			entry['current_rate'] = current_rate_in_usd
-# 			entry['current_rate_plus_landed_cost'] = current_rate_plus_landed_cost_in_usd
-# 			entry['current_landed_cost'] = current_landed_cost_in_usd
-# 		else:
-# 			entry['current_rate'] = current_rate_chosen_currency
-# 			entry['current_rate_plus_landed_cost'] = current_rate_plus_landed_cost_chosen_currency
-# 			entry['current_landed_cost'] = current_landed_cost_chosen_currency
-		
-# 		# Calculate current_total
-# 		old_total_in_usd = entry['amount'] / entry['exchange_rate']
-# 		current_total_chosen_currency = get_current_exchange_rate(from_currency, to_currency, date) * old_total_in_usd
-# 		current_total_in_usd = convert(current_total_chosen_currency, "USD", to_currency, date)
-		
-# 		if filters.get('presentation_currency') == 'USD':
-# 			entry['current_total'] = current_total_in_usd
-# 		else:
-# 			entry['current_total'] = current_total_chosen_currency
-# 		entry['current_exchange_rate'] = get_current_exchange_rate(from_currency, to_currency, date)
-# 	return data
-
 
 def execute(filters=None):
 	return _execute(filters)
@@ -117,25 +77,7 @@ def _execute(filters=None, additional_table_columns=None):
 	item_list = get_items(filters, additional_table_columns)
 	aii_account_map = get_aii_accounts()
 	presentation_currency= filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
-	# if item_list:
-	# 	itemised_tax, tax_columns = get_tax_accounts(
-	# 		item_list,
-	# 		columns,
-	# 		company_currency,
-	# 		doctype="Purchase Invoice",
-	# 		tax_doctype="Purchase Taxes and Charges",
-	# 	)
-
-	# 	scrubbed_tax_fields = {}
-
-	# 	for tax in tax_columns:
-	# 		scrubbed_tax_fields.update(
-	# 			{
-	# 				tax + " Rate": frappe.scrub(tax + " Rate"),
-	# 				tax + " Amount": frappe.scrub(tax + " Amount"),
-	# 			}
-	# 		)
-
+	
 	po_pr_map = get_purchase_receipts_against_purchase_order(item_list)
 
 	data = []
