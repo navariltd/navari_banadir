@@ -46,35 +46,29 @@ frappe.query_reports["Monthly Expense"] = {
 		{
 			"fieldname":"hide_account",
 			"label": __("Hide Account"),
-			"fieldtype": "Link",
+			"fieldtype": "MultiSelectList",
 			"options": "Account",
-			get_query: () => {
-				var company = frappe.query_report.get_filter_value("company");
-				return {
-				  filters: {
-					company: company,
+			get_data: function (txt) {
+				return frappe.db.get_link_options("Account", txt, {
+					company: frappe.query_report.get_filter_value("company"),
 					is_group: 0,
-				  },
-				};
-			  },
+				});
+			},
+	
 	},
 	{
 		"fieldname":"hide_parent_account",
 		"label": __("Hide Parent Account"),
-		"fieldtype": "Link",
+		"fieldtype": "MultiSelectList",
 		"options": "Account",
-		get_query: () => {
-			var company = frappe.query_report.get_filter_value("company");
-			return {
-			  filters: {
-				company: company,
+		get_data: function (txt) {
+			return frappe.db.get_link_options("Account", txt, {
+				company: frappe.query_report.get_filter_value("company"),
 				is_group: 1,
-			  },
-			};
-		  },
+			});
+		},
 },
 
-	
 		{
 			fieldname: "presentation_currency",
 			label: __("Currency"),
@@ -100,4 +94,3 @@ frappe.query_reports["Monthly Expense"] = {
 		}
 	]
 };
-
