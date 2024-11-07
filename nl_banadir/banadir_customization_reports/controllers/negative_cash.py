@@ -19,5 +19,5 @@ def before_save(doc, method=None):
                 # Check if a credit transaction is happening and validate balance
                 if account.credit is not None and account.credit > 0:
                     difference_balance = account_balance - account.credit
-                    if difference_balance <= 0:
-                        frappe.throw(f"Transaction can't be completed for account {account.account}. Check your cash/bank balance.")
+                    if difference_balance < 0.0:
+                        frappe.throw(f"Transaction can't be completed for account {account.account}. Your cash/bank balance is {account_balance} 😊")

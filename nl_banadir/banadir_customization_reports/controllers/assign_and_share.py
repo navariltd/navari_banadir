@@ -36,7 +36,8 @@ def payment_entry_before_submit(doc, method=None):
         create_todo_and_share(doc, party_doc, "Payment Entry")
 
 def journal_entry_before_submit(doc, method=None):
-    for account in doc.accounts:
-        if account.get("party_type") in ["Customer", "Supplier"]:
-            party_doc = frappe.get_doc(account.get("party_type"), account.get("party"))
-            create_todo_and_share(doc, party_doc, "Journal Entry")
+    if doc.is_system_generated==0:
+        for account in doc.accounts:
+            if account.get("party_type") in ["Customer", "Supplier"]:
+                party_doc = frappe.get_doc(account.get("party_type"), account.get("party"))
+                create_todo_and_share(doc, party_doc, "Journal Entry")

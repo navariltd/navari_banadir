@@ -246,6 +246,7 @@ def get_columns(group_wise_columns, filters):
                 "fieldtype": "Date",
                 "width": 100,
             },
+            
             "posting_time": {
                 "label": _("Posting Time"),
                 "fieldname": "posting_time",
@@ -316,7 +317,8 @@ def get_columns(group_wise_columns, filters):
                     f"Avg. Selling Rate <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "avg._selling_rate",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
@@ -325,7 +327,8 @@ def get_columns(group_wise_columns, filters):
                     f"Valuation Rate <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "valuation_rate",
-                "fieldtype": "Float",
+               "fieldtype": "Currency",
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
@@ -334,22 +337,25 @@ def get_columns(group_wise_columns, filters):
                     f"Selling Amount <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "selling_amount",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
             "buying_amount": {
                 "label": _(f"Buying Amount <strong>({presentation_currency})</strong>"),
                 "fieldname": "buying_amount",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
             "gross_profit": {
                 "label": _(f"Gross Profit <strong>({presentation_currency})</strong>"),
                 "fieldname": "gross_profit",
-                "fieldtype": "Float",
-                "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
+                # "precision": 2,
                 "width": 100,
             },
             "gross_profit_percent": {
@@ -377,7 +383,8 @@ def get_columns(group_wise_columns, filters):
                     f"Allocated Amount <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "allocated_amount",
-                "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": "currency",
                 "precision": 2,
                 "width": 100,
             },
@@ -415,6 +422,15 @@ def get_columns(group_wise_columns, filters):
                 "options": "Payment Term",
                 "width": 170,
             },
+            "currency":
+            {
+              "label": _("Currency"),
+              "fieldname":"currency",
+              "fieldtype":"Link",
+              "options":"Currency",
+              "hidden":1,
+            },
+            
         }
     )
 
@@ -1006,7 +1022,6 @@ class GrossProfitGenerator:
         grouped = OrderedDict()
 
         for row in self.si_list:
-            # initialize list with a header row for each new parent
             grouped.setdefault(row.parent, [self.get_invoice_row(row)]).append(
                 row.update(
                     {
@@ -1014,10 +1029,9 @@ class GrossProfitGenerator:
                         "parent_invoice": row.parent,
                         "invoice_or_item": row.item_code,
                     }
-                )  # descendant rows will have indent: 1.0 or greater
+                )  
             )
 
-            # if item is a bundle, add it's components as seperate rows
             if frappe.db.exists("Product Bundle", row.item_code):
                 bundled_items = self.get_bundle_items(row)
                 for x in bundled_items:
@@ -1271,9 +1285,10 @@ def convert_currency_columns(data, filters):
             convert_dict_entries(
                 entry, currency_fields, from_currency, to_currency, date
             )
+            entry["currency"] = from_currency
         else:
             convert_list_entries(
                 entry, currency_indices, from_currency, to_currency, date
             )
-
+            entry.append(from_currency)
     return data
