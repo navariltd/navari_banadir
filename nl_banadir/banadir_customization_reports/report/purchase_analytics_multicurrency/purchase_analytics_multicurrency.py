@@ -15,7 +15,7 @@ def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	# Special report showing all doctype totals on a single chart; overrides some filters
 	if filters.doc_type == "All":
-		filters.tree_type = "Customer"
+		filters.tree_type = "Supplier"
 		filters.value_quantity = "Value"
 		filters.curves = "total"
 		output = None
@@ -59,7 +59,7 @@ class Analytics:
 			"transaction_date"
 			if self.filters.doc_type in ["Quotation", "Sales Order", "Purchase Order"]
 			else "due_date"
-			if self.filters.doc_type == "Sales Invoice (due)"
+			if self.filters.doc_type == "Purchase Invoice (due)"
 			else "posting_date"
 		)
 		if self.filters.doc_type.startswith("Sales Invoice"):
@@ -83,7 +83,7 @@ class Analytics:
 	def run(self, filters):
 		self.get_columns()
 		self.get_data()
-		self.get_chart_data()
+		# self.get_chart_data()
 
 		# Skipping total row for tree-view reports
 		skip_total_row = 0
@@ -96,8 +96,9 @@ class Analytics:
 			self.data=convert_alternative_uom(self.data, filters)
    
    
-  
-		return self.columns, self.data, None, self.chart, None, skip_total_row
+		return self.columns, self.data, None, None, None, skip_total_row
+
+		# return self.columns, self.data, None, self.chart, None, skip_total_row
 
 	def get_columns(self):
 		self.columns = [
@@ -108,12 +109,12 @@ class Analytics:
 				"fieldtype": "Link" if self.filters.tree_type != "Order Type" else "Data",
 				"width": 140 if self.filters.tree_type != "Order Type" else 200,
 			},
-   {
+			{
 				"label":"Currency",
 				"options":"Currency",
 				"fildtype":"Link",
 				"fieldname":"currency",
-				"hidden":1,
+    			"hidden":1,
 			}
 		]
 		if self.filters.tree_type in ["Customer", "Supplier", "Item"]:
@@ -225,7 +226,7 @@ class Analytics:
 				entity = "party as entity"
 				entity_name = "party_name as entity_name"
 				value_field = "base_paid_amount as value_field"
-
+		# frappe.throw(str(self.filters.doc_type))
 		self.entries = frappe.get_all(
 			self.filters.doc_type,
 			fields=[entity, entity_name, value_field, self.date_field],
@@ -483,7 +484,7 @@ class Analytics:
 			labels = [d.get("label") for d in self.columns[3 : length - 1]]
 		else:
 			labels = [d.get("label") for d in self.columns[1 : length - 1]]
-
+		
 		datasets = []
 		if self.filters.curves != "select":
 			for curve in self.data:
@@ -497,6 +498,7 @@ class Analytics:
 					if curve["indent"] == 0:
 						datasets.append(data)
 				elif self.filters.curves == "total":
+
 					if datasets:
 						a = [
 							data["values"][idx] + datasets[0]["values"][idx]
@@ -508,7 +510,6 @@ class Analytics:
 						datasets[0]["name"] = _("Total")
 				else:
 					datasets.append(data)
-
 		self.chart = {"data": {"labels": labels, "datasets": datasets}, "type": "line"}
 
 		if self.filters["value_quantity"] == "Value":
@@ -577,7 +578,7 @@ def convert_currency_columns(data, filters):
 	for entry in data:
 		for field in currency_fields:
 			entry[field] = convert(entry.get(field, 0), from_currency, to_currency, to_date)
-			entry['currency'] = presentation_currency
+			entry["currency"]=presentation_currency
 	
 	return data
 
