@@ -107,6 +107,13 @@ class Analytics:
 				"fieldname": "entity",
 				"fieldtype": "Link" if self.filters.tree_type != "Order Type" else "Data",
 				"width": 140 if self.filters.tree_type != "Order Type" else 200,
+			},
+   {
+				"label":"Currency",
+				"options":"Currency",
+				"fildtype":"Link",
+				"fieldname":"currency",
+				"hidden":1,
 			}
 		]
 		if self.filters.tree_type in ["Customer", "Supplier", "Item"]:
@@ -133,10 +140,10 @@ class Analytics:
 		for end_date in self.periodic_daterange:
 			period = self.get_period(end_date)
 			self.columns.append(
-				{"label": _(period), "fieldname": scrub(period), "fieldtype": "Float", "width": 120}
+				{"label": _(period), "fieldname": scrub(period), "fieldtype": "Currency","options":"currency", "width": 120}
 			)
 
-		self.columns.append({"label": _("Total"), "fieldname": "total", "fieldtype": "Float", "width": 120})
+		self.columns.append({"label": _("Total"), "fieldname": "total", "fieldtype": "Currency","options":"currency", "width": 120})
 
 	def get_data(self):
 		if self.filters.tree_type in ["Customer", "Supplier"]:
@@ -517,6 +524,9 @@ def get_week_of_year(date):
 	return date.isocalendar()[1]  # Returns the ISO week number
 
 def convert_currency_columns(data, filters):
+	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
+		"Company", filters.company, "default_currency"
+	)
 	from_date = datetime.strptime(filters.get('from_date'), '%Y-%m-%d')
 	to_date = datetime.strptime(filters.get("to_date") or frappe.utils.now(), '%Y-%m-%d')
 
@@ -567,6 +577,7 @@ def convert_currency_columns(data, filters):
 	for entry in data:
 		for field in currency_fields:
 			entry[field] = convert(entry.get(field, 0), from_currency, to_currency, to_date)
+			entry['currency'] = presentation_currency
 	
 	return data
 
@@ -590,21 +601,21 @@ def add_currency_label(columns, filters):
 	return columns
 
 def convert_alternative_uom(data, filters):
-    alternative_uom = filters.get('alternative_uom')
-    
-    for row in data:
-        item_code = row.get('entity')
-        
-        if item_code:
-            conversion_factor = get_conversion_factor(item_code, alternative_uom)
-            
-            for key, value in row.items():
-                if isinstance(value, (int, float)):
-                    new_value = value / conversion_factor
-                    row[key] = new_value 
-    
-    return data
+	alternative_uom = filters.get('alternative_uom')
+	
+	for row in data:
+		item_code = row.get('entity')
+		
+		if item_code:
+			conversion_factor = get_conversion_factor(item_code, alternative_uom)
+			
+			for key, value in row.items():
+				if isinstance(value, (int, float)):
+					new_value = value / conversion_factor
+					row[key] = new_value 
+	
+	return data
 
 def get_conversion_factor(item_code, alternative_uom):
-    uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
-    return uom_conversion or 1
+	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+	return uom_conversion or 1

@@ -83,7 +83,7 @@ class Analytics:
 	def run(self, filters):
 		self.get_columns()
 		self.get_data()
-		self.get_chart_data()
+		# self.get_chart_data()
 
 		# Skipping total row for tree-view reports
 		skip_total_row = 0
@@ -96,8 +96,9 @@ class Analytics:
 			self.data=convert_alternative_uom(self.data, filters)
    
    
-  
-		return self.columns, self.data, None, self.chart, None, skip_total_row
+		return self.columns, self.data, None, None, None, skip_total_row
+
+		# return self.columns, self.data, None, self.chart, None, skip_total_row
 
 	def get_columns(self):
 		self.columns = [
@@ -112,7 +113,8 @@ class Analytics:
 				"label":"Currency",
 				"options":"Currency",
 				"fildtype":"Link",
-				"fieldname":"currency"
+				"fieldname":"currency",
+    			"hidden":1,
 			}
 		]
 		if self.filters.tree_type in ["Customer", "Supplier", "Item"]:
@@ -139,10 +141,10 @@ class Analytics:
 		for end_date in self.periodic_daterange:
 			period = self.get_period(end_date)
 			self.columns.append(
-				{"label": _(period), "fieldname": scrub(period), "fieldtype": "Float", "width": 120}
+				{"label": _(period), "fieldname": scrub(period), "fieldtype": "Currency","options":"currency", "width": 120}
 			)
 
-		self.columns.append({"label": _("Total"), "fieldname": "total", "fieldtype": "Float", "width": 120})
+		self.columns.append({"label": _("Total"), "fieldname": "total", "fieldtype": "Currency","options":"currency", "width": 120})
 
 	def get_data(self):
 		if self.filters.tree_type in ["Customer", "Supplier"]:
@@ -482,7 +484,7 @@ class Analytics:
 			labels = [d.get("label") for d in self.columns[3 : length - 1]]
 		else:
 			labels = [d.get("label") for d in self.columns[1 : length - 1]]
-
+		
 		datasets = []
 		if self.filters.curves != "select":
 			for curve in self.data:
@@ -496,6 +498,7 @@ class Analytics:
 					if curve["indent"] == 0:
 						datasets.append(data)
 				elif self.filters.curves == "total":
+
 					if datasets:
 						a = [
 							data["values"][idx] + datasets[0]["values"][idx]
@@ -507,7 +510,6 @@ class Analytics:
 						datasets[0]["name"] = _("Total")
 				else:
 					datasets.append(data)
-
 		self.chart = {"data": {"labels": labels, "datasets": datasets}, "type": "line"}
 
 		if self.filters["value_quantity"] == "Value":
@@ -523,9 +525,9 @@ def get_week_of_year(date):
 	return date.isocalendar()[1]  # Returns the ISO week number
 
 def convert_currency_columns(data, filters):
-	# presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
-	# 	"Company", filters.company, "default_currency"
-	# )
+	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
+		"Company", filters.company, "default_currency"
+	)
 	from_date = datetime.strptime(filters.get('from_date'), '%Y-%m-%d')
 	to_date = datetime.strptime(filters.get("to_date") or frappe.utils.now(), '%Y-%m-%d')
 
@@ -576,7 +578,7 @@ def convert_currency_columns(data, filters):
 	for entry in data:
 		for field in currency_fields:
 			entry[field] = convert(entry.get(field, 0), from_currency, to_currency, to_date)
-			# entry["currency"]=presentation_currency
+			entry["currency"]=presentation_currency
 	
 	return data
 
