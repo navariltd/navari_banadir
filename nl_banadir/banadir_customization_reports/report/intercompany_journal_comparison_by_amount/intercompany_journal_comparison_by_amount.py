@@ -77,6 +77,12 @@ class InterCompanyPartiesMatchReport:
                 "width": "200",
             },
             {
+                "label": "Reference Journal Posting Date",
+                "fieldname": "reference_journal_posting_date",
+                "fieldtype": "Date",
+                "width": "140",
+            },
+            {
                 "label": "",
                 "fieldname": "",
                 "fieldtype": "Data",
@@ -108,6 +114,12 @@ class InterCompanyPartiesMatchReport:
                 "fieldtype": "Currency",
                 "precision": 2,
                 "width": "200",
+            },
+            {
+                "label": "Party Journal Posting Date",
+                "fieldname": "party_journal_posting_date",
+                "fieldtype": "Date",
+                "width": "140",
             },
         ]
 
@@ -148,6 +160,7 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry.company.as_("reference_company"),
                     Journal_Entry_Account.party.as_("representative_company"),
                     Journal_Entry.name.as_("reference_journal"),
+                    Journal_Entry.posting_date.as_("reference_journal_posting_date"),
                     total_amount,
                     Journal_Entry.inter_company_journal_entry_reference.as_(
                         "party_journal"
@@ -190,6 +203,9 @@ class InterCompanyPartiesMatchReport:
                         "reference_journal": journal_item,
                         "total_debit_or_credit": journal["total_debit_or_credit"],
                         "party_journal": journal["party_journal"],
+                        "reference_journal_posting_date": journal[
+                            "reference_journal_posting_date"
+                        ],
                     }
 
             journals = list(merged_reference_journals.values())
@@ -199,6 +215,9 @@ class InterCompanyPartiesMatchReport:
                     party_data = self.get_party_journals(journal=journal)
                     if party_data:
                         merged_journal = journal.copy()
+                        merged_journal["party_journal_posting_date"] = party_data[
+                            0
+                        ].party_journal_posting_date
                         merged_journal["total_credit_or_debit"] = party_data[
                             0
                         ].total_credit_or_debit
@@ -239,6 +258,7 @@ class InterCompanyPartiesMatchReport:
             .on(Journal_Entry_Account.parent == journal.get("party_journal"))
             .select(
                 total_amount,
+                Journal_Entry.posting_date.as_("party_journal_posting_date"),
             )
             .where(Journal_Entry_Account.party_type == party_type)
             .where(Journal_Entry.company == journal.get("representative_company"))
