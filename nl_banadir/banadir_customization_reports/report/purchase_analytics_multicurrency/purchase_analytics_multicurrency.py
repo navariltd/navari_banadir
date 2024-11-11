@@ -141,7 +141,7 @@ class Analytics:
 		for end_date in self.periodic_daterange:
 			period = self.get_period(end_date)
 			self.columns.append(
-				{"label": _(period), "fieldname": scrub(period), "fieldtype": "Currency","options":"currency", "width": 120}
+				{"label": _(period), "fieldname": scrub(period), "fieldtype": "Currency" if self.filters.value_quantity=="Value" else "Float","options":"currency" if self.filters.value_quantity=="Value" else "", "width": 120}
 			)
 
 		self.columns.append({"label": _("Total"), "fieldname": "total", "fieldtype": "Currency","options":"currency", "width": 120})
