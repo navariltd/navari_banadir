@@ -230,7 +230,7 @@ class InterCompanyPartiesMatchReport:
                 if journal_item in merged_reference_journals:
                     merged_reference_journals[journal_item][
                         "reference_company_credit"
-                    ] += journal["refererence_company_credit"]
+                    ] += journal["reference_company_credit"]
                     merged_reference_journals[journal_item][
                         "reference_company_debit"
                     ] += journal["refererence_company_debit"]
@@ -576,9 +576,9 @@ class InterCompanyPartiesMatchReport:
             for journal in journals:
                 journal_item = journal["reference_journal"]
                 if journal_item in merged_reference_journals:
-                    merged_reference_journals[journal_item][
-                        "total_debit_or_credit"
-                    ] += journal["total_debit_or_credit"]
+                    # merged_reference_journals[journal_item][
+                    #     "total_debit_or_credit"
+                    # ] += journal["total_debit_or_credit"]
                     merged_reference_journals[journal_item][
                         "reference_company_credit"
                     ] += journal["reference_company_credit"]
