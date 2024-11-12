@@ -92,6 +92,18 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       label: __("Compare By Amount"),
       fieldtype: "Check",
       default: 0,
+      // on_change: function () {
+      //   frappe.query_report.set_filter_value("compare_randomly", 0);
+      // },
+    },
+    {
+      fieldname: "compare_randomly",
+      label: __("Compare Randomly"),
+      fieldtype: "Check",
+      default: 0,
+      // on_change: function () {
+      //   frappe.query_report.set_filter_value("compare_by_amount", 0);
+      // },
     },
   ],
 };
