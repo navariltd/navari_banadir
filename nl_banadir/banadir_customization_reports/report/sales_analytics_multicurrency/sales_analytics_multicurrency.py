@@ -82,7 +82,7 @@ class Analytics:
 
 	def run(self, filters):
 		self.get_columns()
-		self.get_data()
+		self.get_data(filters)
 		self.get_chart_data()
 
 		# Skipping total row for tree-view reports
@@ -140,12 +140,19 @@ class Analytics:
 		for end_date in self.periodic_daterange:
 			period = self.get_period(end_date)
 			self.columns.append(
-				{"label": _(period), "fieldname": scrub(period), "fieldtype": "Currency" if self.filters.value_quantity=="Value" else "Float","options":"currency" if self.filters.value_quantity=="Value" else "", "width": 120}
+				{
+					"label": _(period),
+					"fieldname": scrub(period),
+    "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),
+					"options": "currency" if self.filters.value_quantity == "Value" else "",
+					# "precision": 0 if self.filters.no_precision == 1 else None,
+					"width": 120
+				}
 			)
 
-		self.columns.append({"label": _("Total"), "fieldname": "total", "fieldtype": "Currency","options":"currency", "width": 120})
+		self.columns.append({"label": _("Total"), "fieldname": "total",     "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),"options":"currency" if self.filters.value_quantity=="Value" else "", "width": 120})
 
-	def get_data(self):
+	def get_data(self, filters):
 		if self.filters.tree_type in ["Customer", "Supplier"]:
 			self.get_sales_transactions_based_on_customers_or_suppliers()
 			self.get_rows()
@@ -162,21 +169,21 @@ class Analytics:
 				self.data = []
 				return
 			self.get_sales_transactions_based_on_customer_or_territory_group()
-			self.get_rows_by_group()
+			self.get_rows_by_group(filters)
 
 		elif self.filters.tree_type == "Item Group":
 			if self.filters.doc_type == "Payment Entry":
 				self.data = []
 				return
 			self.get_sales_transactions_based_on_item_group()
-			self.get_rows_by_group()
+			self.get_rows_by_group(filters)
 
 		elif self.filters.tree_type == "Order Type":
 			if self.filters.doc_type not in ["Quotation", "Sales Order"]:
 				self.data = []
 				return
 			self.get_sales_transactions_based_on_order_type()
-			self.get_rows_by_group()
+			self.get_rows_by_group(filters)
 
 		elif self.filters.tree_type == "Project":
 			if self.filters.doc_type == "Quotation":
@@ -184,6 +191,7 @@ class Analytics:
 				return
 			self.get_sales_transactions_based_on_project()
 			self.get_rows()
+		
 
 	def get_sales_transactions_based_on_order_type(self):
 		if self.filters["value_quantity"] == "Value":
@@ -350,10 +358,36 @@ class Analytics:
 
 			self.data.append(row)
 
-	def get_rows_by_group(self):
+	
+	def get_rows_by_group(self, filters):
+		self.data = []
 		self.get_periodic_data()
-		out = []
 
+		if filters.get("eliminate_zero"):
+			self.data = self.get_filtered_rows(filters)
+		else:
+			self.data = self.get_grouped_rows(filters)
+
+	def get_filtered_rows(self, filters):
+		filtered_data = []
+		for entity, period_data in self.entity_periodic_data.items():
+			total = sum(flt(value) for value in period_data.values())
+			
+			# Only include rows with total quantity greater than 0.00
+			if self.filters.tree_type == "Item Group" and self.filters.value_quantity == "Quantity" and total <= 0.00:
+				continue
+
+			row = {"entity": entity, "total": total}
+			
+			for end_date in self.periodic_daterange:
+				period = self.get_period(end_date)
+				row[scrub(period)] = flt(period_data.get(period))
+
+			filtered_data.append(row)
+		return filtered_data
+
+	def get_grouped_rows(self, filters):
+		grouped_data = []
 		for d in reversed(self.group_entries):
 			row = {"entity": d.name, "indent": self.depth_map.get(d.name)}
 			total = 0
@@ -361,15 +395,18 @@ class Analytics:
 				period = self.get_period(end_date)
 				amount = flt(self.entity_periodic_data.get(d.name, {}).get(period, 0.0))
 				row[scrub(period)] = amount
+				
+				# Update parent totals
 				if d.parent and (self.filters.tree_type != "Order Type" or d.parent == "Order Types"):
 					self.entity_periodic_data.setdefault(d.parent, frappe._dict()).setdefault(period, 0.0)
 					self.entity_periodic_data[d.parent][period] += amount
 				total += amount
 
 			row["total"] = total
-			out = [row, *out]
+			grouped_data = [row, *grouped_data]
+		return grouped_data
 
-		self.data = out
+
 
 	def get_periodic_data(self):
 		self.entity_periodic_data = frappe._dict()
@@ -537,8 +574,6 @@ def convert_currency_columns(data, filters):
 	
 	current_date = from_date
 	current_month_date=from_date
- 
-	
  
 	while current_date <= to_date:
 		year = current_date.year
