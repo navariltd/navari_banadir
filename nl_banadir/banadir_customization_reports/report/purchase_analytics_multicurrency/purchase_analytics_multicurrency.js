@@ -87,6 +87,18 @@ frappe.query_reports["Purchase Analytics Multicurrency"] = {
             width: "100",
             reqd: 0,
         },
+		{
+			fieldname: "eliminate_zero",
+			label: __("Eliminate Zero Values"),
+			fieldtype: "Check",
+			width:"100",
+			hidden:1
+		},{
+			fieldname:"no_precision",
+			label: "No Precision",
+			fieldtype:"Check",
+			width:"100"
+		},
 	],
 	get_datatable_options(options) {
 		return Object.assign(options, {
