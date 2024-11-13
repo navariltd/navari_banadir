@@ -279,7 +279,9 @@ class InterCompanyPartiesMatchReport:
                 party_journals = self.get_journal_entries()
 
                 if journals and party_journals:
-                    for i in range(len(journals)):
+                    print("JOURNALS", len(journals))
+                    print("PARTY JOURNALS", len(party_journals))
+                    for i in range(min(len(journals), len(party_journals))):
                         if party_journals[i]:
                             journals[i].update(party_journals[i])
 
@@ -308,7 +310,7 @@ class InterCompanyPartiesMatchReport:
                 Journal_Entry.posting_date.as_("party_journal_posting_date"),
             )
             .where(Journal_Entry_Account.party_type == party_type)
-            .where(Journal_Entry.company == Journal_Entry.company)
+            .where(Journal_Entry_Account.party == self.filters.get("reference_company"))
             .where(
                 (Journal_Entry.posting_date >= self.from_date)
                 & (Journal_Entry.posting_date <= self.to_date)
@@ -318,10 +320,9 @@ class InterCompanyPartiesMatchReport:
                 & (Journal_Entry.docstatus == 1)
             )
         )
+
         if self.filters.get("party"):
-            query = query.where(
-                Journal_Entry_Account.party == self.filters.get("party")[0]
-            )
+            query = query.where(Journal_Entry.company == self.filters.get("party")[0])
 
         return query.run(as_dict=True)
 
@@ -367,7 +368,7 @@ class InterCompanyPartiesMatchReport:
                 Journal_Entry.posting_date.as_("party_journal_posting_date"),
             )
             .where(Journal_Entry_Account.party_type == party_type)
-            .where(Journal_Entry.company == journal.get("representative_company"))
+            # .where(Journal_Entry.company == journal.get("representative_company"))
             .where(
                 (Journal_Entry.posting_date >= self.from_date)
                 & (Journal_Entry.posting_date <= self.to_date)
@@ -378,6 +379,9 @@ class InterCompanyPartiesMatchReport:
             )
             .where(Journal_Entry.name == journal.get("party_journal"))
         )
+
+        if self.filters.get("party"):
+            query = query.where(Journal_Entry.company == self.filters.get("party")[0])
         return query.run(as_dict=True)
 
     # def filter_by_to_company(self):
@@ -452,6 +456,7 @@ class InterCompanyPartiesMatchReport:
 
     #     return query.run(as_dict=True)
 
+    # START WORKING FROM HERE
     def compare_journals_by_amount(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
         Journal_Entry = DocType("Journal Entry")
@@ -566,6 +571,10 @@ class InterCompanyPartiesMatchReport:
                             ),
                         )
                         .where(Journal_Entry_Account.party_type == party_type)
+                        .where(
+                            Journal_Entry_Account.party
+                            == self.filters.get("reference_company")
+                        )
                         # .where(
                         #     Journal_Entry.company
                         #     == self.filters.get("reference_company")
@@ -579,6 +588,11 @@ class InterCompanyPartiesMatchReport:
                             & (Journal_Entry.docstatus == 1)
                         )
                     )
+
+                    if self.filters.get("party"):
+                        query = query.where(
+                            Journal_Entry.company == self.filters.get("party")[0]
+                        )
 
                     self.amount_journals = amount_query.run(as_dict=True)
                 else:
@@ -602,6 +616,10 @@ class InterCompanyPartiesMatchReport:
                             ),
                         )
                         .where(Journal_Entry_Account.party_type == party_type)
+                        .where(
+                            Journal_Entry_Account.party
+                            == self.filters.get("reference_company")
+                        )
                         # .where(
                         #     Journal_Entry.company
                         #     == self.filters.get("reference_company")
@@ -615,6 +633,11 @@ class InterCompanyPartiesMatchReport:
                             & (Journal_Entry.docstatus == 1)
                         )
                     )
+
+                    if self.filters.get("party"):
+                        query = query.where(
+                            Journal_Entry.company == self.filters.get("party")[0]
+                        )
 
                     self.amount_journals = amount_query.run(as_dict=True)
 
