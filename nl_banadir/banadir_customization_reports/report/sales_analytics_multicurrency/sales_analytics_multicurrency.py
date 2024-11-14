@@ -10,6 +10,10 @@ from frappe.utils import add_days, add_to_date, flt, getdate
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.accounts.report.utils import convert, get_rate_as_at
 
+import locale
+
+# Set locale for thousand separators
+locale.setlocale(locale.LC_ALL, '')  # Adjust locale if needed
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
@@ -49,6 +53,16 @@ def append_report(dt, org, new):
 	else:
 		return new
 
+def format_quantity_with_thousand_separator(data, no_precision):
+	"""Format quantity fields in data with thousand separators if no precision is specified."""
+	
+	for row in data:
+		item_code = row.get('entity')
+		if item_code:			
+			for key, value in row.items():
+				if isinstance(value, (int, float)):
+					row[key] = f"{value:,.2f}" if isinstance(value, float) else f"{value:,}"
+	return data
 
 class Analytics:
 	def __init__(self, filters=None):
@@ -94,9 +108,9 @@ class Analytics:
   
 		if filters.get("tree_type")=="Item" and filters.get('value_quantity')== "Quantity":
 			self.data=convert_alternative_uom(self.data, filters)
-   
-   
-  
+		# Apply thousand separator formatting if needed
+		# if filters.get("value_quantity") == "Quantity" and filters.get("no_precision") == 1:
+		# 	self.data = format_quantity_with_thousand_separator(self.data, filters.get("no_precision"))
 		return self.columns, self.data, None, self.chart, None, skip_total_row
 
 	def get_columns(self):
@@ -143,7 +157,7 @@ class Analytics:
 				{
 					"label": _(period),
 					"fieldname": scrub(period),
-    "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),
+	"fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),
 					"options": "currency" if self.filters.value_quantity == "Value" else "",
 					# "precision": 0 if self.filters.no_precision == 1 else None,
 					"width": 120
@@ -378,7 +392,6 @@ class Analytics:
 				continue
 
 			row = {"entity": entity, "total": total}
-			
 			for end_date in self.periodic_daterange:
 				period = self.get_period(end_date)
 				row[scrub(period)] = flt(period_data.get(period))
@@ -654,3 +667,6 @@ def convert_alternative_uom(data, filters):
 def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	return uom_conversion or 1
+
+
+

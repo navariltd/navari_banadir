@@ -100,6 +100,7 @@ frappe.query_reports["Purchase Analytics Multicurrency"] = {
 			width:"100"
 		},
 	],
+	
 	get_datatable_options(options) {
 		return Object.assign(options, {
 			checkboxColumn: true,

@@ -19,7 +19,6 @@ from erpnext.stock.doctype.warehouse.warehouse import apply_warehouse_filter
 from erpnext.stock.report.stock_ageing.stock_ageing import FIFOSlots, get_average_age
 from erpnext.stock.utils import add_additional_uom_columns
 
-
 class StockBalanceFilter(TypedDict):
     company: str | None
     from_date: str
@@ -70,13 +69,30 @@ class StockBalanceReport:
         self.prepare_opening_data_from_closing_balance()
         self.prepare_stock_ledger_entries()
         self.prepare_new_data()
+        total_bal_qty = self.calculate_total_bal_qty()
 
         if not self.columns:
             self.columns = self.get_columns()
 
         self.add_additional_uom_columns()
+        total_row = {
+            "item_code": _("Total"),
+           
+            "bal_qty": total_bal_qty,
+            "bal_val": 0.0,
+           
+        }
 
+        self.data.append(total_row)
         return self.columns, self.data
+    def calculate_total_bal_qty(self):
+        """
+        Calculate the total balance quantity ('bal_qty') and return the total.
+        """
+        total_bal_qty = sum(item.get("bal_qty", 0.0) for item in self.data)
+   
+        return total_bal_qty
+
 
     def prepare_opening_data_from_closing_balance(self) -> None:
         self.opening_data = frappe._dict({})
@@ -161,7 +177,10 @@ class StockBalanceReport:
                     )
                 }
             )
+
+            # Append report data to the data list
             self.data.append(report_data)
+
 
     def get_item_warehouse_map(self):
         item_warehouse_map = {}
