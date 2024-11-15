@@ -69,20 +69,22 @@ class StockBalanceReport:
         self.prepare_opening_data_from_closing_balance()
         self.prepare_stock_ledger_entries()
         self.prepare_new_data()
-        total_bal_qty = self.calculate_total_bal_qty()
-
+        total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
         if not self.columns:
             self.columns = self.get_columns()
 
         self.add_additional_uom_columns()
+        total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
+
         total_row = {
             "item_code": _("Total"),
            
             "bal_qty": total_bal_qty,
+            "bal_qty_alt":total_bal_alternative_uom_qty,
             "bal_val": 0.0,
            
         }
-
+        
         self.data.append(total_row)
         return self.columns, self.data
     def calculate_total_bal_qty(self):
@@ -90,8 +92,9 @@ class StockBalanceReport:
         Calculate the total balance quantity ('bal_qty') and return the total.
         """
         total_bal_qty = sum(item.get("bal_qty", 0.0) for item in self.data)
-   
-        return total_bal_qty
+        total_bal_alternative_uom_qty= sum(item.get("bal_qty_alt", 0.0) for item in self.data)
+        # frappe.throw(str(self.data))
+        return total_bal_qty, total_bal_alternative_uom_qty
 
 
     def prepare_opening_data_from_closing_balance(self) -> None:
