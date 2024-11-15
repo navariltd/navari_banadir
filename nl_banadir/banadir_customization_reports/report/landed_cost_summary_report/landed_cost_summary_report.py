@@ -273,7 +273,7 @@ def get_data(filters):
         "invoice_number": "Total",
         "expense_booked": grand_total_expense_booked,
         "amount": grand_total_amount,
-        "currency": "",
+        "currency": totals["currency"],
         "expense_account": "",
         "container_no": "",
         "bl_number": "",
