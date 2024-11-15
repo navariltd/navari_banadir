@@ -54,6 +54,8 @@ class InterCompanyPartiesMatchReport:
             # self.data = []
             self.compare_journals_by_amount()
 
+        self.calculate_closing_balance()
+
         return self.columns, self.data
 
     def get_columns(self):
@@ -278,14 +280,45 @@ class InterCompanyPartiesMatchReport:
                 self.filters.get("compare_by_amount") == False
                 party_journals = self.get_journal_entries()
 
-                if journals and party_journals:
-                    print("JOURNALS", len(journals))
-                    print("PARTY JOURNALS", len(party_journals))
-                    for i in range(min(len(journals), len(party_journals))):
-                        if party_journals[i]:
-                            journals[i].update(party_journals[i])
+                # ##############################################################################
+                # WORK FROM HERE
 
-                    self.data = journals
+                if journals and party_journals:
+                    # print("PARTY JOURNALS", party_journals)
+                    sorted_party_journals = sorted(
+                        party_journals,
+                        key=lambda x: x.get("voucher_type") != "Opening Entry",
+                    )
+
+                    for i, item in enumerate(journals):
+                        # Check if the index exists in sorted_party_journals
+                        if i < len(sorted_party_journals):
+                            if (
+                                sorted_party_journals[i].get("voucher_type")
+                                == "Opening Entry"
+                            ):
+                                opening_entry = {
+                                    "is_opening": True,
+                                    "reference_journal_posting_date": "",
+                                    "reference_company": "Opening Entry",
+                                    "reference_company_debit": None,
+                                    "reference_company_credit": None,
+                                    "representative_company": sorted_party_journals[
+                                        i
+                                    ].get("representative_company"),
+                                }
+                                journals.append(
+                                    {**sorted_party_journals[i], **opening_entry}
+                                )
+                                # item.update(
+                                #     {**sorted_party_journals[i], **opening_entry}
+                                # )
+                                continue
+
+                    sorted_journals = sorted(
+                        journals, key=lambda x: x.get("voucher_type") != "Opening Entry"
+                    )
+                    self.data = sorted_journals
 
     def get_journal_entries(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
@@ -308,6 +341,8 @@ class InterCompanyPartiesMatchReport:
                     "representative_company_credit"
                 ),
                 Journal_Entry.posting_date.as_("party_journal_posting_date"),
+                Journal_Entry.voucher_type,
+                Journal_Entry.company.as_("representative_company"),
             )
             .where(Journal_Entry_Account.party_type == party_type)
             .where(Journal_Entry_Account.party == self.filters.get("reference_company"))
@@ -316,7 +351,8 @@ class InterCompanyPartiesMatchReport:
                 & (Journal_Entry.posting_date <= self.to_date)
             )
             .where(
-                (Journal_Entry.voucher_type != "Opening Entry")
+                # (Journal_Entry.voucher_type != "Opening Entry")&
+                (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                 & (Journal_Entry.docstatus == 1)
             )
         )
@@ -733,6 +769,41 @@ class InterCompanyPartiesMatchReport:
                             break
                     if not matched:
                         self.data.append(journal)
+
+    def calculate_closing_balance(self):
+        r_company_closing_balance = 0
+        p_company_closing_balance = 0
+
+        if self.data:
+            for d in self.data:
+                r_debit = d.get("reference_company_debit") or 0
+                r_credit = d.get("reference_company_credit") or 0
+
+                r_total = r_debit - r_credit
+                r_company_closing_balance += r_total
+
+                p_debit = d.get("representative_company_debit") or 0
+                p_credit = d.get("representative_company_credit") or 0
+
+                p_total = p_debit + p_credit
+                p_company_closing_balance += p_total
+
+            total_row = {
+                "reference_journal_posting_date": "",
+                "reference_company": "Reference Company Closing Balance",
+                "reference_journal": "",
+                "reference_company_debit": None,
+                "reference_company_credit": r_company_closing_balance,
+                "": "",
+                "": "",
+                "party_journal_posting_date": "",
+                "representative_company": "Representative Company Closing Balance",
+                "party_journal": "",
+                "representative_company_debit": None,
+                "representative_company_credit": p_company_closing_balance,
+                "is_total": True,
+            }
+            self.data.append(total_row)
 
 
 def convert_currency_fields(self, data, filters, company_key, amount_field):
