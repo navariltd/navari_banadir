@@ -109,8 +109,7 @@ class Analytics:
 		if filters.get("tree_type")=="Item" and filters.get('value_quantity')== "Quantity":
 			self.data=convert_alternative_uom(self.data, filters)
 		# Apply thousand separator formatting if needed
-		# if filters.get("value_quantity") == "Quantity" and filters.get("no_precision") == 1:
-		# 	self.data = format_quantity_with_thousand_separator(self.data, filters.get("no_precision"))
+
 		return self.columns, self.data, None, self.chart, None, skip_total_row
 
 	def get_columns(self):
@@ -567,11 +566,10 @@ class Analytics:
 			self.chart["fieldtype"] = "Float"
 
 def get_quarter(date):
-	# Calculate which quarter the month belongs to
 	return (date.month - 1) // 3 + 1
 
 def get_week_of_year(date):
-	return date.isocalendar()[1]  # Returns the ISO week number
+	return date.isocalendar()[1]  
 
 def convert_currency_columns(data, filters):
 	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
@@ -667,6 +665,4 @@ def convert_alternative_uom(data, filters):
 def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	return uom_conversion or 1
-
-
 

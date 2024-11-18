@@ -72,7 +72,6 @@ class StockBalanceReport:
 
 		self.add_additional_uom_columns()
 		self.data=self.convert_currency_fields(self.data, self.filters)
-		# frappe.throw(str(self.data))
 		return self.columns, self.data
 
 	def prepare_opening_data_from_closing_balance(self) -> None:
@@ -91,7 +90,7 @@ class StockBalanceReport:
 			group_by_key = self.get_group_by_key(entry)
 			if group_by_key not in self.opening_data:
 				self.opening_data.setdefault(group_by_key, entry)
-
+	
 	def prepare_new_data(self):
 		self.item_warehouse_map = self.get_item_warehouse_map()
 
