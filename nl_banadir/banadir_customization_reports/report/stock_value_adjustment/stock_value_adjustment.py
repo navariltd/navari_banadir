@@ -572,3 +572,5 @@ def append_opening_qty(data, filters):
 
 '''Bad implementation because we need to consider a warehouse, incase there is a change, use below code'''
 # opening_stock_map = (d["item_code"],d["warehouse"]):d["opening_qty"]
+
+
