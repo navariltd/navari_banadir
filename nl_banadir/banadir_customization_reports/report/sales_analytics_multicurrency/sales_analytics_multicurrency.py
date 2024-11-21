@@ -53,7 +53,7 @@ def append_report(dt, org, new):
 	else:
 		return new
 
-def format_quantity_with_thousand_separator(data, no_precision):
+def format_quantity_with_thousand_separator(data):
 	"""Format quantity fields in data with thousand separators if no precision is specified."""
 	
 	for row in data:
@@ -109,6 +109,8 @@ class Analytics:
 		if filters.get("tree_type")=="Item" and filters.get('value_quantity')== "Quantity":
 			self.data=convert_alternative_uom(self.data, filters)
 		# Apply thousand separator formatting if needed
+		# if filters.get("value_quantity")=="Quantity" and filters.get('no_precision')==1:
+		# 	self.data = format_quantity_with_thousand_separator(self.data)
 
 		return self.columns, self.data, None, self.chart, None, skip_total_row
 
@@ -156,14 +158,15 @@ class Analytics:
 				{
 					"label": _(period),
 					"fieldname": scrub(period),
-	"fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),
+	"fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Float" if self.filters.no_precision == 1 else "Float"),
 					"options": "currency" if self.filters.value_quantity == "Value" else "",
-					# "precision": 0 if self.filters.no_precision == 1 else None,
+					"precision": 1 if self.filters.no_precision == 1 else None,
 					"width": 120
 				}
 			)
 
-		self.columns.append({"label": _("Total"), "fieldname": "total",     "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),"options":"currency" if self.filters.value_quantity=="Value" else "", "width": 120})
+		self.columns.append({"label": _("Total"), "fieldname": "total",     "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Float" if self.filters.no_precision == 1 else "Float"),"options":"currency" if self.filters.value_quantity=="Value" else "",					"precision": 1 if self.filters.no_precision == 1 else None,
+ "width": 120})
 
 	def get_data(self, filters):
 		if self.filters.tree_type in ["Customer", "Supplier"]:
