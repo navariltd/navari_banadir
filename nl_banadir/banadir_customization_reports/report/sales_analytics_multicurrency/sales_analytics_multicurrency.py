@@ -61,7 +61,11 @@ def format_quantity_with_thousand_separator(data):
 		if item_code:			
 			for key, value in row.items():
 				if isinstance(value, (int, float)):
+					print("-----------------------------------------")
+					print("Value",str(value))
 					row[key] = f"{value:,.2f}" if isinstance(value, float) else f"{value:,}"
+				else:
+					print("Mania")
 	return data
 
 class Analytics:
@@ -158,14 +162,14 @@ class Analytics:
 				{
 					"label": _(period),
 					"fieldname": scrub(period),
-	"fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Float" if self.filters.no_precision == 1 else "Float"),
+	"fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),
 					"options": "currency" if self.filters.value_quantity == "Value" else "",
 					"precision": 1 if self.filters.no_precision == 1 else None,
 					"width": 120
 				}
 			)
 
-		self.columns.append({"label": _("Total"), "fieldname": "total",     "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Float" if self.filters.no_precision == 1 else "Float"),"options":"currency" if self.filters.value_quantity=="Value" else "",					"precision": 1 if self.filters.no_precision == 1 else None,
+		self.columns.append({"label": _("Total"), "fieldname": "total",     "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),"options":"currency" if self.filters.value_quantity=="Value" else "",					"precision": 1 if self.filters.no_precision == 1 else None,
  "width": 120})
 
 	def get_data(self, filters):
