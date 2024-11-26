@@ -289,20 +289,23 @@ class InterCompanyPartiesMatchReport:
                 party_journals = self.get_journal_entries()
 
                 if journals and party_journals:
+                    print("LENGTH", len(journals))
                     sorted_party_journals = sorted(
                         party_journals,
                         key=lambda x: x.get("voucher_type") != "Opening Entry",
                     )
 
                     updated_journals = []
+                    i = 0
 
-                    for i, item in enumerate(journals):
-                        # Check if the index exists in sorted_party_journals
+                    while i < len(journals):
+                        item = journals[i]
                         if i < len(sorted_party_journals):
                             if (
                                 sorted_party_journals[i].get("voucher_type")
                                 == "Opening Entry"
                             ):
+
                                 opening_entry = {
                                     "is_opening": True,
                                     "reference_journal_posting_date": "",
@@ -318,13 +321,14 @@ class InterCompanyPartiesMatchReport:
                                 updated_journals.append(
                                     {**sorted_party_journals[i], **opening_entry}
                                 )
-
+                                journals.append(item)
                             else:
-                                item.update(sorted_party_journals[i])
-                                updated_journals.append(item)
-
+                                updated_item = {**item, **sorted_party_journals[i]}
+                                updated_journals.append(updated_item)
                         else:
                             updated_journals.append(item)
+
+                        i += 1
 
                     sorted_journals = sorted(
                         updated_journals,
@@ -372,7 +376,24 @@ class InterCompanyPartiesMatchReport:
         if self.filters.get("party"):
             query = query.where(Journal_Entry.company == self.filters.get("party")[0])
 
-        return query.run(as_dict=True)
+        data = query.run(as_dict=True)
+
+        merged_journals = {}
+
+        for d in data:
+            item = d["party_journal"]
+            if item in merged_journals:
+                merged_journals[item]["representative_company_debit"] += d[
+                    "representative_company_debit"
+                ]
+                merged_journals[item]["representative_company_credit"] += d[
+                    "representative_company_credit"
+                ]
+
+            else:
+                merged_journals[item] = {**d}
+
+        return list(merged_journals.values())
 
     def get_party_journal(self, journal):
         Journal_Entry = DocType("Journal Entry")
