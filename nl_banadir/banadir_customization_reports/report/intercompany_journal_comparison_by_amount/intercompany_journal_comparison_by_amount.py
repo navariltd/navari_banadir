@@ -287,9 +287,14 @@ class InterCompanyPartiesMatchReport:
                 self.data = []
                 self.filters.get("compare_by_amount") == False
                 party_journals = self.get_journal_entries()
+                opening_entries = self.get_reverse_opening_entries()
 
                 if journals and party_journals:
-                    print("LENGTH", len(journals))
+                    if opening_entries:
+                        for entry in opening_entries:
+                            print("OPENING ENTRIES", entry)
+                            party_journals.append(entry)
+
                     sorted_party_journals = sorted(
                         party_journals,
                         key=lambda x: x.get("voucher_type") != "Opening Entry",
@@ -305,22 +310,56 @@ class InterCompanyPartiesMatchReport:
                                 sorted_party_journals[i].get("voucher_type")
                                 == "Opening Entry"
                             ):
+                                if sorted_party_journals[i].get("is_reverse"):
+                                    opening_entry = {
+                                        "is_opening": True,
+                                        "reference_journal_posting_date": sorted_party_journals[
+                                            i
+                                        ].get(
+                                            "party_journal_posting_date"
+                                        ),
+                                        "reference_company": sorted_party_journals[
+                                            i
+                                        ].get("representative_company"),
+                                        "reference_company_debit": sorted_party_journals[
+                                            i
+                                        ].get(
+                                            "representative_company_debit"
+                                        ),
+                                        "reference_company_credit": sorted_party_journals[
+                                            i
+                                        ].get(
+                                            "representative_company_credit"
+                                        ),
+                                        "reference_journal": sorted_party_journals[
+                                            i
+                                        ].get("party_journal"),
+                                        "party_journal": None,
+                                        "representative_company": "Opening Entry",
+                                        "party_journal_posting_date": None,
+                                        "representative_company_debit": None,
+                                        "representative_company_credit": None,
+                                        "reference_company_closing_balance": None,
+                                        "representative_company_closing_balance": None,
+                                    }
+                                    updated_journals.append({**opening_entry})
 
-                                opening_entry = {
-                                    "is_opening": True,
-                                    "reference_journal_posting_date": "",
-                                    "reference_company": "Opening Entry",
-                                    "reference_company_debit": None,
-                                    "reference_company_credit": None,
-                                    "representative_company": sorted_party_journals[
-                                        i
-                                    ].get("representative_company"),
-                                    "reference_company_closing_balance": None,
-                                    "representative_company_closing_balance": None,
-                                }
-                                updated_journals.append(
-                                    {**sorted_party_journals[i], **opening_entry}
-                                )
+                                else:
+                                    opening_entry = {
+                                        "is_opening": True,
+                                        "reference_journal_posting_date": "",
+                                        "reference_company": "Opening Entry",
+                                        "reference_company_debit": None,
+                                        "reference_company_credit": None,
+                                        "representative_company": sorted_party_journals[
+                                            i
+                                        ].get("representative_company"),
+                                        "reference_company_closing_balance": None,
+                                        "representative_company_closing_balance": None,
+                                    }
+                                    updated_journals.append(
+                                        {**sorted_party_journals[i], **opening_entry}
+                                    )
                                 journals.append(item)
                             else:
                                 updated_item = {**item, **sorted_party_journals[i]}
@@ -525,7 +564,6 @@ class InterCompanyPartiesMatchReport:
 
     #     return query.run(as_dict=True)
 
-    # START WORKING FROM HERE
     def compare_journals_by_amount(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
         Journal_Entry = DocType("Journal Entry")
@@ -870,6 +908,60 @@ class InterCompanyPartiesMatchReport:
                 "is_total": True,
             }
             self.data.append(total_row)
+
+    def get_reverse_opening_entries(self):
+        Journal_Entry_Account = DocType("Journal Entry Account")
+        Journal_Entry = DocType("Journal Entry")
+        party_type = self.filters.get("party_type")
+
+        query = (
+            frappe.qb.from_(Journal_Entry_Account)
+            .join(Journal_Entry)
+            .on(Journal_Entry_Account.parent == Journal_Entry.name)
+            .select(
+                # total_amount,
+                Journal_Entry.name.as_("party_journal"),
+                Journal_Entry_Account.debit_in_account_currency.as_(
+                    "representative_company_debit"
+                ),
+                Journal_Entry_Account.credit_in_account_currency.as_(
+                    "representative_company_credit"
+                ),
+                Journal_Entry.posting_date.as_("party_journal_posting_date"),
+                Journal_Entry.voucher_type,
+                Journal_Entry.company.as_("representative_company"),
+            )
+            .where(Journal_Entry_Account.party_type == party_type)
+            .where(Journal_Entry.company == self.filters.get("reference_company"))
+            .where(
+                (Journal_Entry.posting_date >= self.from_date)
+                & (Journal_Entry.posting_date <= self.to_date)
+            )
+            .where(
+                (Journal_Entry.voucher_type == "Opening Entry")
+                & (Journal_Entry.docstatus == 1)
+            )
+        )
+
+        data = query.run(as_dict=True)
+
+        merged_journals = {}
+
+        for d in data:
+            item = d["party_journal"]
+            if item in merged_journals:
+                merged_journals[item]["representative_company_debit"] += d[
+                    "representative_company_debit"
+                ]
+                merged_journals[item]["representative_company_credit"] += d[
+                    "representative_company_credit"
+                ]
+
+            else:
+
+                merged_journals[item] = {**d, "is_reverse": True}
+
+        return list(merged_journals.values())
 
 
 def convert_currency_fields(self, data, filters, company_key, amount_field):
