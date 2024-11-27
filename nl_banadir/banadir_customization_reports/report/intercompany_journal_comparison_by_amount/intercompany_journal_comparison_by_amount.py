@@ -901,7 +901,7 @@ class InterCompanyPartiesMatchReport:
                 p_debit = d.get("representative_company_debit") or 0
                 p_credit = d.get("representative_company_credit") or 0
 
-                p_total = p_debit + p_credit
+                p_total = p_debit - p_credit
                 p_company_closing_balance += p_total
 
             total_row = {
