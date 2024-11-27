@@ -292,7 +292,6 @@ class InterCompanyPartiesMatchReport:
                 if journals and party_journals:
                     if opening_entries:
                         for entry in opening_entries:
-                            print("OPENING ENTRIES", entry)
                             party_journals.append(entry)
 
                     sorted_party_journals = sorted(
@@ -301,6 +300,7 @@ class InterCompanyPartiesMatchReport:
                     )
 
                     updated_journals = []
+                    matched_journals = []
                     i = 0
 
                     while i < len(journals):
@@ -343,6 +343,7 @@ class InterCompanyPartiesMatchReport:
                                         "representative_company_closing_balance": None,
                                     }
                                     updated_journals.append({**opening_entry})
+                                    matched_journals.append(sorted_party_journals[i])
 
                                 else:
                                     opening_entry = {
@@ -360,14 +361,26 @@ class InterCompanyPartiesMatchReport:
                                     updated_journals.append(
                                         {**sorted_party_journals[i], **opening_entry}
                                     )
+                                    matched_journals.append(sorted_party_journals[i])
                                 journals.append(item)
                             else:
                                 updated_item = {**item, **sorted_party_journals[i]}
                                 updated_journals.append(updated_item)
+                                matched_journals.append(sorted_party_journals[i])
                         else:
                             updated_journals.append(item)
 
                         i += 1
+
+                    for item in sorted_party_journals:
+                        if item not in matched_journals:
+                            updated_item = {
+                                "reference_company_debit": None,
+                                "reference_company_credit": None,
+                                "reference_company_closing_balance": None,
+                                "representative_company_closing_balance": None,
+                            }
+                            updated_journals.append({**item, **updated_item})
 
                     sorted_journals = sorted(
                         updated_journals,
