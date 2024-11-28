@@ -50,7 +50,6 @@ doc_events = {
     }
 }
 
-
 # include js, css files in header of desk.html
 # app_include_css = "/assets/nl_banadir/css/nl_banadir.css"
 # app_include_js = "/assets/nl_banadir/js/nl_banadir.js"
@@ -70,7 +69,8 @@ doc_events = {
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+    "Work Order" : "public/js/work_order.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
