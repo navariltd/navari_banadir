@@ -220,7 +220,8 @@ class InterCompanyPartiesMatchReport:
                     & (Journal_Entry.posting_date <= self.to_date)
                 )
                 .where(
-                    (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                    # (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                    (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                     & (Journal_Entry.docstatus == 1)
                 )
             )
@@ -513,7 +514,8 @@ class InterCompanyPartiesMatchReport:
                 & (Journal_Entry.posting_date <= self.to_date)
             )
             .where(
-                (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                # (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                 & (Journal_Entry.docstatus == 1)
             )
             .where(Journal_Entry.name == journal.get("party_journal"))
@@ -651,7 +653,8 @@ class InterCompanyPartiesMatchReport:
                     & (Journal_Entry.posting_date <= self.to_date)
                 )
                 .where(
-                    (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                    # (Journal_Entry.voucher_type == "Inter Company Journal Entry")
+                    (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                     & (Journal_Entry.docstatus == 1)
                 )
             )
