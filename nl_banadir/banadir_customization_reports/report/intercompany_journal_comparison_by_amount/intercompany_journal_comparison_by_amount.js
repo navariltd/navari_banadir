@@ -115,6 +115,10 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       value = `<b><span style='color:green'>${value}</span></b>`;
     }
 
+    if (data && data.highlight) {
+      value = `<span style='color:blue'>${value}</span>`;
+    }
+
     return value;
   },
 };

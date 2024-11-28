@@ -281,7 +281,13 @@ class InterCompanyPartiesMatchReport:
                         ].representative_company_credit
                         self.data.append(merged_journal)
                 else:
-                    self.data.append(journal)
+                    updated_item = {
+                        "representative_company": None,
+                        "representative_company_credit": None,
+                        "representative_company_debit": None,
+                    }
+                    self.data.append({**journal, **updated_item})
+                    # print("JOURNAL", journal)
 
             if self.filters.get("compare_randomly"):
                 self.data = []
@@ -368,13 +374,25 @@ class InterCompanyPartiesMatchReport:
                                 updated_journals.append(updated_item)
                                 matched_journals.append(sorted_party_journals[i])
                         else:
-                            updated_journals.append(item)
+                            # updated_item = {
+                            #     "highlight": True,
+                            #     "representative_company": None,
+                            #     "representative_company_debit": None,
+                            #     "representative_company_credit": None,
+                            #     "representative_company_closing_balance": None,
+                            #     "representative_company_closing_balance": None,
+                            # }
+                            updated_journals.append({**item, **updated_item})
 
                         i += 1
 
                     for item in sorted_party_journals:
-                        if item not in matched_journals:
+                        if (
+                            item not in matched_journals
+                            and item.get("voucher_type") != "Opening Entry"
+                        ):
                             updated_item = {
+                                "highlight": True,
                                 "reference_company_debit": None,
                                 "reference_company_credit": None,
                                 "reference_company_closing_balance": None,
@@ -706,7 +724,8 @@ class InterCompanyPartiesMatchReport:
                         )
                         .where(
                             # (Journal_Entry.voucher_type != "Opening Entry")&
-                            (Journal_Entry.docstatus == 1)
+                            (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
+                            & (Journal_Entry.docstatus == 1)
                         )
                     )
 
@@ -752,7 +771,8 @@ class InterCompanyPartiesMatchReport:
                         )
                         .where(
                             # (Journal_Entry.voucher_type != "Opening Entry")&
-                            (Journal_Entry.docstatus == 1)
+                            (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
+                            & (Journal_Entry.docstatus == 1)
                         )
                     )
 
@@ -838,7 +858,7 @@ class InterCompanyPartiesMatchReport:
                             (journal.get("reference_company_credit") > 0)
                             and (
                                 journal.get("reference_company_credit")
-                                == amount_journal.get("representative_company_credit")
+                                == amount_journal.get("representative_company_debit")
                             )
                         ):
                             if amount_journal not in matched_amount_journals:
@@ -880,6 +900,20 @@ class InterCompanyPartiesMatchReport:
 
                     if not matched:
                         self.data.append(journal)
+
+                for item in self.amount_journals:
+                    if (
+                        item not in matched_amount_journals
+                        and item.get("voucher_type") != "Opening Entry"
+                    ):
+                        updated_data = {
+                            "highlight": True,
+                            "representative_company": item.get("company"),
+                            "reference_company_debit": None,
+                            "reference_company_credit": None,
+                        }
+                        print("ITEM", item)
+                        self.data.append({**item, **updated_data})
 
                 sorted_data = sorted(
                     self.data, key=lambda x: x.get("voucher_type") != "Opening Entry"
