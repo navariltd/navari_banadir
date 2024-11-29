@@ -375,14 +375,14 @@ class InterCompanyPartiesMatchReport:
                                 updated_journals.append(updated_item)
                                 matched_journals.append(sorted_party_journals[i])
                         else:
-                            # updated_item = {
-                            #     "highlight": True,
-                            #     "representative_company": None,
-                            #     "representative_company_debit": None,
-                            #     "representative_company_credit": None,
-                            #     "representative_company_closing_balance": None,
-                            #     "representative_company_closing_balance": None,
-                            # }
+                            updated_item = {
+                                "highlight": True,
+                                "representative_company": None,
+                                "representative_company_debit": None,
+                                "representative_company_credit": None,
+                                "representative_company_closing_balance": None,
+                                "representative_company_closing_balance": None,
+                            }
                             updated_journals.append({**item, **updated_item})
 
                         i += 1
@@ -640,6 +640,7 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry_Account.credit_in_account_currency.as_(
                         "reference_company_credit"
                     ),
+                    Journal_Entry.voucher_type,
                     # Journal_Entry.inter_company_journal_entry_reference.as_(
                     #     "party_journal"
                     # ),
@@ -803,6 +804,7 @@ class InterCompanyPartiesMatchReport:
                     ] += journal["reference_company_debit"]
                 else:
                     merged_reference_journals[journal_item] = {
+                        "voucher_type": journal["voucher_type"],
                         "reference_company": journal["reference_company"],
                         "representative_company": journal["representative_company"],
                         "reference_journal": journal_item,
@@ -849,60 +851,109 @@ class InterCompanyPartiesMatchReport:
 
                 matched_amount_journals = []
                 for journal in journals:
+
+                    if journal.get("voucher_type") == "Opening Entry":
+                        opening_entry = {
+                            "is_opening": True,
+                            "voucher_type": "Opening Entry",
+                            "reference_journal_posting_date": journal[
+                                "reference_journal_posting_date"
+                            ],
+                            "reference_company": journal.get("reference_company"),
+                            "reference_company_debit": journal.get(
+                                "reference_company_debit"
+                            ),
+                            "reference_company_credit": journal.get(
+                                "reference_company_credit"
+                            ),
+                            "reference_journal": journal.get("reference_journal"),
+                            "party_journal": None,
+                            "representative_company": "Opening Entry",
+                            "party_journal_posting_date": None,
+                            "representative_company_debit": None,
+                            "representative_company_credit": None,
+                            "reference_company_closing_balance": None,
+                            "representative_company_closing_balance": None,
+                        }
+                        self.data.append({**opening_entry})
+
                     matched = False
                     for amount_journal in self.amount_journals:
+                        print("A_JOURNAL", amount_journal)
                         if (
-                            (journal.get("reference_company_debit") > 0)
-                            and (
-                                journal.get("reference_company_debit")
-                                == amount_journal.get("representative_company_credit")
-                            )
-                        ) or (
-                            (journal.get("reference_company_credit") > 0)
-                            and (
-                                journal.get("reference_company_credit")
-                                == amount_journal.get("representative_company_debit")
-                            )
+                            journal.get("voucher_type") != "Opening Entry"
+                            and amount_journal.get("voucher_type") != "Opening Entry"
                         ):
-                            if amount_journal not in matched_amount_journals:
-                                merged_journal = copy.deepcopy(journal)
-                                merged_journal["representative_company_credit"] = (
-                                    amount_journal.get("representative_company_credit")
+                            if (
+                                (journal.get("reference_company_debit") > 0)
+                                and (
+                                    journal.get("reference_company_debit")
+                                    == amount_journal.get(
+                                        "representative_company_credit"
+                                    )
                                 )
-                                merged_journal["representative_company_debit"] = (
-                                    amount_journal.get("representative_company_debit")
+                            ) or (
+                                (journal.get("reference_company_credit") > 0)
+                                and (
+                                    journal.get("reference_company_credit")
+                                    == amount_journal.get(
+                                        "representative_company_debit"
+                                    )
                                 )
-                                merged_journal["party_journal"] = amount_journal.get(
-                                    "party_journal"
-                                )
-                                merged_journal["party_journal_posting_date"] = (
-                                    amount_journal.get("party_journal_posting_date")
-                                )
-                                self.data.append(merged_journal)
-                                matched_amount_journals.append(amount_journal)
-                                matched = True
-                                break
+                            ):
+                                if amount_journal not in matched_amount_journals:
+                                    merged_journal = copy.deepcopy(journal)
+                                    merged_journal["representative_company_credit"] = (
+                                        amount_journal.get(
+                                            "representative_company_credit"
+                                        )
+                                    )
+                                    merged_journal["representative_company_debit"] = (
+                                        amount_journal.get(
+                                            "representative_company_debit"
+                                        )
+                                    )
+                                    merged_journal["party_journal"] = (
+                                        amount_journal.get("party_journal")
+                                    )
+                                    merged_journal["party_journal_posting_date"] = (
+                                        amount_journal.get("party_journal_posting_date")
+                                    )
+                                    self.data.append(merged_journal)
+                                    matched_amount_journals.append(amount_journal)
+                                    matched = True
+                                    break
 
-                        if amount_journal.get("voucher_type") == "Opening Entry":
-                            updated_journal = {}
-                            opening_entry = {
-                                "is_opening": True,
-                                "reference_journal_posting_date": "",
-                                "reference_company": "Opening Entry",
-                                "reference_company_debit": None,
-                                "reference_company_credit": None,
-                                "representative_company": amount_journal.get("company"),
-                                "reference_company_closing_balance": None,
-                                "representative_company_closing_balance": None,
-                            }
+                            if amount_journal.get("voucher_type") == "Opening Entry":
+                                updated_journal = {}
+                                opening_entry = {
+                                    "is_opening": True,
+                                    "reference_journal_posting_date": "",
+                                    "reference_company": "Opening Entry",
+                                    "reference_company_debit": None,
+                                    "reference_company_credit": None,
+                                    "representative_company": amount_journal.get(
+                                        "company"
+                                    ),
+                                    "reference_company_closing_balance": None,
+                                    "representative_company_closing_balance": None,
+                                }
 
-                            updated_journal = {**amount_journal, **opening_entry}
+                                updated_journal = {**amount_journal, **opening_entry}
 
-                            if updated_journal not in self.data:
-                                self.data.append(updated_journal)
+                                if updated_journal not in self.data:
+                                    self.data.append(updated_journal)
 
                     if not matched:
-                        self.data.append(journal)
+                        if journal.get("voucher_type") != "Opening Entry":
+                            updated_data = {
+                                "highlight": True,
+                                "representative_company": None,
+                                "representative_company_debit": None,
+                                "representative_company_credit": None,
+                            }
+                            self.data.append({**journal, **updated_data})
+                        # print("JOURNAL", journal)
 
                 for item in self.amount_journals:
                     if (
