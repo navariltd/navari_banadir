@@ -98,9 +98,12 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       label: __("Compare Randomly"),
       fieldtype: "Check",
       default: 1,
-      // on_change: function () {
-      //   frappe.query_report.set_filter_value("compare_by_amount", 0);
-      // },
+    },
+    {
+      fieldname: "ignore_exchange_gain_or_loss",
+      label: __("Ignore Exchange Gain Or Loss"),
+      fieldtype: "Check",
+      default: 1,
     },
   ],
 

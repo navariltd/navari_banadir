@@ -19,6 +19,7 @@ class InterCompanyFilter(TypedDict):
     to_date: str
     compare_by_amount: bool
     compare_randomly: bool
+    ignore_exchange_gain_or_loss: bool
 
 
 def execute(filters: InterCompanyFilter | None = None):
@@ -210,6 +211,7 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry.inter_company_journal_entry_reference.as_(
                         "party_journal"
                     ),
+                    Journal_Entry.voucher_type,
                 )
                 .where(
                     Journal_Entry_Account.party_type == self.filters.get("party_type")
@@ -231,6 +233,10 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry_Account.party == self.filters.get("party")[0]
                 )
 
+            if self.filters.get("ignore_exchange_gain_or_loss"):
+                query = query.where(
+                    Journal_Entry.voucher_type != "Exchange Gain Or Loss"
+                )
             # Loop through the data, if it has a party journal, get the value of the debit/credit
             journals = query.run(as_dict=True)
 
@@ -238,28 +244,33 @@ class InterCompanyPartiesMatchReport:
 
             for journal in journals:
                 journal_item = journal["reference_journal"]
-                if journal_item in merged_reference_journals:
-                    merged_reference_journals[journal_item][
-                        "reference_company_credit"
-                    ] += journal["reference_company_credit"]
-                    merged_reference_journals[journal_item][
-                        "reference_company_debit"
-                    ] += journal["reference_company_debit"]
-                else:
-                    merged_reference_journals[journal_item] = {
-                        "reference_company": journal["reference_company"],
-                        "representative_company": journal["representative_company"],
-                        "reference_journal": journal_item,
-                        # "total_debit_or_credit": journal["total_debit_or_credit"],
-                        "reference_company_debit": journal["reference_company_debit"],
-                        "reference_company_credit": journal["reference_company_credit"],
-                        "party_journal": journal["party_journal"],
-                        "reference_journal_posting_date": journal[
-                            "reference_journal_posting_date"
-                        ],
-                        "reference_company_closing_balance": None,
-                        "representative_company_closing_balance": None,
-                    }
+                if journal.get("voucher_type") != "Opening Entry":
+                    if journal_item in merged_reference_journals:
+                        merged_reference_journals[journal_item][
+                            "reference_company_credit"
+                        ] += journal["reference_company_credit"]
+                        merged_reference_journals[journal_item][
+                            "reference_company_debit"
+                        ] += journal["reference_company_debit"]
+                    else:
+                        merged_reference_journals[journal_item] = {
+                            "reference_company": journal["reference_company"],
+                            "representative_company": journal["representative_company"],
+                            "reference_journal": journal_item,
+                            # "total_debit_or_credit": journal["total_debit_or_credit"],
+                            "reference_company_debit": journal[
+                                "reference_company_debit"
+                            ],
+                            "reference_company_credit": journal[
+                                "reference_company_credit"
+                            ],
+                            "party_journal": journal["party_journal"],
+                            "reference_journal_posting_date": journal[
+                                "reference_journal_posting_date"
+                            ],
+                            "reference_company_closing_balance": None,
+                            "representative_company_closing_balance": None,
+                        }
 
             journals = list(merged_reference_journals.values())
 
@@ -447,6 +458,9 @@ class InterCompanyPartiesMatchReport:
         if self.filters.get("party"):
             query = query.where(Journal_Entry.company == self.filters.get("party")[0])
 
+        if self.filters.get("ignore_exchange_gain_or_loss"):
+            query = query.where(Journal_Entry.voucher_type != "Exchange Gain Or Loss")
+
         data = query.run(as_dict=True)
 
         merged_journals = {}
@@ -523,6 +537,10 @@ class InterCompanyPartiesMatchReport:
 
         if self.filters.get("party"):
             query = query.where(Journal_Entry.company == self.filters.get("party")[0])
+
+        if self.filters.get("ignore_exchange_gain_or_loss"):
+            query = query.where(Journal_Entry.voucher_type != "Exchange Gain Or Loss")
+
         return query.run(as_dict=True)
 
     # def filter_by_to_company(self):
@@ -665,6 +683,11 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry_Account.party == self.filters.get("party")[0]
                 )
 
+            if self.filters.get("ignore_exchange_gain_or_loss"):
+                query = query.where(
+                    Journal_Entry.voucher_type != "Exchange Gain Or Loss"
+                )
+
             journals = query.run(as_dict=True)
 
             if self.filters.get("compare_by_amount"):
@@ -738,6 +761,11 @@ class InterCompanyPartiesMatchReport:
                             Journal_Entry.company == self.filters.get("party")[0]
                         )
 
+                    if self.filters.get("ignore_exchange_gain_or_loss"):
+                        query = query.where(
+                            Journal_Entry.voucher_type != "Exchange Gain Or Loss"
+                        )
+
                     self.amount_journals = amount_query.run(as_dict=True)
                 else:
                     amount_query = (
@@ -783,6 +811,11 @@ class InterCompanyPartiesMatchReport:
                     if self.filters.get("party"):
                         amount_query = amount_query.where(
                             Journal_Entry.company == self.filters.get("party")[0]
+                        )
+
+                    if self.filters.get("ignore_exchange_gain_or_loss"):
+                        query = query.where(
+                            Journal_Entry.voucher_type != "Exchange Gain Or Loss"
                         )
 
                     self.amount_journals = amount_query.run(as_dict=True)
@@ -1081,3 +1114,8 @@ def convert_currency_fields(self, data, filters, company_key, amount_field):
         )
 
     return data
+
+
+# Exchange Gain or Loss
+# Difference Entry
+# Contra Entry
