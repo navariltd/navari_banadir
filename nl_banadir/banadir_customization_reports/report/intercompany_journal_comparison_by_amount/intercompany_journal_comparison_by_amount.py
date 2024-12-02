@@ -211,6 +211,7 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry.inter_company_journal_entry_reference.as_(
                         "party_journal"
                     ),
+                    Journal_Entry.voucher_type,
                 )
                 .where(
                     Journal_Entry_Account.party_type == self.filters.get("party_type")
@@ -243,28 +244,33 @@ class InterCompanyPartiesMatchReport:
 
             for journal in journals:
                 journal_item = journal["reference_journal"]
-                if journal_item in merged_reference_journals:
-                    merged_reference_journals[journal_item][
-                        "reference_company_credit"
-                    ] += journal["reference_company_credit"]
-                    merged_reference_journals[journal_item][
-                        "reference_company_debit"
-                    ] += journal["reference_company_debit"]
-                else:
-                    merged_reference_journals[journal_item] = {
-                        "reference_company": journal["reference_company"],
-                        "representative_company": journal["representative_company"],
-                        "reference_journal": journal_item,
-                        # "total_debit_or_credit": journal["total_debit_or_credit"],
-                        "reference_company_debit": journal["reference_company_debit"],
-                        "reference_company_credit": journal["reference_company_credit"],
-                        "party_journal": journal["party_journal"],
-                        "reference_journal_posting_date": journal[
-                            "reference_journal_posting_date"
-                        ],
-                        "reference_company_closing_balance": None,
-                        "representative_company_closing_balance": None,
-                    }
+                if journal.get("voucher_type") != "Opening Entry":
+                    if journal_item in merged_reference_journals:
+                        merged_reference_journals[journal_item][
+                            "reference_company_credit"
+                        ] += journal["reference_company_credit"]
+                        merged_reference_journals[journal_item][
+                            "reference_company_debit"
+                        ] += journal["reference_company_debit"]
+                    else:
+                        merged_reference_journals[journal_item] = {
+                            "reference_company": journal["reference_company"],
+                            "representative_company": journal["representative_company"],
+                            "reference_journal": journal_item,
+                            # "total_debit_or_credit": journal["total_debit_or_credit"],
+                            "reference_company_debit": journal[
+                                "reference_company_debit"
+                            ],
+                            "reference_company_credit": journal[
+                                "reference_company_credit"
+                            ],
+                            "party_journal": journal["party_journal"],
+                            "reference_journal_posting_date": journal[
+                                "reference_journal_posting_date"
+                            ],
+                            "reference_company_closing_balance": None,
+                            "representative_company_closing_balance": None,
+                        }
 
             journals = list(merged_reference_journals.values())
 
