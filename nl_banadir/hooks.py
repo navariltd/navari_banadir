@@ -46,7 +46,11 @@ doc_events = {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
 },
     "Production Plan":{
+        "autoname":"nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
         "on_submit":"nl_banadir.banadir_customization_reports.controllers.production_plan.sync_sequence"
+    },
+     "Work Order":{
+        "autoname":"nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
     }
 }
 
