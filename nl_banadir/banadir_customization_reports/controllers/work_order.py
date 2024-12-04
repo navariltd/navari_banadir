@@ -28,6 +28,7 @@ def before_save(doc, method=None):
 
 def on_submit(doc, method=None):
     for operation in doc.custom_subcontractors:
-        if operation.supplier is None:
+        if (operation.status == "In Progress" or operation.status == "Completed") and operation.supplier is None:
             frappe.throw("Kindly enter the supplier in Sub-contractor table")
+
     
