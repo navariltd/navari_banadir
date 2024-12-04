@@ -299,13 +299,28 @@ class InterCompanyPartiesMatchReport:
                         "representative_company_debit": None,
                     }
                     self.data.append({**journal, **updated_item})
-                    # print("JOURNAL", journal)
 
             if self.filters.get("compare_randomly"):
                 self.data = []
                 self.filters.get("compare_by_amount") == False
                 party_journals = self.get_journal_entries()
                 opening_entries = self.get_reverse_opening_entries()
+
+                if journals and not party_journals:
+                    self.process_reference_journals(journals=journals)
+
+                if party_journals and not journals:
+                    if opening_entries:
+                        sorted_party_journals = self.sort_party_journals(
+                            party_journals=party_journals,
+                            opening_entries=opening_entries,
+                        )
+                        self.process_party_journals(sorted_party_journals)
+                    else:
+                        sorted_party_journals = self.sort_party_journals(
+                            party_journals=party_journals
+                        )
+                        self.process_party_journals(sorted_party_journals)
 
                 if journals and party_journals:
                     if opening_entries:
@@ -417,6 +432,81 @@ class InterCompanyPartiesMatchReport:
                         key=lambda x: x.get("voucher_type") != "Opening Entry",
                     )
                     self.data = sorted_journals
+
+    def process_reference_journals(self, journals):
+        updated_journals = []
+        for item in journals:
+            updated_item = {
+                "representative_company": None,
+                "representative_company_credit": None,
+                "representative_company_debit": None,
+            }
+            updated_journals.append({**item, **updated_item})
+
+        self.data = updated_journals
+
+    def process_party_journals(self, journals):
+        updated_journals = []
+        for journal in journals:
+            if journal.get("voucher_type") == "Opening Entry":
+                if journal.get("is_reverse"):
+                    opening_entry = {
+                        "is_opening": True,
+                        "reference_journal_posting_date": journal.get(
+                            "party_journal_posting_date"
+                        ),
+                        "reference_company": journal.get("representative_company"),
+                        "reference_company_debit": journal.get(
+                            "representative_company_debit"
+                        ),
+                        "reference_company_credit": journal.get(
+                            "representative_company_credit"
+                        ),
+                        "reference_journal": journal.get("party_journal"),
+                        "party_journal": None,
+                        "representative_company": "Opening Entry",
+                        "party_journal_posting_date": None,
+                        "representative_company_debit": None,
+                        "representative_company_credit": None,
+                        "reference_company_closing_balance": None,
+                        "representative_company_closing_balance": None,
+                    }
+                    updated_journals.append({**opening_entry})
+
+                else:
+                    opening_entry = {
+                        "is_opening": True,
+                        "reference_journal_posting_date": "",
+                        "reference_company": "Opening Entry",
+                        "reference_company_debit": None,
+                        "reference_company_credit": None,
+                        "representative_company": journal.get("representative_company"),
+                        "reference_company_closing_balance": None,
+                        "representative_company_closing_balance": None,
+                    }
+                    updated_journals.append({**journal, **opening_entry})
+            else:
+                updated_item = {
+                    "reference_company_debit": None,
+                    "reference_company_credit": None,
+                    "reference_company_closing_balance": None,
+                }
+                updated_journals.append({**journal, **updated_item})
+
+        self.data = updated_journals
+
+    def sort_party_journals(self, party_journals, opening_entries=[]):
+        party_journals = party_journals
+        if opening_entries:
+            for entry in opening_entries:
+                party_journals.append(entry)
+
+        sorted_party_journals = sorted(
+            party_journals,
+            key=lambda x: x.get("voucher_type") != "Opening Entry",
+        )
+
+        return sorted_party_journals
 
     def get_journal_entries(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
@@ -762,7 +852,7 @@ class InterCompanyPartiesMatchReport:
                         )
 
                     if self.filters.get("ignore_exchange_gain_or_loss"):
-                        query = query.where(
+                        amount_query = amount_query.where(
                             Journal_Entry.voucher_type != "Exchange Gain Or Loss"
                         )
 
@@ -814,7 +904,7 @@ class InterCompanyPartiesMatchReport:
                         )
 
                     if self.filters.get("ignore_exchange_gain_or_loss"):
-                        query = query.where(
+                        amount_query = amount_query.where(
                             Journal_Entry.voucher_type != "Exchange Gain Or Loss"
                         )
 
@@ -883,6 +973,7 @@ class InterCompanyPartiesMatchReport:
                 self.amount_journals = list(merged_party_journals.values())
 
                 matched_amount_journals = []
+
                 for journal in journals:
 
                     if journal.get("voucher_type") == "Opening Entry":
@@ -912,7 +1003,6 @@ class InterCompanyPartiesMatchReport:
 
                     matched = False
                     for amount_journal in self.amount_journals:
-                        print("A_JOURNAL", amount_journal)
                         if (
                             journal.get("voucher_type") != "Opening Entry"
                             and amount_journal.get("voucher_type") != "Opening Entry"
@@ -957,25 +1047,25 @@ class InterCompanyPartiesMatchReport:
                                     matched = True
                                     break
 
-                            if amount_journal.get("voucher_type") == "Opening Entry":
-                                updated_journal = {}
-                                opening_entry = {
-                                    "is_opening": True,
-                                    "reference_journal_posting_date": "",
-                                    "reference_company": "Opening Entry",
-                                    "reference_company_debit": None,
-                                    "reference_company_credit": None,
-                                    "representative_company": amount_journal.get(
-                                        "company"
-                                    ),
-                                    "reference_company_closing_balance": None,
-                                    "representative_company_closing_balance": None,
-                                }
+                        if amount_journal.get("voucher_type") == "Opening Entry":
 
-                                updated_journal = {**amount_journal, **opening_entry}
+                            updated_journal = {}
+                            opening_entry = {
+                                "is_opening": True,
+                                "reference_journal_posting_date": "",
+                                "reference_company": "Opening Entry",
+                                "reference_company_debit": None,
+                                "reference_company_credit": None,
+                                "representative_company": amount_journal.get("company"),
+                                "reference_company_closing_balance": None,
+                                "representative_company_closing_balance": None,
+                            }
 
-                                if updated_journal not in self.data:
-                                    self.data.append(updated_journal)
+                            updated_journal = {**amount_journal, **opening_entry}
+
+                            if updated_journal not in self.data:
+                                self.data.append(updated_journal)
+                        # else:
 
                     if not matched:
                         if journal.get("voucher_type") != "Opening Entry":
@@ -986,7 +1076,6 @@ class InterCompanyPartiesMatchReport:
                                 "representative_company_credit": None,
                             }
                             self.data.append({**journal, **updated_data})
-                        # print("JOURNAL", journal)
 
                 for item in self.amount_journals:
                     if (
@@ -999,8 +1088,21 @@ class InterCompanyPartiesMatchReport:
                             "reference_company_debit": None,
                             "reference_company_credit": None,
                         }
-                        print("ITEM", item)
+
                         self.data.append({**item, **updated_data})
+
+                    if not journals and item.get("voucher_type") == "Opening Entry":
+                        opening_entry = {
+                            "is_opening": True,
+                            "reference_journal_posting_date": "",
+                            "reference_company": "Opening Entry",
+                            "reference_company_debit": None,
+                            "reference_company_credit": None,
+                            "representative_company": item.get("company"),
+                            "reference_company_closing_balance": None,
+                            "representative_company_closing_balance": None,
+                        }
+                        self.data.append({**item, **opening_entry})
 
                 sorted_data = sorted(
                     self.data, key=lambda x: x.get("voucher_type") != "Opening Entry"
