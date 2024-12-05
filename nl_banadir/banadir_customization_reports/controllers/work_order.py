@@ -26,7 +26,7 @@ def before_save(doc, method=None):
                     "amount": operation["amount"],
                     "item": operation["item"],
                     "currency": currency,
-                    "supplier":"GLI footwear PVT LTD",
+                   
                 })
 
 def on_submit(doc, method=None):
@@ -40,7 +40,7 @@ def generate_invoice_number(item_code, company_abbr):
     Generate a custom invoice number in the format: item_code-company_abbreviation-series.
     """
     series = make_autoname(f"{company_abbr}-.####")
-    return f"{item_code}-{company_abbr}-{series}"
+    return f"{item_code}-{series}"
 
 def create_purchase_invoice(operation, company, currency, custom_work_order):
     """
@@ -58,7 +58,7 @@ def create_purchase_invoice(operation, company, currency, custom_work_order):
     purchase_invoice.currency = currency
     purchase_invoice.supplier = operation.supplier
     purchase_invoice.company = company
-    purchase_invoice.set_warehouse = "Store - CW"
+    # purchase_invoice.set_warehouse = "Store - CW"
     purchase_invoice.update_stock = 0
     purchase_invoice.custom_work_order = custom_work_order
     purchase_invoice.custom_invoice_no = custom_invoice_no
@@ -80,6 +80,12 @@ def create_purchase_invoice(operation, company, currency, custom_work_order):
         "invoice_created",
         1
     )
+    frappe.db.set_value(
+        "Work Order Operations Item",
+        operation.name,  
+        "invoice",
+        purchase_invoice.name
+    )
 
     return purchase_invoice
 
@@ -88,20 +94,23 @@ def on_update(doc, method=None):
     Main function to handle the creation of Purchase Invoices for completed operations.
     """
     for operation in doc.custom_subcontractors:
+        operation_doc = frappe.get_doc("Work Order Operations Item", operation.get('name'))
+        if (operation_doc.status == "In Progress" or operation_doc.status == "Completed") and operation_doc.supplier is None:
+            frappe.throw("Kindly enter the supplier in Sub-contractor table")
         # Only consider operations with status "Completed" and invoice_created flag is 0
-        if operation.status == "Completed" and operation.invoice_created == 0:
-            if operation.completed_qty > doc.qty:
+        if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
+            if operation_doc.completed_qty > doc.qty:
                 frappe.throw(
-                    f"Completed quantity ({operation.completed_qty}) for operation '{operation.operations}' "
+                    f"Completed quantity ({operation_doc.completed_qty}) for operation '{operation_doc.operations}' "
                     f"cannot exceed the quantity to manufacture ({doc.qty}) on this Work Order."
                 )
             create_purchase_invoice(
-                operation=operation,
+                operation=operation_doc,
                 company=doc.company,
-                currency=operation.currency,
+                currency=operation_doc.currency,
                 custom_work_order=doc.name
             )
 
             frappe.msgprint("Purchase Invoices successfully created for all suppliers with completed operations.")
-    doc.save()
-    doc.reload()
+    # doc.save()
+    # doc.reload()
