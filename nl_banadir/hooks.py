@@ -55,7 +55,10 @@ doc_events = {
         "on_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_submit",
         "on_update_after_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
 
-    }
+    },
+     "Stock Entry":{
+         "before_save":"nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
+     }
 }
 
 # include js, css files in header of desk.html
