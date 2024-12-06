@@ -110,7 +110,11 @@ def on_update(doc, method=None):
                 currency=operation_doc.currency,
                 custom_work_order=doc.name
             )
+            total_operation_cost(doc, operation_doc)
 
             frappe.msgprint("Purchase Invoices successfully created for all suppliers with completed operations.")
-    # doc.save()
-    # doc.reload()
+         
+    
+def total_operation_cost(doc, operation_doc):
+    doc.custom_total_operation_cost += operation_doc.amount
+ 

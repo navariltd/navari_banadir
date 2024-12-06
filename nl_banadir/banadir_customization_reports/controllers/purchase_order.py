@@ -16,7 +16,8 @@ def get_items_from_production_plan(production_plan):
         items.append({
             "item_code": work_order.production_item,
             "quantity": work_order.qty,
-            "work_order": work_order.name
+            "work_order": work_order.name,
         })
     frappe.response['message'] = items
     return items
+
