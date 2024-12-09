@@ -115,19 +115,28 @@ frappe.query_reports["Stock Balance Summary"] = {
       fieldtype: "Check",
       default: 0,
     },
+    {
+      fieldname: "show_warehouse_totals",
+      label: __("Show Warehouse Totals"),
+      fieldtype: "Check",
+      default: 0,
+    },
   ],
 
   formatter: function (value, row, column, data, default_formatter) {
-        value = default_formatter(value, row, column, data);
+    value = default_formatter(value, row, column, data);
 
-        if (data && data.bal_qty > 0) {
-            // Check if the column fieldname contains 'bal_qty'
-            if (column.fieldname.includes("bal_qty")) {
-                // Format the value with thousand separators
-                value = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-        }
+    if (data && data.bal_qty > 0) {
+      // Check if the column fieldname contains 'bal_qty'
+      if (column.fieldname.includes("bal_qty")) {
+        // Format the value with thousand separators
+        value = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      }
+    }
 
+    if (data && data.is_total) {
+      value = `<b>${value}</b>`;
+    }
 
     if (column.fieldname == "out_qty" && data && data.out_qty > 0) {
       value = "<span style='color:red'>" + value + "</span>";

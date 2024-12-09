@@ -3,6 +3,7 @@
 
 from operator import itemgetter
 from typing import Any, TypedDict
+from collections import defaultdict
 
 import frappe
 from frappe import _
@@ -32,6 +33,7 @@ class StockBalanceFilter(TypedDict):
     show_stock_ageing_data: bool
     show_variant_attributes: bool
     remove_precision: bool
+    show_warehouse_totals: bool
 
 
 SLEntry = dict[str, Any]
@@ -75,6 +77,10 @@ class StockBalanceReport:
             self.columns = self.get_columns()
 
         self.add_additional_uom_columns()
+
+        if self.filters.get("show_warehouse_totals"):
+            if self.data:
+                self.get_warehouse_totals(data=self.data)
 
         return self.columns, self.data
 
@@ -396,6 +402,37 @@ class StockBalanceReport:
             query = query.where(sle.posting_date <= self.to_date)
 
         return query
+
+    def get_warehouse_totals(self, data):
+        grouped_data = defaultdict(lambda: {"bal_qty": 0.0})
+
+        for entry in data:
+            key = entry["warehouse"]
+            grouped_data[key]["bal_qty"] += entry["bal_qty"]
+
+        result = [
+            {
+                "item_code": f"Total - {key}",
+                "warehouse": f"Total - {key}",
+                "bal_qty": value["bal_qty"],
+                "is_total": True,
+            }
+            for key, value in grouped_data.items()
+        ]
+
+        for r in result:
+            self.data.append(r)
+
+        sorted_data = sorted(
+            self.data,
+            key=lambda x: (
+                x["warehouse"][8:]
+                if x["warehouse"].startswith("Total - ")
+                else x["warehouse"]
+            ),
+        )
+
+        self.data = sorted_data
 
     def get_columns(self):
         columns = [
