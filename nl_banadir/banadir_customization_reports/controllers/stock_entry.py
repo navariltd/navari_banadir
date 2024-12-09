@@ -3,8 +3,11 @@ import frappe
 
 def add_total_operation_cost(doc):
     operation_cost = get_operation_cost(doc.work_order)
-    expense_account = frappe.get_doc("Company", doc.company).custom_default_operating_cost
-
+    _account = frappe.get_doc("Company", doc.company)
+    expense_account= _account.default_operating_cost_account
+    if not expense_account:
+        frappe.throw("Go to company and enter the respective default Operating Cost Account")
+    
     if operation_cost:
         existing_entry = next(
             (entry for entry in doc.additional_costs if entry.description == "Operation Cost"), None
@@ -14,7 +17,8 @@ def add_total_operation_cost(doc):
             doc.append("additional_costs", {
                 "expense_account": expense_account,
                 "description": "Operation Cost",
-                "amount": operation_cost
+                "amount": operation_cost,
+                "base_amount":operation_cost
             })
 
 
@@ -24,6 +28,6 @@ def get_operation_cost(work_order):
     return operation_cost
 
 def before_save(doc, method=None):
-    if doc.work_order:
+    if doc.work_order and doc.stock_entry_type=="Manufacture":
         add_total_operation_cost(doc)
     

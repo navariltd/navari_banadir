@@ -42,7 +42,7 @@ def generate_invoice_number(item_code, company_abbr):
     series = make_autoname(f"{company_abbr}-.####")
     return f"{item_code}-{series}"
 
-def create_purchase_invoice(operation, company, currency, custom_work_order):
+def create_purchase_invoice(doc, operation, company, currency, custom_work_order):
     """
     Create a Purchase Invoice for the given operation.
     """
@@ -86,6 +86,7 @@ def create_purchase_invoice(operation, company, currency, custom_work_order):
         "invoice",
         purchase_invoice.name
     )
+    doc.reload()
 
     return purchase_invoice
 
@@ -105,6 +106,7 @@ def on_update(doc, method=None):
                     f"cannot exceed the quantity to manufacture ({doc.qty}) on this Work Order."
                 )
             create_purchase_invoice(
+                doc=doc,
                 operation=operation_doc,
                 company=doc.company,
                 currency=operation_doc.currency,
