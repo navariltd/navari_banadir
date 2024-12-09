@@ -126,34 +126,41 @@ frappe.query_reports["Stock Balance Summary"] = {
   formatter: function (value, row, column, data, default_formatter) {
     value = default_formatter(value, row, column, data);
 
+    if (data && data.bal_qty > 0) {
+      // Check if the column fieldname contains 'bal_qty'
+      if (column.fieldname.includes("bal_qty")) {
+        // Format the value with thousand separators
+        value = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      }
+    }
+
     if (data && data.is_total) {
       value = `<b>${value}</b>`;
+    }
 
-    // Check if "remove_precision" filter is set to 1
-    const remove_precision = frappe.query_report.get_filter_value("remove_precision");
+    const remove_precision =
+      frappe.query_report.get_filter_value("remove_precision");
 
     if (remove_precision === 1 && data && data.bal_qty > 0) {
-        // Check if the column fieldname contains 'bal_qty'
-        if (column.fieldname.includes("bal_qty")) {
-            // Split the value into integer and decimal parts
-            let [integerPart, decimalPart] = value.toString().split(".");
-            // Add comma formatting to the integer part only
-            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            // Recombine integer and decimal parts
-            value = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
-        }
-
+      // Check if the column fieldname contains 'bal_qty'
+      if (column.fieldname.includes("bal_qty")) {
+        // Split the value into integer and decimal parts
+        let [integerPart, decimalPart] = value.toString().split(".");
+        // Add comma formatting to the integer part only
+        integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        // Recombine integer and decimal parts
+        value = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
+      }
     }
 
     if (column.fieldname == "out_qty" && data && data.out_qty > 0) {
-        value = "<span style='color:red'>" + value + "</span>";
+      value = "<span style='color:red'>" + value + "</span>";
     } else if (column.fieldname == "in_qty" && data && data.in_qty > 0) {
-        value = "<span style='color:green'>" + value + "</span>";
+      value = "<span style='color:green'>" + value + "</span>";
     }
 
     return value;
-},
-
+  },
 };
 
 erpnext.utils.add_inventory_dimensions("Stock Balance", 8);

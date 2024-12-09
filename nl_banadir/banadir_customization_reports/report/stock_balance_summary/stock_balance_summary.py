@@ -20,6 +20,7 @@ from erpnext.stock.doctype.warehouse.warehouse import apply_warehouse_filter
 from erpnext.stock.report.stock_ageing.stock_ageing import FIFOSlots, get_average_age
 from erpnext.stock.utils import add_additional_uom_columns
 
+
 class StockBalanceFilter(TypedDict):
     company: str | None
     from_date: str
@@ -77,34 +78,33 @@ class StockBalanceReport:
 
         self.add_additional_uom_columns()
 
-
         if self.filters.get("show_warehouse_totals"):
             if self.data:
                 self.get_warehouse_totals(data=self.data)
 
         total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
 
-        total_row = {
-            "item_code": _("Total"),
-           
-            "bal_qty": total_bal_qty,
-            "bal_qty_alt":total_bal_alternative_uom_qty,
-            "bal_val": 0.0,
-           
-        }
-        
-        self.data.append(total_row)
+        if not self.filters.get("show_warehouse_totals"):
+            total_row = {
+                "item_code": _("Total"),
+                "bal_qty": total_bal_qty,
+                "bal_qty_alt": total_bal_alternative_uom_qty,
+                "bal_val": 0.0,
+            }
 
+            self.data.append(total_row)
         return self.columns, self.data
+
     def calculate_total_bal_qty(self):
         """
         Calculate the total balance quantity ('bal_qty') and return the total.
         """
         total_bal_qty = sum(item.get("bal_qty", 0.0) for item in self.data)
-        total_bal_alternative_uom_qty= sum(item.get("bal_qty_alt", 0.0) for item in self.data)
+        total_bal_alternative_uom_qty = sum(
+            item.get("bal_qty_alt", 0.0) for item in self.data
+        )
         # frappe.throw(str(self.data))
         return total_bal_qty, total_bal_alternative_uom_qty
-
 
     def prepare_opening_data_from_closing_balance(self) -> None:
         self.opening_data = frappe._dict({})
@@ -192,7 +192,6 @@ class StockBalanceReport:
 
             # Append report data to the data list
             self.data.append(report_data)
-
 
     def get_item_warehouse_map(self):
         item_warehouse_map = {}
