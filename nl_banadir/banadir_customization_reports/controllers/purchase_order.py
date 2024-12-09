@@ -17,6 +17,7 @@ def get_items_from_production_plan(production_plan):
             "item_code": work_order.production_item,
             "quantity": work_order.qty,
             "work_order": work_order.name,
+            "fg_item_qty": work_order.qty,
         })
     frappe.response['message'] = items
     return items
