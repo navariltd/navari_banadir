@@ -21,7 +21,7 @@ frappe.ui.form.on("Purchase Order", {
                   const child = frm.add_child("items"); // Replace "items" with your child table fieldname
                   frappe.model.set_value(child.doctype, child.name, "item_code", "JOB WORK CHARGES");
                   frappe.model.set_value(child.doctype, child.name, "fg_item", item.item_code);
-                  frappe.model.set_value(child.doctype, child.name, "fg_item_qty", 1);
+                  frappe.model.set_value(child.doctype, child.name, "fg_item_qty", item.fg_item_qty);
                   frappe.model.set_value(child.doctype, child.name, "qty", item.quantity);
                   frappe.model.set_value(child.doctype, child.name, "custom_work_order", item.work_order);
                   frappe.model.set_value(child.doctype, child.name, "uom", "Pair");
