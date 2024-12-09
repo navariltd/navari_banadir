@@ -115,19 +115,10 @@ frappe.query_reports["Stock Balance Summary"] = {
       fieldtype: "Check",
       default: 0,
     },
-    {
-      fieldname: "show_warehouse_totals",
-      label: __("Show Warehouse Totals"),
-      fieldtype: "Check",
-      default: 0,
-    },
   ],
 
   formatter: function (value, row, column, data, default_formatter) {
     value = default_formatter(value, row, column, data);
-
-    if (data && data.is_total) {
-      value = `<b>${value}</b>`;
 
     // Check if "remove_precision" filter is set to 1
     const remove_precision = frappe.query_report.get_filter_value("remove_precision");
@@ -142,7 +133,6 @@ frappe.query_reports["Stock Balance Summary"] = {
             // Recombine integer and decimal parts
             value = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
         }
-
     }
 
     if (column.fieldname == "out_qty" && data && data.out_qty > 0) {
