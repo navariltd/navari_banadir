@@ -50,6 +50,12 @@ frappe.query_reports["Stock Value Adjustment"] = {
 			options: "Mode of Payment",
 		},
 		{
+			fieldname: "warehouse",
+			label: __("Warehouse"),
+			fieldtype: "Link",
+			options: "Warehouse",
+		},
+		{
 			label: __("Group By"),
 			fieldname: "group_by",
 			fieldtype: "Select",

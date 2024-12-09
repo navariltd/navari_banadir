@@ -44,9 +44,22 @@ doc_events = {
     "Journal Entry": {
         "before_save":"nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
-}
-}
+},
+    "Production Plan":{
+        "autoname":"nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
+        "on_submit":"nl_banadir.banadir_customization_reports.controllers.production_plan.sync_sequence"
+    },
+     "Work Order":{
+        "autoname":"nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
+        "before_save":"nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
+        "on_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_submit",
+        "on_update_after_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
 
+    },
+     "Stock Entry":{
+         "before_save":"nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
+     }
+}
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/nl_banadir/css/nl_banadir.css"
@@ -67,7 +80,11 @@ doc_events = {
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+    "Work Order" : "public/js/work_order.js",
+    "Purchase Order":"public/js/purchase_order.js",
+    }
+
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}

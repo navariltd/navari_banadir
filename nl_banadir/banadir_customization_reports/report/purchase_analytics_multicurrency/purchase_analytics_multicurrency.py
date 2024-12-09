@@ -10,16 +10,12 @@ from frappe.utils import add_days, add_to_date, flt, getdate
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.accounts.report.utils import convert, get_rate_as_at
 
-import locale
-
-# Set locale for thousand separators
-locale.setlocale(locale.LC_ALL, '')  # Adjust locale if needed
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	# Special report showing all doctype totals on a single chart; overrides some filters
 	if filters.doc_type == "All":
-		filters.tree_type = "Customer"
+		filters.tree_type = "Supplier"
 		filters.value_quantity = "Value"
 		filters.curves = "total"
 		output = None
@@ -53,20 +49,6 @@ def append_report(dt, org, new):
 	else:
 		return new
 
-def format_quantity_with_thousand_separator(data):
-	"""Format quantity fields in data with thousand separators if no precision is specified."""
-	
-	for row in data:
-		item_code = row.get('entity')
-		if item_code:			
-			for key, value in row.items():
-				if isinstance(value, (int, float)):
-					print("-----------------------------------------")
-					print("Value",str(value))
-					row[key] = f"{value:,.2f}" if isinstance(value, float) else f"{value:,}"
-				else:
-					print("Mania")
-	return data
 
 class Analytics:
 	def __init__(self, filters=None):
@@ -77,7 +59,7 @@ class Analytics:
 			"transaction_date"
 			if self.filters.doc_type in ["Quotation", "Sales Order", "Purchase Order"]
 			else "due_date"
-			if self.filters.doc_type == "Sales Invoice (due)"
+			if self.filters.doc_type == "Purchase Invoice (due)"
 			else "posting_date"
 		)
 		if self.filters.doc_type.startswith("Sales Invoice"):
@@ -100,8 +82,8 @@ class Analytics:
 
 	def run(self, filters):
 		self.get_columns()
-		self.get_data(filters)
-		self.get_chart_data()
+		self.get_data()
+		# self.get_chart_data()
 
 		# Skipping total row for tree-view reports
 		skip_total_row = 0
@@ -112,11 +94,11 @@ class Analytics:
   
 		if filters.get("tree_type")=="Item" and filters.get('value_quantity')== "Quantity":
 			self.data=convert_alternative_uom(self.data, filters)
-		# Apply thousand separator formatting if needed
-		# if filters.get("value_quantity")=="Quantity" and filters.get('no_precision')==1:
-		# 	self.data = format_quantity_with_thousand_separator(self.data)
+   
+   
+		return self.columns, self.data, None, None, None, skip_total_row
 
-		return self.columns, self.data, None, self.chart, None, skip_total_row
+		# return self.columns, self.data, None, self.chart, None, skip_total_row
 
 	def get_columns(self):
 		self.columns = [
@@ -127,12 +109,12 @@ class Analytics:
 				"fieldtype": "Link" if self.filters.tree_type != "Order Type" else "Data",
 				"width": 140 if self.filters.tree_type != "Order Type" else 200,
 			},
-   {
+			{
 				"label":"Currency",
 				"options":"Currency",
 				"fildtype":"Link",
 				"fieldname":"currency",
-				"hidden":1,
+    			"hidden":1,
 			}
 		]
 		if self.filters.tree_type in ["Customer", "Supplier", "Item"]:
@@ -162,17 +144,16 @@ class Analytics:
 				{
 					"label": _(period),
 					"fieldname": scrub(period),
-	"fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),
+    "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),
 					"options": "currency" if self.filters.value_quantity == "Value" else "",
-					"precision": 1 if self.filters.no_precision == 1 else None,
+					# "precision": 0 if self.filters.no_precision == 1 else None,
 					"width": 120
 				}
 			)
 
-		self.columns.append({"label": _("Total"), "fieldname": "total",     "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),"options":"currency" if self.filters.value_quantity=="Value" else "",					"precision": 1 if self.filters.no_precision == 1 else None,
- "width": 120})
+		self.columns.append({"label": _("Total"), "fieldname": "total",     "fieldtype": "Currency" if self.filters.value_quantity == "Value" else ("Int" if self.filters.no_precision == 1 else "Float"),"options":"currency" if self.filters.value_quantity=="Value" else "", "width": 120})
 
-	def get_data(self, filters):
+	def get_data(self):
 		if self.filters.tree_type in ["Customer", "Supplier"]:
 			self.get_sales_transactions_based_on_customers_or_suppliers()
 			self.get_rows()
@@ -189,21 +170,21 @@ class Analytics:
 				self.data = []
 				return
 			self.get_sales_transactions_based_on_customer_or_territory_group()
-			self.get_rows_by_group(filters)
+			self.get_rows_by_group()
 
 		elif self.filters.tree_type == "Item Group":
 			if self.filters.doc_type == "Payment Entry":
 				self.data = []
 				return
 			self.get_sales_transactions_based_on_item_group()
-			self.get_rows_by_group(filters)
+			self.get_rows_by_group()
 
 		elif self.filters.tree_type == "Order Type":
 			if self.filters.doc_type not in ["Quotation", "Sales Order"]:
 				self.data = []
 				return
 			self.get_sales_transactions_based_on_order_type()
-			self.get_rows_by_group(filters)
+			self.get_rows_by_group()
 
 		elif self.filters.tree_type == "Project":
 			if self.filters.doc_type == "Quotation":
@@ -211,7 +192,6 @@ class Analytics:
 				return
 			self.get_sales_transactions_based_on_project()
 			self.get_rows()
-		
 
 	def get_sales_transactions_based_on_order_type(self):
 		if self.filters["value_quantity"] == "Value":
@@ -253,7 +233,7 @@ class Analytics:
 				entity = "party as entity"
 				entity_name = "party_name as entity_name"
 				value_field = "base_paid_amount as value_field"
-
+		# frappe.throw(str(self.filters.doc_type))
 		self.entries = frappe.get_all(
 			self.filters.doc_type,
 			fields=[entity, entity_name, value_field, self.date_field],
@@ -378,35 +358,10 @@ class Analytics:
 
 			self.data.append(row)
 
-	
-	def get_rows_by_group(self, filters):
-		self.data = []
+	def get_rows_by_group(self):
 		self.get_periodic_data()
+		out = []
 
-		if filters.get("eliminate_zero"):
-			self.data = self.get_filtered_rows(filters)
-		else:
-			self.data = self.get_grouped_rows(filters)
-
-	def get_filtered_rows(self, filters):
-		filtered_data = []
-		for entity, period_data in self.entity_periodic_data.items():
-			total = sum(flt(value) for value in period_data.values())
-			
-			# Only include rows with total quantity greater than 0.00
-			if self.filters.tree_type == "Item Group" and self.filters.value_quantity == "Quantity" and total <= 0.00:
-				continue
-
-			row = {"entity": entity, "total": total}
-			for end_date in self.periodic_daterange:
-				period = self.get_period(end_date)
-				row[scrub(period)] = flt(period_data.get(period))
-
-			filtered_data.append(row)
-		return filtered_data
-
-	def get_grouped_rows(self, filters):
-		grouped_data = []
 		for d in reversed(self.group_entries):
 			row = {"entity": d.name, "indent": self.depth_map.get(d.name)}
 			total = 0
@@ -414,18 +369,15 @@ class Analytics:
 				period = self.get_period(end_date)
 				amount = flt(self.entity_periodic_data.get(d.name, {}).get(period, 0.0))
 				row[scrub(period)] = amount
-				
-				# Update parent totals
 				if d.parent and (self.filters.tree_type != "Order Type" or d.parent == "Order Types"):
 					self.entity_periodic_data.setdefault(d.parent, frappe._dict()).setdefault(period, 0.0)
 					self.entity_periodic_data[d.parent][period] += amount
 				total += amount
 
 			row["total"] = total
-			grouped_data = [row, *grouped_data]
-		return grouped_data
+			out = [row, *out]
 
-
+		self.data = out
 
 	def get_periodic_data(self):
 		self.entity_periodic_data = frappe._dict()
@@ -539,7 +491,7 @@ class Analytics:
 			labels = [d.get("label") for d in self.columns[3 : length - 1]]
 		else:
 			labels = [d.get("label") for d in self.columns[1 : length - 1]]
-
+		
 		datasets = []
 		if self.filters.curves != "select":
 			for curve in self.data:
@@ -553,6 +505,7 @@ class Analytics:
 					if curve["indent"] == 0:
 						datasets.append(data)
 				elif self.filters.curves == "total":
+
 					if datasets:
 						a = [
 							data["values"][idx] + datasets[0]["values"][idx]
@@ -564,7 +517,6 @@ class Analytics:
 						datasets[0]["name"] = _("Total")
 				else:
 					datasets.append(data)
-
 		self.chart = {"data": {"labels": labels, "datasets": datasets}, "type": "line"}
 
 		if self.filters["value_quantity"] == "Value":
@@ -573,10 +525,11 @@ class Analytics:
 			self.chart["fieldtype"] = "Float"
 
 def get_quarter(date):
+	# Calculate which quarter the month belongs to
 	return (date.month - 1) // 3 + 1
 
 def get_week_of_year(date):
-	return date.isocalendar()[1]  
+	return date.isocalendar()[1]  # Returns the ISO week number
 
 def convert_currency_columns(data, filters):
 	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
@@ -592,6 +545,8 @@ def convert_currency_columns(data, filters):
 	
 	current_date = from_date
 	current_month_date=from_date
+ 
+	
  
 	while current_date <= to_date:
 		year = current_date.year
@@ -630,7 +585,7 @@ def convert_currency_columns(data, filters):
 	for entry in data:
 		for field in currency_fields:
 			entry[field] = convert(entry.get(field, 0), from_currency, to_currency, to_date)
-			entry['currency'] = presentation_currency
+			entry["currency"]=presentation_currency
 	
 	return data
 
@@ -672,4 +627,3 @@ def convert_alternative_uom(data, filters):
 def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	return uom_conversion or 1
-

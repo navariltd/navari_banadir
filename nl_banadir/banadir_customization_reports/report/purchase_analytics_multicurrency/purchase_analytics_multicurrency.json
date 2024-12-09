@@ -1,33 +1,30 @@
 {
- "add_total_row": 0,
+ "add_total_row": 1,
  "columns": [],
- "creation": "2024-09-30 10:28:09.702074",
+ "creation": "2024-11-07 18:00:49.906621",
  "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
+ "letter_head": "Banadir",
  "letterhead": null,
- "modified": "2024-11-12 14:06:44.086487",
+ "modified": "2024-11-07 18:00:49.906621",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
- "name": "Landed Cost Summary Report",
+ "name": "Purchase Analytics Multicurrency",
  "owner": "Administrator",
  "prepared_report": 0,
- "ref_doctype": "Purchase Invoice",
- "report_name": "Landed Cost Summary Report",
+ "ref_doctype": "Purchase Order",
+ "report_name": "Purchase Analytics Multicurrency",
  "report_type": "Script Report",
  "roles": [
   {
-   "role": "Accounts User"
-  },
-  {
-   "role": "Accounts Manager"
+   "role": "Purchase Manager"
   },
   {
    "role": "Purchase User"
   }
- ],
- "timeout": 0
+ ]
 }

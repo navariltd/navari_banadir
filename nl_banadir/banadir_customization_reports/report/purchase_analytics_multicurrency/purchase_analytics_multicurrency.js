@@ -1,38 +1,22 @@
 // Copyright (c) 2024, Navari Ltd and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Sales Analytics Multicurrency"] = {
+frappe.query_reports["Purchase Analytics Multicurrency"] = {
 	filters: [
 		{
 			fieldname: "tree_type",
 			label: __("Tree Type"),
 			fieldtype: "Select",
-			options: [
-				"Customer Group",
-				"Customer",
-				"Item Group",
-				"Item",
-				"Territory",
-				"Order Type",
-				"Project",
-			],
-			default: "Customer",
+			options: ["Supplier Group", "Supplier", "Item Group", "Item"],
+			default: "Supplier",
 			reqd: 1,
 		},
 		{
 			fieldname: "doc_type",
-			label: __("Based On"),
+			label: __("based_on"),
 			fieldtype: "Select",
-			options: [
-				"All",
-				"Quotation",
-				"Sales Order",
-				"Delivery Note",
-				"Sales Invoice",
-				"Sales Invoice (due)",
-				"Payment Entry",
-			],
-			default: "Sales Invoice",
+			options: ["Purchase Order", "Purchase Receipt", "Purchase Invoice"],
+			default: "Purchase Invoice",
 			reqd: 1,
 		},
 		{
@@ -50,18 +34,14 @@ frappe.query_reports["Sales Analytics Multicurrency"] = {
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default:
-				frappe.defaults.get_user_default("sales_start_date") ||
-				erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[1],
+			default: erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[1],
 			reqd: 1,
 		},
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default:
-				frappe.defaults.get_user_default("sales_end_date") ||
-				erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[2],
+			default: erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[2],
 			reqd: 1,
 		},
 		{
@@ -83,19 +63,6 @@ frappe.query_reports["Sales Analytics Multicurrency"] = {
 				{ value: "Yearly", label: __("Yearly") },
 			],
 			default: "Monthly",
-			reqd: 1,
-		},
-		{
-			fieldname: "curves",
-			label: __("Curves"),
-			fieldtype: "Select",
-			options: [
-				{ value: "select", label: __("Select") },
-				{ value: "all", label: __("All") },
-				{ value: "non-zeros", label: __("Non-Zeros") },
-				{ value: "total", label: __("Total Only") },
-			],
-			default: "select",
 			reqd: 1,
 		},
 		{
@@ -124,7 +91,8 @@ frappe.query_reports["Sales Analytics Multicurrency"] = {
 			fieldname: "eliminate_zero",
 			label: __("Eliminate Zero Values"),
 			fieldtype: "Check",
-			width:"100"
+			width:"100",
+			hidden:1
 		},{
 			fieldname:"no_precision",
 			label: "No Precision",
@@ -132,36 +100,56 @@ frappe.query_reports["Sales Analytics Multicurrency"] = {
 			width:"100"
 		},
 	],
+	
 	get_datatable_options(options) {
 		return Object.assign(options, {
 			checkboxColumn: true,
 			events: {
 				onCheckRow: function (data) {
 					if (!data) return;
+
 					const data_doctype = $(data[2].html)[0].attributes.getNamedItem("data-doctype").value;
 					const tree_type = frappe.query_report.filters[0].value;
 					if (data_doctype != tree_type) return;
 
-					const row_name = data[2].content;
-					const raw_data = frappe.query_report.chart.data;
-					const new_datasets = raw_data.datasets;
-					const element_found = new_datasets.some((element, index, array) => {
+					let row_name = data[2].content;
+					let length = data.length;
+					let row_values = "";
+
+					if (tree_type == "Supplier") {
+						row_values = data.slice(4, length - 1).map(function (column) {
+							return column.content;
+						});
+					} else if (tree_type == "Item") {
+						row_values = data.slice(5, length - 1).map(function (column) {
+							return column.content;
+						});
+					} else {
+						row_values = data.slice(3, length - 1).map(function (column) {
+							return column.content;
+						});
+					}
+
+					let entry = {
+						name: row_name,
+						values: row_values,
+					};
+
+					let raw_data = frappe.query_report.chart.data;
+					let new_datasets = raw_data.datasets;
+
+					let element_found = new_datasets.some((element, index, array) => {
 						if (element.name == row_name) {
 							array.splice(index, 1);
 							return true;
 						}
 						return false;
 					});
-					const slice_at = { Customer: 4, Item: 5 }[tree_type] || 3;
 
 					if (!element_found) {
-						new_datasets.push({
-							name: row_name,
-							values: data.slice(slice_at, data.length - 1).map((column) => column.content),
-						});
+						new_datasets.push(entry);
 					}
-
-					const new_data = {
+					let new_data = {
 						labels: raw_data.labels,
 						datasets: new_datasets,
 					};

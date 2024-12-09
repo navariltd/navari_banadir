@@ -27,6 +27,7 @@ def get_current_exchange_rate(from_currency, to_currency, date):
 		if exchange_rate==1 and from_currency!=to_currency:
 			pass
 		return exchange_rate
+
 def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
 	date = frappe.utils.today()
 	for entry in data:
@@ -166,13 +167,13 @@ def _execute(filters=None, additional_table_columns=None):
 		add_sub_total_row(total_row, total_row_map, "total_row", tax_columns)
 		data.append(total_row_map.get("total_row"))
 		skip_total_row = 1
-
+	data=append_opening_qty(data, filters)
 	data=convert_as_per_current_exchange_rate(data, filters, "USD", presentation_currency)
 	data=convert_currency_fields(data, filters)
 
 	return columns, data, None, None, None, skip_total_row
-
-
+	
+	
 def get_columns(additional_table_columns, filters):
 	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
 		"Company", filters.company, "default_currency"
@@ -288,6 +289,8 @@ def get_columns(additional_table_columns, filters):
 			"options": "Account",
 			"width": 100,
 		},
+  		{"label": _("Opening Stock"), "fieldname": "opening_stock_qty", "fieldtype": "Float", "width": 100},
+
 		{"label": _("Stock Qty"), "fieldname": "stock_qty", "fieldtype": "Float", "width": 100},
 		{
 			"label": _("Stock UOM"),
@@ -337,7 +340,7 @@ def get_columns(additional_table_columns, filters):
 	"fieldname":"current_landed_cost",
 	"fieldtype":"Float",
   			"precision": 2,
-     "width":100,
+	 "width":100,
   },
   {
 	  "label":f"Rate + LC({presentation_currency})",
@@ -517,3 +520,57 @@ def convert_currency_fields(data, filters):
 				entry['current_landed_cost'] = convert(entry.get('current_landed_cost', 0), from_currency, to_currency, date)
 				
 		return data
+
+def get_opening_stock_qty(filters):
+	conditions = []
+	if filters.get("company"):
+		conditions.append("sle.company=%(company)s")
+	if filters.get("item_code"):
+		conditions.append("sle.item_code=%(item_code)s")
+	if filters.get("from_date"):
+		conditions.append("sle.posting_date >= %(from_date)s")
+	if filters.get("warehouse"):
+		conditions.append("sle.warehouse=%(warehouse)s")
+	condition_str = " AND ".join(conditions)
+
+	query = f"""
+		SELECT
+			sle.item_code,
+			sle.warehouse,
+			MIN(CONCAT(sle.posting_date, ' ', sle.posting_time)) AS first_transaction_time,
+			(
+				SELECT (qty_after_transaction - actual_qty)
+				FROM `tabStock Ledger Entry` sub_sle
+				WHERE sub_sle.item_code = sle.item_code
+				  AND sub_sle.warehouse = sle.warehouse
+				  AND CONCAT(sub_sle.posting_date, ' ', sub_sle.posting_time) = MIN(CONCAT(sle.posting_date, ' ', sle.posting_time))
+				  AND {condition_str}
+				LIMIT 1
+			) AS opening_qty
+		FROM
+			`tabStock Ledger Entry` sle
+		WHERE
+			{condition_str}
+		GROUP BY
+			sle.item_code, sle.warehouse
+	"""
+	opening_stock_data = frappe.db.sql(query, filters, as_dict=True)
+	opening_stock_map = {
+		d["item_code"]: d["opening_qty"]
+		for d in opening_stock_data
+	}
+	
+	return opening_stock_map
+	
+def append_opening_qty(data, filters):
+	opening_stock_map=get_opening_stock_qty(filters)
+	for row in data:
+		opening_qty=opening_stock_map.get(row.get("item_code"), 0)
+		row["opening_stock_qty"]=opening_qty
+	return data
+
+
+'''Bad implementation because we need to consider a warehouse, incase there is a change, use below code'''
+# opening_stock_map = (d["item_code"],d["warehouse"]):d["opening_qty"]
+
+

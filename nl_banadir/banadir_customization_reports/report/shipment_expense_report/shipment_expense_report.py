@@ -155,6 +155,14 @@ def get_data(filters):
     selected_currency = filters.get("currency")
     final_data = []
     totals_dict = {}
+    grand_totals_dict = {
+        "grand_total_expense_booked": 0,
+        "grand_total_amount":  0,
+        "grand_total_expense_booked_in_currency": 0,
+        "grand_total_amount_in_currency": 0,
+        "currency": ""
+    }
+
 
 
     for row in data:
@@ -174,6 +182,10 @@ def get_data(filters):
 
         totals_dict[invoice_number]["total_expense_booked"] += row["expense_booked"]
         totals_dict[invoice_number]["total_amount"] += row["amount"]
+
+        grand_totals_dict["grand_total_expense_booked"] += row["expense_booked"]
+        grand_totals_dict["grand_total_amount"] += row["amount"]
+        grand_totals_dict["currency"] = original_currency
 
         # Convert currency if necessary
         if selected_currency:
@@ -198,6 +210,9 @@ def get_data(filters):
 
             totals_dict[invoice_number]["total_expense_booked_in_currency"] += row["expense_booked_in_currency"]
             totals_dict[invoice_number]["total_amount_in_currency"] += row["amount_in_currency"]
+
+            grand_totals_dict["grand_total_expense_booked_in_currency"] += row["expense_booked_in_currency"]
+            grand_totals_dict["grand_total_amount_in_currency"] += row["amount_in_currency"]
         
         # Add row to final data
         final_data.append(row)
@@ -209,6 +224,7 @@ def get_data(filters):
             "expense_booked": totals["total_expense_booked"],
             "amount": totals["total_amount"],
             "currency": totals["currency"],
+            "selected_currency": selected_currency,
             "expense_account": "",
             "container_no": "",
             "bl_number": "",
@@ -225,15 +241,37 @@ def get_data(filters):
 
         final_data.append(total_row)
 
-    # Sort data by invoice number
-    final_data = sorted(final_data, key=lambda x: x["invoice_number"][8:] if x["invoice_number"].startswith("Total - ") else x["invoice_number"])
+    grand_total_row = {
+        "invoice_number": "Total",
+        "expense_booked": grand_totals_dict["grand_total_expense_booked"],
+        "amount": grand_totals_dict["grand_total_amount"],
+        "currency": grand_totals_dict["currency"],
+        "selected_currency": selected_currency,
+        "expense_account": "",
+        "container_no": "",
+        "bl_number": "",
+        "landed_cost": "",
+        "description": "",
+        "is_total": True,
+        "expense_booked_in_currency": grand_totals_dict["grand_total_expense_booked_in_currency"] if selected_currency else None,
+        "amount_in_currency": grand_totals_dict["grand_total_amount_in_currency"] if selected_currency else None,
+    }
+    final_data.append(grand_total_row)
 
+    # Sort data by invoice number
+    final_data = sorted(
+        final_data,
+        key=lambda x: (
+            1 if x["invoice_number"] == "Total" else 0,
+            x["invoice_number"][8:] if x["invoice_number"].startswith("Total - ") else x["invoice_number"]
+        )
+    )
     return final_data
 
 def get_conversion_rate(from_currency, to_currency, date):
 
     if from_currency == to_currency:
-        return (1, None)
+        return 1, None
     
     conversion_rate = frappe.get_all(
         "Currency Exchange",
