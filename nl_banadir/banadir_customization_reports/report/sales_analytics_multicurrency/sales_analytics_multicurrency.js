@@ -124,12 +124,14 @@ frappe.query_reports["Sales Analytics Multicurrency"] = {
 			fieldname: "eliminate_zero",
 			label: __("Eliminate Zero Values"),
 			fieldtype: "Check",
-			width:"100"
+			width:"100",
+			default:1,
 		},{
 			fieldname:"no_precision",
 			label: "No Precision",
 			fieldtype:"Check",
-			width:"100"
+			width:"100",
+			default:1,
 		},
 	],
 	get_datatable_options(options) {
