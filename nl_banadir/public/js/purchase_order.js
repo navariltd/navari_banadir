@@ -1,3 +1,27 @@
+
+frappe.ui.form.on("Purchase Order Item",{
+
+    item_code: function(frm, cdt, cdn){
+      if(frm.doc.custom_production_plan){
+        var child = locals[cdt][cdn];
+        frappe.call({
+            method: "nl_banadir.banadir_customization_reports.controllers.purchase_order.get_qty_from_first_work_order",
+            args: {
+                production_plan: frm.doc.custom_production_plan,
+            },
+            callback: function(response){
+                if(response.message){
+                    frappe.model.set_value(cdt, cdn, "fg_item_qty", response.message);
+
+                }
+            }
+        });
+      }
+    
+    }
+})
+
+
 frappe.ui.form.on("Purchase Order", {
     refresh: function (frm) {
       frm.add_custom_button(
@@ -38,4 +62,5 @@ frappe.ui.form.on("Purchase Order", {
       );
     },
   });
+  
   
