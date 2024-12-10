@@ -75,24 +75,23 @@ def get_data(filters: dict) -> list[dict]:
 
     JournalEntry = DocType("Journal Entry")
     JournalEntryAccount = DocType("Journal Entry Account")
-    SalesInvoice = DocType("Sales Invoice")
+    SalesShipmentCost = DocType("Sales Shipment Cost")
+    LandedCostSalesInvoice = DocType("Landed Cost Sales Invoice")
 
     query = (
         frappe.qb.from_(JournalEntry)
         .join(JournalEntryAccount)
         .on(JournalEntry.name == JournalEntryAccount.parent)
-        .left_join(SalesInvoice)
-        .on(SalesInvoice.name == JournalEntryAccount.reference_name)
+        .left_join(SalesShipmentCost)
+        .on(SalesShipmentCost.name == JournalEntryAccount.custom_sales_shipment_ref)
         .select(
             JournalEntry.name.as_("journal_entry"),
             JournalEntry.total_debit.as_("journal_total"),
             JournalEntryAccount.custom_sales_shipment_ref.as_("sales_shipment"),
-            JournalEntryAccount.reference_name.as_("sales_invoice"),
-            SalesInvoice.currency.as_("currency")
+            SalesShipmentCost.sales_invoice.as_("sales_invoice")
         )
         .where(
-            (JournalEntryAccount.reference_type == "Sales Invoice")
-            & (JournalEntryAccount.custom_sales_shipment_ref.isnotnull())
+            (JournalEntryAccount.custom_sales_shipment_ref.isnotnull())
         )
     )
 
@@ -108,7 +107,7 @@ def get_data(filters: dict) -> list[dict]:
     if filters.get("journal_entry"):
         query = query.where(JournalEntry.name == filters.get("journal_entry"))
     if filters.get("sales_invoice"):
-        query = query.where(JournalEntryAccount.reference_name == filters.get("sales_invoice"))
+        query = query.where(SalesShipmentCost.sales_invoice == filters.get("sales_invoice"))
     if filters.get("sales_shipment"):
         query = query.where(JournalEntryAccount.custom_sales_shipment_ref == filters.get("sales_shipment"))
 
@@ -116,10 +115,24 @@ def get_data(filters: dict) -> list[dict]:
 
 
     for je in journal_entries:
-        sales_invoice = je.sales_invoice
         journal_total = je.journal_total or 0
         sales_shipment = je.sales_shipment
-        currency = je.currency
+        sales_invoice = None
+        currency = None
+
+        # Fetch Sales Invoice from the child table of Sales Shipment Cost
+        if sales_shipment:
+            sales_invoice = frappe.db.get_value(
+                "Landed Cost Sales Invoice",
+                {"parent": sales_shipment},
+                "receipt_document"
+            )
+
+            currency = frappe.db.get_value(
+                "Sales Invoice",
+                {"name": sales_invoice},
+                "currency"
+            )
 
         shipment_total = frappe.db.get_value(
             "Sales Shipment Cost", sales_shipment, "total_taxes_and_charges"
