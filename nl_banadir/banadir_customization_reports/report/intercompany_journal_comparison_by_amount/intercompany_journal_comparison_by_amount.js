@@ -91,7 +91,7 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       fieldname: "compare_by_amount",
       label: __("Compare By Amount"),
       fieldtype: "Check",
-      default: 0,
+      default: 1,
     },
     {
       fieldname: "compare_randomly",
