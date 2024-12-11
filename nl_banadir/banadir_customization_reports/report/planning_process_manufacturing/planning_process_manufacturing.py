@@ -3,6 +3,10 @@
 
 import frappe
 
+'''Since there is a need to have finished goods and insole on the same line, they must have a corelation
+Hence the report cannot work if the corelation doesn't exit.
+The remaining solution will be to to bypass creation of work order and create our own with the sequence so that they can map.
+'''
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
