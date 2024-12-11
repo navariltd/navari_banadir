@@ -8,7 +8,7 @@ frappe.query_reports["Planning Process Manufacturing"] = {
             fieldname: "production_plan",
             fieldtype: "Link",
             options: "Production Plan",
-            reqd: 1,  // Make it mandatory
+            // reqd: 1,  // Make it mandatory
         },
         {
             label: __("Sales Order"),
@@ -19,6 +19,12 @@ frappe.query_reports["Planning Process Manufacturing"] = {
         {
             label: __("Item Name (Finished Goods)"),
             fieldname: "finished_goods_item",
+            fieldtype: "Link",
+            options: "Item",
+        },
+		{
+            label: __("Item Name (Insole)"),
+            fieldname: "insole_item",
             fieldtype: "Link",
             options: "Item",
         },

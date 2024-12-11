@@ -3,6 +3,10 @@
 
 import frappe
 
+'''Since there is a need to have finished goods and insole on the same line, they must have a corelation
+Hence the report cannot work if the corelation doesn't exit.
+The remaining solution will be to to bypass creation of work order and create our own with the sequence so that they can map.
+'''
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
@@ -53,13 +57,13 @@ def get_data(filters):
         SELECT
             ppso.sales_order AS sales_order_no,
             pp.name AS production_plan_no,
-            ppi.work_order AS finished_goods_work_order_no,
-            psa.work_order AS insole_work_order,
+            # ppi.work_order AS finished_goods_work_order_no,
+            # psa.work_order AS insole_work_order,
             pp.status AS status,
             ppi.item_code AS finished_goods_item,
-            psa.item_code AS insole_item,
-            psa.upper_item AS upper_item,
-            pp.order_quantity AS order_pairs,
+            psa.production_item  AS insole_item,
+            psa.parent_item_code AS upper_item,
+            pp.total_planned_qty AS order_pairs,
             '' AS date_of_cutting,
             '' AS cutting_pairs,
             '' AS cutting_contractor,
