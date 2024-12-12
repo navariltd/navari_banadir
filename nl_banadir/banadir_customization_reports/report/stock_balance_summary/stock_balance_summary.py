@@ -428,10 +428,12 @@ class StockBalanceReport:
         return query
 
     def get_warehouse_totals(self, data):
-        grouped_data = defaultdict(lambda: {"bal_qty": 0.0})
+        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0})
 
         for entry in data:
             key = entry["warehouse"]
+            if self.filters.get("include_uom"):
+                grouped_data[key]["bal_qty_alt"] += entry["bal_qty_alt"]
             grouped_data[key]["bal_qty"] += entry["bal_qty"]
 
         result = [
@@ -439,6 +441,9 @@ class StockBalanceReport:
                 "item_code": f"Total - {key}",
                 "warehouse": f"Total - {key}",
                 "bal_qty": value["bal_qty"],
+                "bal_qty_alt": (
+                    value["bal_qty_alt"] if value.get("bal_qty_alt") else 0.0
+                ),
                 "is_total": True,
             }
             for key, value in grouped_data.items()
