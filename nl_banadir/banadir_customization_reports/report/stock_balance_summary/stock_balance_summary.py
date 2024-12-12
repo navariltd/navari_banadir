@@ -34,6 +34,7 @@ class StockBalanceFilter(TypedDict):
     show_variant_attributes: bool
     remove_precision: bool
     show_warehouse_totals: bool
+    eliminate_zero_values: bool
 
 
 SLEntry = dict[str, Any]
@@ -93,6 +94,15 @@ class StockBalanceReport:
             }
 
             self.data.append(total_row)
+
+        if self.filters.get("eliminate_zero_values"):
+            updated_data = []
+            for entry in self.data:
+                if entry.get("bal_qty") > 0:
+                    updated_data.append(entry)
+
+            self.data = updated_data
+
         return self.columns, self.data
 
     def calculate_total_bal_qty(self):
