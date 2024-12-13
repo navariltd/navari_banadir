@@ -85,15 +85,16 @@ class StockBalanceReport:
 
         total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
 
-        if not self.filters.get("show_warehouse_totals"):
-            total_row = {
-                "item_code": _("Total"),
-                "bal_qty": total_bal_qty,
-                "bal_qty_alt": total_bal_alternative_uom_qty,
-                "bal_val": 0.0,
-            }
+        # if not self.filters.get("show_warehouse_totals"):
+        total_row = {
+            "item_code": _("Overall Total"),
+            "bal_qty": total_bal_qty,
+            "bal_qty_alt": total_bal_alternative_uom_qty,
+            "bal_val": 0.0,
+            "is_total": True,
+        }
 
-            self.data.append(total_row)
+        self.data.append(total_row)
 
         if self.filters.get("eliminate_zero_values"):
             updated_data = []
@@ -109,9 +110,13 @@ class StockBalanceReport:
         """
         Calculate the total balance quantity ('bal_qty') and return the total.
         """
-        total_bal_qty = sum(item.get("bal_qty", 0.0) for item in self.data)
+        total_bal_qty = sum(
+            item.get("bal_qty", 0.0) for item in self.data if not item.get("is_total")
+        )
         total_bal_alternative_uom_qty = sum(
-            item.get("bal_qty_alt", 0.0) for item in self.data
+            item.get("bal_qty_alt", 0.0)
+            for item in self.data
+            if not item.get("is_total")
         )
         # frappe.throw(str(self.data))
         return total_bal_qty, total_bal_alternative_uom_qty
