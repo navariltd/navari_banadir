@@ -80,4 +80,4 @@ More Issues both epending and closed can be found [here](https://docs.google.com
 
 #### License
 
-agpl-3.0
+[agpl-3.0](https://github.com/navariltd/navari_banadir?tab=AGPL-3.0-1-ov-file)

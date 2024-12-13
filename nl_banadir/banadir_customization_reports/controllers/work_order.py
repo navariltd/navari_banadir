@@ -94,17 +94,13 @@ def on_update(doc, method=None):
     """
     Main function to handle the creation of Purchase Invoices for completed operations.
     """
+    validate_operations(doc)
     for operation in doc.custom_subcontractors:
         operation_doc = frappe.get_doc("Work Order Operations Item", operation.get('name'))
-        if (operation_doc.status == "In Progress" or operation_doc.status == "Completed") and operation_doc.supplier is None:
-            frappe.throw("Kindly enter the supplier in Sub-contractor table")
+
         # Only consider operations with status "Completed" and invoice_created flag is 0
         if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
-            if operation_doc.completed_qty > doc.qty:
-                frappe.throw(
-                    f"Completed quantity ({operation_doc.completed_qty}) for operation '{operation_doc.operations}' "
-                    f"cannot exceed the quantity to manufacture ({doc.qty}) on this Work Order."
-                )
+            
             create_purchase_invoice(
                 doc=doc,
                 operation=operation_doc,
@@ -119,4 +115,21 @@ def on_update(doc, method=None):
     
 def total_operation_cost(doc, operation_doc):
     doc.custom_total_operation_cost += operation_doc.amount
+
+def validate_operations(doc):
+    """
+    Validate the subcontractor operations in the custom_subcontractors table.
+    """
+    for operation in doc.custom_subcontractors:
+        operation_doc = frappe.get_doc("Work Order Operations Item", operation.get('name'))
+
+        if (operation_doc.status == "In Progress" or operation_doc.status == "Completed") and operation_doc.supplier is None:
+            frappe.throw("Kindly enter the supplier in the Sub-contractor table.")
+
+        if operation_doc.status in ["In Progress", "Completed"]:
+            if operation_doc.completed_qty > doc.qty:
+                frappe.throw(
+                    f"Completed quantity ({operation_doc.completed_qty}) for operation '{operation_doc.operations}' "
+                    f"cannot exceed the quantity to manufacture ({doc.qty}) on this Work Order."
+                )
  
