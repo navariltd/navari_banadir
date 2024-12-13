@@ -34,6 +34,7 @@ class StockBalanceFilter(TypedDict):
     show_variant_attributes: bool
     remove_precision: bool
     show_warehouse_totals: bool
+    eliminate_zero_values: bool
 
 
 SLEntry = dict[str, Any]
@@ -84,24 +85,38 @@ class StockBalanceReport:
 
         total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
 
-        if not self.filters.get("show_warehouse_totals"):
-            total_row = {
-                "item_code": _("Total"),
-                "bal_qty": total_bal_qty,
-                "bal_qty_alt": total_bal_alternative_uom_qty,
-                "bal_val": 0.0,
-            }
+        # if not self.filters.get("show_warehouse_totals"):
+        total_row = {
+            "item_code": _("Overall Total"),
+            "bal_qty": total_bal_qty,
+            "bal_qty_alt": total_bal_alternative_uom_qty,
+            "bal_val": 0.0,
+            "is_total": True,
+        }
 
-            self.data.append(total_row)
+        self.data.append(total_row)
+
+        if self.filters.get("eliminate_zero_values"):
+            updated_data = []
+            for entry in self.data:
+                if entry.get("bal_qty") > 0:
+                    updated_data.append(entry)
+
+            self.data = updated_data
+
         return self.columns, self.data
 
     def calculate_total_bal_qty(self):
         """
         Calculate the total balance quantity ('bal_qty') and return the total.
         """
-        total_bal_qty = sum(item.get("bal_qty", 0.0) for item in self.data)
+        total_bal_qty = sum(
+            item.get("bal_qty", 0.0) for item in self.data if not item.get("is_total")
+        )
         total_bal_alternative_uom_qty = sum(
-            item.get("bal_qty_alt", 0.0) for item in self.data
+            item.get("bal_qty_alt", 0.0)
+            for item in self.data
+            if not item.get("is_total")
         )
         # frappe.throw(str(self.data))
         return total_bal_qty, total_bal_alternative_uom_qty
@@ -428,10 +443,12 @@ class StockBalanceReport:
         return query
 
     def get_warehouse_totals(self, data):
-        grouped_data = defaultdict(lambda: {"bal_qty": 0.0})
+        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0})
 
         for entry in data:
             key = entry["warehouse"]
+            if self.filters.get("include_uom"):
+                grouped_data[key]["bal_qty_alt"] += entry["bal_qty_alt"]
             grouped_data[key]["bal_qty"] += entry["bal_qty"]
 
         result = [
@@ -439,6 +456,9 @@ class StockBalanceReport:
                 "item_code": f"Total - {key}",
                 "warehouse": f"Total - {key}",
                 "bal_qty": value["bal_qty"],
+                "bal_qty_alt": (
+                    value["bal_qty_alt"] if value.get("bal_qty_alt") else 0.0
+                ),
                 "is_total": True,
             }
             for key, value in grouped_data.items()

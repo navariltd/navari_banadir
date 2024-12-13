@@ -121,6 +121,12 @@ frappe.query_reports["Stock Balance Summary"] = {
       fieldtype: "Check",
       default: 0,
     },
+    {
+      fieldname: "eliminate_zero_values",
+      label: __("Eliminate Zero Values"),
+      fieldtype: "Check",
+      default: 1,
+    },
   ],
 
   formatter: function (value, row, column, data, default_formatter) {
