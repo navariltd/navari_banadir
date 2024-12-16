@@ -34,18 +34,39 @@ frappe.query_reports["Sales Shipment and Journal Difference"] = {
             "label": __("Journal Entry"),
             "fieldtype": "Link",
             "options": "Journal Entry",
+            "get_query": function() {
+                return {
+                    "filters": {
+                        "company": frappe.query_report.get_filter_value("company")
+                    }
+                }
+            }
         },
         {
             "fieldname": "sales_invoice",
             "label": __("Sales Invoice"),
             "fieldtype": "Link",
             "options": "Sales Invoice",
+            "get_query": function() {
+                return {
+                    "filters": {
+                        "company": frappe.query_report.get_filter_value("company")
+                    }
+                }
+            }
         },
         {
             "fieldname": "sales_shipment",
             "label": __("Sales Shipment"),
             "fieldtype": "Link",
             "options": "Sales Shipment Cost",
+            "get_query": function() {
+                return {
+                    "filters": {
+                        "company": frappe.query_report.get_filter_value("company")
+                    }
+                }
+            }
         }
 	],
 };
