@@ -43,6 +43,14 @@ def get_columns() -> list[dict]:
             "fieldname": "journal_total", 
             "fieldtype": "Currency",
             "options": "currency",
+            "width": 150,
+            "hidden": 1
+        },
+        {
+            "label": "Account Total", 
+            "fieldname": "account_total", 
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 150
         },
         {
@@ -78,6 +86,17 @@ def get_data(filters: dict) -> list[dict]:
     SalesShipmentCost = DocType("Sales Shipment Cost")
     LandedCostSalesInvoice = DocType("Landed Cost Sales Invoice")
 
+    default_shipping_account = None
+    if filters.get("company"):
+        default_shipping_account = frappe.db.get_value(
+            "Company",
+            {"name": filters.get("company")},
+            "custom_default_shipping_account"
+        )
+
+    if not default_shipping_account:
+        frappe.throw(f"Shipping Account is not defined in for the selected company {filters.get('company')}")
+
     query = (
         frappe.qb.from_(JournalEntry)
         .join(JournalEntryAccount)
@@ -88,9 +107,11 @@ def get_data(filters: dict) -> list[dict]:
             JournalEntry.name.as_("journal_entry"),
             JournalEntry.total_debit.as_("journal_total"),
             JournalEntryAccount.custom_sales_shipment_ref.as_("sales_shipment"),
+            JournalEntryAccount.debit.as_("account_total"),
             SalesShipmentCost.sales_invoice.as_("sales_invoice")
         )
         .where(
+            (JournalEntryAccount.account == default_shipping_account) &
             (JournalEntryAccount.custom_sales_shipment_ref.isnotnull())
         )
     )
@@ -117,6 +138,7 @@ def get_data(filters: dict) -> list[dict]:
     for je in journal_entries:
         journal_total = je.journal_total or 0
         sales_shipment = je.sales_shipment
+        account_total = je.account_total or 0
         sales_invoice = None
         currency = None
 
@@ -138,13 +160,14 @@ def get_data(filters: dict) -> list[dict]:
             "Sales Shipment Cost", sales_shipment, "total_taxes_and_charges"
         ) or 0
 
-        difference = journal_total - shipment_total
+        difference = account_total - shipment_total
 
         data.append({
             "journal_entry": je.journal_entry,
             "sales_invoice": sales_invoice,
             "sales_shipment": sales_shipment,
             "journal_total": journal_total,
+            "account_total": account_total,
             "shipment_total": shipment_total,
             "difference": difference,
             "currency": currency
