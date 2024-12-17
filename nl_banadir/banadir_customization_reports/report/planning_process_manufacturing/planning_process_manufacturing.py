@@ -19,6 +19,7 @@ def get_columns():
         {"label": "Production Plan No", "fieldname": "production_plan_no", "fieldtype": "Link", "options": "Production Plan", "width": 150},
         {"label": "Finished Goods Work Order No", "fieldname": "finished_goods_work_order_no", "fieldtype": "Link", "options": "Work Order", "width": 200},
         {"label": "Insole Work Order", "fieldname": "insole_work_order", "fieldtype": "Link", "options": "Work Order", "width": 150},
+        {"label": "Sequence No (Finished Goods)", "fieldname": "sequence_no", "fieldtype": "Data", "width": 150},  # Added column for sequence number
         {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 100},
         {"label": "Item Name (Finished Goods)", "fieldname": "finished_goods_item", "fieldtype": "Data", "width": 200},
         {"label": "Item Name (Insole)", "fieldname": "insole_item", "fieldtype": "Data", "width": 200},
@@ -41,7 +42,6 @@ def get_columns():
         {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": "Int", "width": 120},
     ]
 
-
 def get_data(filters):
     conditions = []
     if filters.get("production_plan"):
@@ -50,18 +50,20 @@ def get_data(filters):
         conditions.append(f"ppso.sales_order = '{filters['sales_order']}'")
     if filters.get("from_date") and filters.get("to_date"):
         conditions.append(f"pp.transaction_date BETWEEN '{filters['from_date']}' AND '{filters['to_date']}'")
-
+    if filters.get("status"):
+        conditions.append(f"pp.status = '{filters['status']}'")
     condition_query = " AND ".join(conditions) if conditions else "1=1"
 
     query = f"""
         SELECT
             ppso.sales_order AS sales_order_no,
             pp.name AS production_plan_no,
-            # ppi.work_order AS finished_goods_work_order_no,
-            # psa.work_order AS insole_work_order,
+            fg_work_order.name AS finished_goods_work_order_no,
+            insole_work_order.name AS insole_work_order,
+            fg_work_order.custom_seq_id AS sequence_no,  # Fetch the custom_seq_id for finished goods work order
             pp.status AS status,
             ppi.item_code AS finished_goods_item,
-            psa.production_item  AS insole_item,
+            psa.production_item AS insole_item,
             psa.parent_item_code AS upper_item,
             pp.total_planned_qty AS order_pairs,
             '' AS date_of_cutting,
@@ -86,7 +88,12 @@ def get_data(filters):
         LEFT JOIN
             `tabProduction Plan Item` ppi ON pp.name = ppi.parent
         LEFT JOIN
-            `tabProduction Plan Sub Assembly Item` psa ON pp.name = psa.parent
+            `tabProduction Plan Sub Assembly Item` psa 
+             ON pp.name = psa.parent AND ppi.custom_seq_id = psa.custom_seq_id
+        LEFT JOIN
+             `tabWork Order` fg_work_order ON fg_work_order.production_plan_item = ppi.name
+        LEFT JOIN
+            `tabWork Order` insole_work_order ON insole_work_order.production_plan_sub_assembly_item = psa.name
         WHERE
             {condition_query}
     """

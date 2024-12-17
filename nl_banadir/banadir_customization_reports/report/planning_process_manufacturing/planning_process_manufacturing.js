@@ -29,6 +29,12 @@ frappe.query_reports["Planning Process Manufacturing"] = {
             options: "Item",
         },
         {
+            label: __("Status"),
+            fieldname: "status",
+            fieldtype: "Select",
+            options: "\nDraft\nSubmitted\nCancelled\nCompleted",
+        },
+        {
             label: __("From Date"),
             fieldname: "from_date",
             fieldtype: "Date",
