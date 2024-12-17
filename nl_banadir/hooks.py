@@ -51,6 +51,7 @@ doc_events = {
     },
      "Work Order":{
         "autoname":"nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
+        "validate":"nl_banadir.banadir_customization_reports.controllers.work_order.validate",
         "before_save":"nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
         "on_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_submit",
         "on_update_after_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
