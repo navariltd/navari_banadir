@@ -4,18 +4,9 @@ import frappe
 from frappe.model.naming import make_autoname
 from datetime import datetime
 
-def validate(doc, method=None):
-    if doc.production_plan_item:
-        doc.custom_seq_id = get_seq_id(doc.production_item, "Production Plan Item")
-    elif doc.production_plan_sub_assembly_item:
-        doc.custom_seq_id = get_seq_id(doc.production_plan_sub_assembly_item, "Production Plan Sub Assembly Item")
-        
+
 def before_save(doc, method=None):
-    if doc.production_plan_item:
-        frappe.throw("relax")
-        doc.custom_seq_id = get_seq_id(doc.production_item, "Production Plan Item")
-    elif doc.production_plan_sub_assembly_item:
-        doc.custom_seq_id = get_seq_id(doc.production_plan_sub_assembly_item, "Production Plan Sub Assembly Item")
+    
     if not doc.custom_subcontractors:
         currency = frappe.db.get_value("Company", doc.company, "default_currency")
 
