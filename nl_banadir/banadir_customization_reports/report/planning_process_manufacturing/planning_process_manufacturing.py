@@ -67,8 +67,8 @@ def get_data(filters):
             pp.status AS status,
             ppi.item_code AS finished_goods_item,
             psa.production_item AS insole_item,
-            psa.parent_item_code AS upper_item,
-            pp.total_planned_qty AS order_pairs,
+            required_items.item_code AS upper_item,
+            fg_work_order.qty AS order_pairs,
             cso.in_progress_date AS in_progress_date,
             cso.completed_date AS date_of_cutting,
             cso.supplier AS cutting_contractor,
@@ -103,6 +103,10 @@ def get_data(filters):
         LEFT JOIN
             `tabWork Order Operations Item` csp 
              ON fg_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
+        LEFT JOIN
+            `tabWork Order Item` required_items 
+             ON fg_work_order.name = required_items.parent
+             AND required_items.custom_item_group = 'UPPER STOCK'
         WHERE
             {condition_query}
     """
