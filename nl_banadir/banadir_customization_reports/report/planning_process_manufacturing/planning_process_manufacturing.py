@@ -25,6 +25,9 @@ def get_columns():
         {"label": "Item Name (Insole)", "fieldname": "insole_item", "fieldtype": "Data", "width": 200},
         {"label": "Item Name (Upper)", "fieldname": "upper_item", "fieldtype": "Data", "width": 200},
         {"label": "Order/Pairs", "fieldname": "order_pairs", "fieldtype": "Int", "width": 100},
+        {"label": "Date of Issue(In Progress)", "fieldname": "in_progress_date", "fieldtype": "Date", "width": 120},
+        {"label": "Qty Issued", "fieldname": "qty_issued", "fieldtype": "float", "width": 120},
+
         {"label": "Date of Cutting", "fieldname": "date_of_cutting", "fieldtype": "Date", "width": 120},
         {"label": "Cutting Pairs", "fieldname": "cutting_pairs", "fieldtype": "Int", "width": 120},
         {"label": "Cutting Contractor", "fieldname": "cutting_contractor", "fieldtype": "Link", "options": "Supplier", "width": 150},
@@ -66,17 +69,17 @@ def get_data(filters):
             psa.production_item AS insole_item,
             psa.parent_item_code AS upper_item,
             pp.total_planned_qty AS order_pairs,
-            '' AS date_of_cutting,
-            '' AS cutting_pairs,
-            '' AS cutting_contractor,
+            cso.in_progress_date AS in_progress_date,
+            cso.completed_date AS date_of_cutting,
+            cso.supplier AS cutting_contractor,
+            cso.completed_qty AS cutting_pairs,
             '' AS balance_to_cut,
-            '' AS date_of_printing_embossing,
-            '' AS printed_embossed_pairs,
-            '' AS printing_embossing_contractor,
+            csp.completed_date AS date_of_printing_embossing,
+            csp.completed_qty AS printed_embossed_pairs,
+            csp.supplier AS printing_embossing_contractor,
             '' AS balance_to_print_emboss,
             '' AS insole_stock,
             '' AS issued_date,
-            '' AS subcontractor_name,
             '' AS quantity_issued,
             '' AS received_quantity,
             '' AS balance_quantity,
@@ -94,7 +97,15 @@ def get_data(filters):
              `tabWork Order` fg_work_order ON fg_work_order.production_plan_item = ppi.name
         LEFT JOIN
             `tabWork Order` insole_work_order ON insole_work_order.production_plan_sub_assembly_item = psa.name
+        LEFT JOIN
+            `tabWork Order Operations Item` cso 
+             ON fg_work_order.name = cso.parent AND cso.operations = 'Cutting'
+        LEFT JOIN
+            `tabWork Order Operations Item` csp 
+             ON fg_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
         WHERE
             {condition_query}
     """
-    return frappe.db.sql(query, as_dict=True)
+    result= frappe.db.sql(query, as_dict=True)
+    # frappe.throw(str(result))
+    return result
