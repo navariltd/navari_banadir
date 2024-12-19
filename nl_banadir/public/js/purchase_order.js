@@ -11,7 +11,9 @@ frappe.ui.form.on("Purchase Order Item",{
             },
             callback: function(response){
                 if(response.message){
-                    frappe.model.set_value(cdt, cdn, "fg_item_qty", response.message);
+                    frappe.model.set_value(cdt, cdn, "fg_item_qty", response.message.work_order_qty);
+                    frappe.model.set_value(cdt, cdn, "fg_item", response.message.upper_stock_items);
+
 
                 }
             }

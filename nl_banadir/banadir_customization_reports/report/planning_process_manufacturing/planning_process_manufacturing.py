@@ -33,6 +33,7 @@ def get_columns():
         {"label": "Cutting Contractor", "fieldname": "cutting_contractor", "fieldtype": "Link", "options": "Supplier", "width": 150},
         {"label": "Balance to Cut", "fieldname": "balance_to_cut", "fieldtype": "Int", "width": 120},
         {"label": "Date of Printing & Embossing", "fieldname": "date_of_printing_embossing", "fieldtype": "Date", "width": 150},
+        {"label": "Qty Issued(Printing)", "fieldname": "qty_issued_printing", "fieldtype": "float", "width": 120},
         {"label": "Printed & Embossed Pairs", "fieldname": "printed_embossed_pairs", "fieldtype": "Int", "width": 150},
         {"label": "Printing/Embossing Contractor", "fieldname": "printing_embossing_contractor", "fieldtype": "Link", "options": "Supplier", "width": 200},
         {"label": "Balance to Print/Emboss", "fieldname": "balance_to_print_emboss", "fieldtype": "Int", "width": 150},
@@ -70,17 +71,20 @@ def get_data(filters):
             required_items.item_code AS upper_item,
             fg_work_order.qty AS order_pairs,
             cso.in_progress_date AS in_progress_date,
+            (cso.qty_issued - cso.completed_qty) AS balance_to_cut,
+            (csp.qty_issued - csp.completed_qty) AS balance_to_print_emboss,
             cso.completed_date AS date_of_cutting,
             cso.supplier AS cutting_contractor,
             cso.completed_qty AS cutting_pairs,
-            '' AS balance_to_cut,
             csp.completed_date AS date_of_printing_embossing,
             csp.completed_qty AS printed_embossed_pairs,
             csp.supplier AS printing_embossing_contractor,
-            '' AS balance_to_print_emboss,
+            csp.qty_issued AS qty_issued_printing,
+            # '' AS balance_to_print_emboss,
             '' AS insole_stock,
             '' AS issued_date,
-            '' AS quantity_issued,
+            cso.qty_issued AS qty_issued,
+            (cso.completed_qty - cso.qty_issued) AS balance_quantity,
             '' AS received_quantity,
             '' AS balance_quantity,
             '' AS upper_stock
@@ -111,5 +115,4 @@ def get_data(filters):
             {condition_query}
     """
     result= frappe.db.sql(query, as_dict=True)
-    # frappe.throw(str(result))
     return result
