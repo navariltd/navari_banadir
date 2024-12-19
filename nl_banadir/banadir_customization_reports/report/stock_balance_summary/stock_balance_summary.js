@@ -130,7 +130,12 @@ frappe.query_reports["Stock Balance Summary"] = {
       // Check if the column fieldname contains 'bal_qty'
       if (column.fieldname.includes("bal_qty")) {
         // Format the value with thousand separators
-        value = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        // Split the value into integer and decimal parts
+        let [integerPart, decimalPart] = value.toString().split(".");
+        // Add comma formatting to the integer part only
+        integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        // Recombine integer and decimal parts
+        value = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
       }
     }
 
