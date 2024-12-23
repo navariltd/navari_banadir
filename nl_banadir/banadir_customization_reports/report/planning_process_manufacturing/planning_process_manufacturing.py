@@ -37,13 +37,13 @@ def get_columns():
         {"label": "Printed & Embossed Pairs", "fieldname": "printed_embossed_pairs", "fieldtype": "Int", "width": 150},
         {"label": "Printing/Embossing Contractor", "fieldname": "printing_embossing_contractor", "fieldtype": "Link", "options": "Supplier", "width": 200},
         {"label": "Balance to Print/Emboss", "fieldname": "balance_to_print_emboss", "fieldtype": "Int", "width": 150},
-        {"label": "Insole Stock", "fieldname": "insole_stock", "fieldtype": "Int", "width": 120},
+        {"label": "Insole Stock", "fieldname": "insole_stock", "fieldtype": "Link","options":"Item", "width": 120},
         {"label": "Issued Date to Subcontractor", "fieldname": "issued_date", "fieldtype": "Date", "width": 150},
-        {"label": "Subcontractor Name", "fieldname": "subcontractor_name", "fieldtype": "Link", "options": "Supplier", "width": 150},
+        {"label": "Subcontractor Name", "fieldname": "subcontractor_name_po", "fieldtype": "Link", "options": "Supplier", "width": 150},
         {"label": "Quantity Issued", "fieldname": "quantity_issued", "fieldtype": "Int", "width": 120},
         {"label": "Received Quantity", "fieldname": "received_quantity", "fieldtype": "Int", "width": 120},
         {"label": "Balance Quantity", "fieldname": "balance_quantity", "fieldtype": "Int", "width": 120},
-        {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": "Int", "width": 120},
+        {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": "Link","options":"Item", "width": 120},
     ]
 
 def get_data(filters):
@@ -103,10 +103,10 @@ def get_data(filters):
             `tabWork Order` insole_work_order ON insole_work_order.production_plan_sub_assembly_item = psa.name
         LEFT JOIN
             `tabWork Order Operations Item` cso 
-             ON fg_work_order.name = cso.parent AND cso.operations = 'Cutting'
+             ON insole_work_order.name = cso.parent AND cso.operations = 'Cutting'
         LEFT JOIN
             `tabWork Order Operations Item` csp 
-             ON fg_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
+             ON insole_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
         LEFT JOIN
             `tabWork Order Item` required_items 
              ON fg_work_order.name = required_items.parent
@@ -115,4 +115,94 @@ def get_data(filters):
             {condition_query}
     """
     result= frappe.db.sql(query, as_dict=True)
-    return result
+    main_data = [add_insole_stock_data(record) for record in result]
+    return main_data
+
+def add_insole_stock_data(record):
+    """
+    Fetch and add insole stock data to a given record based on its finished goods work order.
+
+    :param record: Dictionary containing data of the main record.
+    :return: Updated record with insole stock data.
+    """
+    finished_goods_work_order_no = record.get("finished_goods_work_order_no")
+    
+    if not finished_goods_work_order_no:
+        # Skip if no finished goods work order number is present
+        return record
+
+    # Fetch purchase order data linked to the specific finished goods work order
+    purchase_order_data = frappe.db.sql(
+        f"""
+        SELECT
+    poi.qty AS issued_qty,
+    poi.fg_item AS insole_stock_item,
+    po.name AS purchase_order,
+    po.supplier AS subcontractor_name_po,
+    po.transaction_date AS issued_date
+FROM
+    `tabPurchase Order Item` poi
+JOIN
+    `tabPurchase Order` po ON poi.parent = po.name
+WHERE
+    poi.custom_work_order = '{finished_goods_work_order_no}'
+    AND po.docstatus = '1'
+
+        """,
+        as_dict=True,
+    )
+    if purchase_order_data:
+        insole_data = purchase_order_data[0]
+        subcontracting_order = frappe.db.get_value(
+            "Subcontracting Order",
+            {"purchase_order": insole_data["purchase_order"]},
+            "name",
+        )
+        
+        # Fetch receipt data linked to the specific subcontracting order
+        receipt = frappe.db.sql(
+            f"""
+            SELECT
+                SUM(sci.qty) AS received_quantity,
+                sci.item_code AS upper_stock
+            FROM
+                `tabSubcontracting Receipt Item` sci
+            JOIN
+                `tabSubcontracting Receipt` sr ON sci.parent = sr.name
+            WHERE
+                sci.subcontracting_order = '{subcontracting_order}'
+            """,
+            as_dict=True,
+        )
+
+        received_qty = receipt[0].received_quantity if receipt else 0
+        balance_quantity = insole_data["issued_qty"] - received_qty
+        upper_stock = receipt[0].upper_stock if receipt else None
+
+        # Update the record with additional fields
+        record.update(
+            {
+                "insole_stock": insole_data["insole_stock_item"],
+                "quantity_issued": insole_data["issued_qty"],
+                "issued_date": insole_data["issued_date"],
+                "received_quantity": received_qty,
+                "balance_quantity": balance_quantity,
+                "subcontractor_name_po": insole_data["subcontractor_name_po"],
+                "upper_stock": upper_stock,
+            }
+        )
+    else:
+        # Default values if no insole stock data is found for this work order
+        record.update(
+            {
+                "insole_stock": None,
+                "quantity_issued": 0,
+                "received_quantity": 0,
+                "balance_quantity": 0,
+                "subcontractor_name_po": None,
+                "upper_stock": None,
+                "issued_date": None,
+            }
+        )
+
+    return record
