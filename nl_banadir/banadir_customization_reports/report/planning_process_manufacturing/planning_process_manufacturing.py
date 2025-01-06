@@ -37,7 +37,7 @@ def get_columns():
         {"label": "Printed & Embossed Pairs", "fieldname": "printed_embossed_pairs", "fieldtype": "Int", "width": 150},
         {"label": "Printing/Embossing Contractor", "fieldname": "printing_embossing_contractor", "fieldtype": "Link", "options": "Supplier", "width": 200},
         {"label": "Balance to Print/Emboss", "fieldname": "balance_to_print_emboss", "fieldtype": "Int", "width": 150},
-        {"label": "Insole Stock", "fieldname": "insole_stock", "fieldtype": "Link","options":"Item", "width": 120},
+        {"label": "Insole Stock", "fieldname": "insole_stock_qty", "fieldtype": "Link","options":"Item", "width": 120},
         {"label": "Issued Date to Subcontractor", "fieldname": "issued_date", "fieldtype": "Date", "width": 150},
         {"label": "Subcontractor Name", "fieldname": "subcontractor_name_po", "fieldtype": "Link", "options": "Supplier", "width": 150},
         {"label": "Quantity Issued", "fieldname": "quantity_issued", "fieldtype": "Int", "width": 120},
@@ -103,10 +103,10 @@ def get_data(filters):
             `tabWork Order` insole_work_order ON insole_work_order.production_plan_sub_assembly_item = psa.name
         LEFT JOIN
             `tabWork Order Operations Item` cso 
-             ON insole_work_order.name = cso.parent AND cso.operations = 'Cutting'
+             ON insole_work_order.name = cso.parent AND cso.operations = 'CUTTING'
         LEFT JOIN
             `tabWork Order Operations Item` csp 
-             ON insole_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
+             ON insole_work_order.name = csp.parent AND csp.operations = 'PRINTING'
         LEFT JOIN
             `tabWork Order Item` required_items 
              ON fg_work_order.name = required_items.parent
@@ -116,6 +116,7 @@ def get_data(filters):
     """
     result= frappe.db.sql(query, as_dict=True)
     main_data = [add_insole_stock_data(record) for record in result]
+    [update_insole_stock_qty(record) for record in main_data]
     return main_data
 
 def add_insole_stock_data(record):
@@ -182,7 +183,7 @@ WHERE
         # Update the record with additional fields
         record.update(
             {
-                "insole_stock": insole_data["insole_stock_item"],
+                "upper_item": insole_data["insole_stock_item"],
                 "quantity_issued": insole_data["issued_qty"],
                 "issued_date": insole_data["issued_date"],
                 "received_quantity": received_qty,
@@ -195,7 +196,7 @@ WHERE
         # Default values if no insole stock data is found for this work order
         record.update(
             {
-                "insole_stock": None,
+                "upper_item": None,
                 "quantity_issued": 0,
                 "received_quantity": 0,
                 "balance_quantity": 0,
@@ -206,3 +207,13 @@ WHERE
         )
 
     return record
+
+def update_insole_stock_qty(record):
+   if record.get("printed_embossed_pairs") and record.get("quantity_issued"):
+        record.update(
+                {
+                    "insole_stock_qty": record.printed_embossed_pairs - record.quantity_issued
+                }
+        )
+        
+        
