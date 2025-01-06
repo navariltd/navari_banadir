@@ -12,7 +12,6 @@ def execute(filters=None):
     data = get_data(filters)
     return columns, data
 
-
 def get_columns():
     return [
         {"label": "Sales Order No", "fieldname": "sales_order_no", "fieldtype": "Link", "options": "Sales Order", "width": 150},
@@ -103,10 +102,10 @@ def get_data(filters):
             `tabWork Order` insole_work_order ON insole_work_order.production_plan_sub_assembly_item = psa.name
         LEFT JOIN
             `tabWork Order Operations Item` cso 
-             ON insole_work_order.name = cso.parent AND cso.operations = 'CUTTING'
+             ON insole_work_order.name = cso.parent AND cso.operations = 'Cutting'
         LEFT JOIN
             `tabWork Order Operations Item` csp 
-             ON insole_work_order.name = csp.parent AND csp.operations = 'PRINTING'
+             ON insole_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
         LEFT JOIN
             `tabWork Order Item` required_items 
              ON fg_work_order.name = required_items.parent
@@ -129,10 +128,8 @@ def add_insole_stock_data(record):
     finished_goods_work_order_no = record.get("finished_goods_work_order_no")
     
     if not finished_goods_work_order_no:
-        # Skip if no finished goods work order number is present
         return record
 
-    # Fetch purchase order data linked to the specific finished goods work order
     purchase_order_data = frappe.db.sql(
         f"""
         SELECT
@@ -160,7 +157,6 @@ WHERE
             "name",
         )
         
-        # Fetch receipt data linked to the specific subcontracting order
         receipt = frappe.db.sql(
             f"""
             SELECT
@@ -180,7 +176,6 @@ WHERE
         balance_quantity = insole_data["issued_qty"] - received_qty
         upper_stock = receipt[0].upper_stock if receipt else None
 
-        # Update the record with additional fields
         record.update(
             {
                 "upper_item": insole_data["insole_stock_item"],
@@ -193,7 +188,6 @@ WHERE
             }
         )
     else:
-        # Default values if no insole stock data is found for this work order
         record.update(
             {
                 "upper_item": None,
@@ -215,5 +209,3 @@ def update_insole_stock_qty(record):
                     "insole_stock_qty": record.printed_embossed_pairs - record.quantity_issued
                 }
         )
-        
-        
