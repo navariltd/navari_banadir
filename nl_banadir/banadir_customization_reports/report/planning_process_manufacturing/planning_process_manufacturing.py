@@ -203,9 +203,10 @@ WHERE
     return record
 
 def update_insole_stock_qty(record):
-   if record.get("printed_embossed_pairs") and record.get("quantity_issued"):
-        record.update(
-                {
-                    "insole_stock_qty": record.printed_embossed_pairs - record.quantity_issued
-                }
-        )
+    printed_embossed_pairs = record.get("printed_embossed_pairs") or 0
+    quantity_issued = record.get("quantity_issued") or 0
+
+    if isinstance(printed_embossed_pairs, (int, float)) and isinstance(quantity_issued, (int, float)):
+        record["insole_stock_qty"] = printed_embossed_pairs - quantity_issued
+    else:
+        raise ValueError("Fields 'printed_embossed_pairs' and 'quantity_issued' must be numeric.")
