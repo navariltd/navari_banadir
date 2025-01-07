@@ -661,7 +661,6 @@ def convert_alternative_uom(data, filters):
 		
 		if item_code:
 			conversion_factor = get_conversion_factor(item_code, alternative_uom)
-			
 			for key, value in row.items():
 				if isinstance(value, (int, float)):
 					new_value = value / conversion_factor
