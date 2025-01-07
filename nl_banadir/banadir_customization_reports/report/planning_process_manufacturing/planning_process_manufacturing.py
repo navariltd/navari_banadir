@@ -36,7 +36,7 @@ def get_columns():
         {"label": "Printed & Embossed Pairs", "fieldname": "printed_embossed_pairs", "fieldtype": "Int", "width": 150},
         {"label": "Printing/Embossing Contractor", "fieldname": "printing_embossing_contractor", "fieldtype": "Link", "options": "Supplier", "width": 200},
         {"label": "Balance to Print/Emboss", "fieldname": "balance_to_print_emboss", "fieldtype": "Int", "width": 150},
-        {"label": "Insole Stock", "fieldname": "insole_stock_qty", "fieldtype": "Link","options":"Item", "width": 120},
+        {"label": "Insole Stock", "fieldname": "insole_stock_qty", "fieldtype": "Float", "width": 120},
         {"label": "Issued Date to Subcontractor", "fieldname": "issued_date", "fieldtype": "Date", "width": 150},
         {"label": "Subcontractor Name", "fieldname": "subcontractor_name_po", "fieldtype": "Link", "options": "Supplier", "width": 150},
         {"label": "Quantity Issued", "fieldname": "quantity_issued", "fieldtype": "Int", "width": 120},
@@ -210,3 +210,4 @@ def update_insole_stock_qty(record):
         record["insole_stock_qty"] = printed_embossed_pairs - quantity_issued
     else:
         raise ValueError("Fields 'printed_embossed_pairs' and 'quantity_issued' must be numeric.")
+    

@@ -170,6 +170,7 @@ def _execute(filters=None, additional_table_columns=None):
 	data=append_opening_qty(data, filters)
 	data=convert_as_per_current_exchange_rate(data, filters, "USD", presentation_currency)
 	data=convert_currency_fields(data, filters)
+	data=convert_alternative_uom(data, filters)
 
 	return columns, data, None, None, None, skip_total_row
 	
@@ -299,6 +300,22 @@ def get_columns(additional_table_columns, filters):
 			"options": "UOM",
 			"width": 100,
 		},
+ 
+	]
+
+	# Add the Alternative UOM column after Stock UOM
+	if filters.get("alternative_uom"):
+		columns.append(
+			{
+				"label": _("<span style='color:red'>Alternative UOM</span>"),
+				"fieldname": "uom",
+				"fieldtype": "Link",
+				"options": "UOM",
+				"width": 100,
+			}
+		)
+
+	columns += [
 		{
 		"label": _("Exchange Rate"),
 		"fieldname": "exchange_rate",
@@ -383,6 +400,8 @@ def get_columns(additional_table_columns, filters):
 		columns.append(
 			{"label": _("% Of Grand Total"), "fieldname": "percent_gt", "fieldtype": "Float", "width": 80}
 		)
+  
+
 	return columns
 
 
@@ -570,7 +589,33 @@ def append_opening_qty(data, filters):
 	return data
 
 
+def convert_alternative_uom(data, filters):
+	# frappe.throw(str(data))
+	alternative_uom = filters.get('alternative_uom')
+	
+	for row in data:
+		item_code = row.get('item_code')
+		
+		if item_code:
+			conversion_factor = get_conversion_factor(item_code, alternative_uom)
+			row["uom"] = alternative_uom
+			# Only convert stock_qty and opening_stock_qty
+			for key in ['stock_qty', 'opening_stock_qty']:
+				if key in row:
+					value = row[key]
+					# frappe.throw(str(value))
+					if isinstance(value, (int, float)):  # Ensure it's a number
+						new_value = value / conversion_factor
+						row[key] = new_value 
+	
+	return data
+
+
+def get_conversion_factor(item_code, alternative_uom):
+	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+	return uom_conversion or 1
+
+
+
 '''Bad implementation because we need to consider a warehouse, incase there is a change, use below code'''
 # opening_stock_map = (d["item_code"],d["warehouse"]):d["opening_qty"]
-
-

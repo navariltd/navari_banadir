@@ -68,6 +68,14 @@ frappe.query_reports["Stock Value Adjustment"] = {
 			options: erpnext.get_presentation_currency_list()
 			
 		},
+		{
+            fieldname: "alternative_uom",
+            label: __("Alternative UOM"),
+            fieldtype: "Link",
+            options: "UOM",
+            width: "100",
+            reqd: 0,
+        },
 	],
 	formatter: function (value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);
