@@ -22,6 +22,16 @@ frappe.query_reports["Landed Cost Summary Report"] = {
             label: __("Purchase Invoice"),
             fieldtype: "Link",
             options: "Purchase Invoice",
+        },
+        {
+            fieldname: "from_date",
+            label: __("From Date"),
+            fieldtype: "Date",
+        },
+        {
+            fieldname: "to_date",
+            label: __("To Date"),
+            fieldtype: "Date",
         }
 	],
     "formatter": function (value, row, column, data, default_formatter) {

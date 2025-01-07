@@ -172,6 +172,12 @@ def get_data(filters):
     if filters.get("purchase_invoice"):
         query = query.where(PurchaseInvoice.name == filters.get("purchase_invoice"))
 
+    if filters.get("from_date"):
+        query = query.where(PurchaseInvoice.posting_date >= filters.get("from_date"))
+
+    if filters.get("to_date"):
+        query = query.where(PurchaseInvoice.posting_date <= filters.get("to_date"))
+
     # Fetch data
     data = query.run(as_dict=True)
 
