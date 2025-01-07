@@ -22,9 +22,15 @@ frappe.query_reports["Transit Number Balance Report"] = {
         },
         {
             "fieldname": "sales_invoice",
-            "label": __("Sales Invoice"),
+            "label": __("Transit Number"),
             "fieldtype": "Link",
             "options": "Sales Invoice",
         },
+        {
+            "fieldname": "alternative_uom",
+            "label": __("Alternative UOM"),
+            "fieldtype": "Link",
+            "options": "UOM",
+        }
 	],
 };

@@ -32,7 +32,8 @@ def get_columns() -> list[dict]:
         {
 			"fieldname": "item_code", 
 			"label": "Item Code", 
-			"fieldtype": "Data", 
+			"fieldtype": "Link",
+            "options": "Item",
 			"width": 250
 		},
         {
@@ -44,19 +45,19 @@ def get_columns() -> list[dict]:
         {
 			"fieldname": "qty_in", 
 			"label": "Total Qty In", 
-			"fieldtype": "HTML", 
+			"fieldtype": "Float", 
 			"width": 120
 		},
         {
 			"fieldname": "qty_out", 
 			"label": "Total Qty Out", 
-			"fieldtype": "HTML", 
+			"fieldtype": "Float", 
 			"width": 120
 		},
         {
 			"fieldname": "balance", 
 			"label": "Balance", 
-			"fieldtype": "HTML", 
+			"fieldtype": "Float", 
 			"width": 120
 		},
 	]
@@ -142,6 +143,9 @@ def get_data(filters) -> list[list]:
 
     data = query.run(as_dict=True)
 
+    if filters.get("alternative_uom"):
+        data = convert_alternative_uom(data, filters)
+
     # Process the data and calculate totals for each transit number
     processed_data = []
     transit_totals = {}  # Dictionary to store totals for each transit number
@@ -164,9 +168,9 @@ def get_data(filters) -> list[list]:
             "name_link": sales_invoice_links,
             "item_code": row['item_code'],
             "uom": row['uom'],
-            "qty_in": f"{row['qty_in']:,.2f}",
-            "qty_out": f"{row['qty_out']:,.2f}",
-            "balance": f"{row['balance']:,.2f}",
+            "qty_in": row['qty_in'],
+            "qty_out": row['qty_out'],
+            "balance": row['balance'],
         })
 
         # Calculate totals for each transit number
@@ -177,9 +181,9 @@ def get_data(filters) -> list[list]:
                 "balance": 0.0
             }
         
-        transit_totals[row["transit_no"]]["qty_in"] = transit_totals[row["transit_no"]]["qty_in"] + row["qty_in"]
-        transit_totals[row["transit_no"]]["qty_out"] = transit_totals[row["transit_no"]]["qty_out"] + row["qty_out"]
-        transit_totals[row["transit_no"]]["balance"] = transit_totals[row["transit_no"]]["balance"] + row["balance"]
+        transit_totals[row["transit_no"]]["qty_in"] += row["qty_in"]
+        transit_totals[row["transit_no"]]["qty_out"] += row["qty_out"]
+        transit_totals[row["transit_no"]]["balance"] += row["balance"]
 
     # Append totals for each transit number after their respective items
     final_data = []
@@ -201,9 +205,9 @@ def get_data(filters) -> list[list]:
                 "name_link": "",
                 "item_code": "",
                 "uom": "",
-                "qty_in": f"<b>{totals['qty_in']:,.2f}</b>",
-                "qty_out": f"<b>{totals['qty_out']:,.2f}</b>",
-                "balance": f"<b>{totals['balance']:,.2f}</b>",
+                "qty_in": totals['qty_in'],
+                "qty_out": totals['qty_out'],
+                "balance": totals['balance'],
             })
             
     # Initialize grand total variables
@@ -221,12 +225,31 @@ def get_data(filters) -> list[list]:
         "name_link": "",
         "item_code": "",
         "uom": "",
-        "qty_in": f"<b>{grand_totals['qty_in']:,.2f}</b>",
-        "qty_out": f"<b>{grand_totals['qty_out']:,.2f}</b>",
-        "balance": f"<b>{grand_totals['balance']:,.2f}</b>",
+        "qty_in": grand_totals['qty_in'],
+        "qty_out": grand_totals['qty_out'],
+        "balance": grand_totals['balance'],
     })
 
-    # Assign columns and report_data to data
-    report_data = final_data  # Use processed final data with totals
     
-    return report_data
+    return final_data
+
+def convert_alternative_uom(data, filters):
+	alternative_uom = filters.get('alternative_uom')
+	
+	for row in data:
+		item_code = row.get('item_code')
+		
+		if item_code:
+			conversion_factor = get_conversion_factor(item_code, alternative_uom)
+			
+			for key, value in row.items():
+				if isinstance(value, (int, float)):
+					new_value = value / conversion_factor
+					row[key] = new_value 
+	
+	return data
+
+def get_conversion_factor(item_code, alternative_uom):
+	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+	return uom_conversion or 1
+ 
