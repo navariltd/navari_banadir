@@ -125,6 +125,7 @@ def _execute(filters=None, additional_table_columns=None):
 			"landed_cost_voucher_amount": flt(d.landed_cost_voucher_amount/ d.stock_qty),
 		"rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount / d.stock_qty),
 			}
+		row["stock_qty"] = flt(row["stock_qty"]) if row["stock_qty"] else 0
 		total_tax = 0
 		for tax in tax_columns:
 			item_tax = itemised_tax.get(d.name, {}).get(tax, {})
@@ -167,6 +168,7 @@ def _execute(filters=None, additional_table_columns=None):
 		add_sub_total_row(total_row, total_row_map, "total_row", tax_columns)
 		data.append(total_row_map.get("total_row"))
 		skip_total_row = 1
+
 	data=append_opening_qty(data, filters)
 	data=convert_as_per_current_exchange_rate(data, filters, "USD", presentation_currency)
 	data=convert_currency_fields(data, filters)
@@ -290,7 +292,7 @@ def get_columns(additional_table_columns, filters):
 			"options": "Account",
 			"width": 100,
 		},
-  		{"label": _("Opening Stock"), "fieldname": "opening_stock_qty", "fieldtype": "Float", "width": 100},
+  		{"label": _("Opening Stock"), "fieldname": "opening_stock_qty", "fieldtype": "Float", "width": 100, "hidden":1},
 
 		{"label": _("Stock Qty"), "fieldname": "stock_qty", "fieldtype": "Float", "width": 100},
 		{
@@ -300,7 +302,7 @@ def get_columns(additional_table_columns, filters):
 			"options": "UOM",
 			"width": 100,
 		},
- 
+  
 	]
 
 	# Add the Alternative UOM column after Stock UOM
@@ -493,7 +495,6 @@ def get_items(filters, additional_table_columns):
 
 	return query.run(as_dict=True)
 
-
 def get_aii_accounts():
 	return dict(frappe.db.sql("select name, stock_received_but_not_billed from tabCompany"))
 
@@ -589,33 +590,42 @@ def append_opening_qty(data, filters):
 	return data
 
 
-def convert_alternative_uom(data, filters):
-	# frappe.throw(str(data))
-	alternative_uom = filters.get('alternative_uom')
-	
-	for row in data:
-		item_code = row.get('item_code')
-		
-		if item_code:
-			conversion_factor = get_conversion_factor(item_code, alternative_uom)
-			row["uom"] = alternative_uom
-			# Only convert stock_qty and opening_stock_qty
-			for key in ['stock_qty', 'opening_stock_qty']:
-				if key in row:
-					value = row[key]
-					# frappe.throw(str(value))
-					if isinstance(value, (int, float)):  # Ensure it's a number
-						new_value = value / conversion_factor
-						row[key] = new_value 
-	
-	return data
 
 
 def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	return uom_conversion or 1
 
-
-
 '''Bad implementation because we need to consider a warehouse, incase there is a change, use below code'''
 # opening_stock_map = (d["item_code"],d["warehouse"]):d["opening_qty"]
+# import frappe
+
+def convert_alternative_uom(data, filters):
+	alternative_uom = filters.get('alternative_uom')
+	item_codes = {row.get('item_code') for row in data if row.get('item_code')}
+	item_exists_map = {item['item_code']: True for item in frappe.get_all('Item', filters={'item_code': ['in', list(item_codes)]}, fields=['item_code'])}
+	for row in data:
+		item_code = row.get('item_code')
+		if item_code:
+			# item_exists = frappe.get_all('Item', filters={'item_code': item_code}, fields=['name'])
+			
+			if item_exists_map.get(item_code):
+				conversion_factor = get_conversion_factor(item_code, alternative_uom)
+				row["uom"] = alternative_uom
+
+				for key in ['stock_qty', 'opening_stock_qty']:
+					if key in row:
+						value = row[key]
+						if isinstance(value, (int, float)): 
+							new_value = value / conversion_factor
+							row[key] = new_value 
+			else:
+				invoice_code = item_code 
+				stock_qty=0
+				if invoice_code:
+					for all in data:
+						if item_code==all.get("invoice"):
+							stock_qty += all.get('stock_qty', 0)
+				row['stock_qty'] = stock_qty
+				
+	return data
