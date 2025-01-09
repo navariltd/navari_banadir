@@ -78,7 +78,7 @@ def _execute(filters=None, additional_table_columns=None):
 	item_list = get_items(filters, additional_table_columns)
 	aii_account_map = get_aii_accounts()
 	presentation_currency= filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
-	
+	# frappe.throw(str(presentation_currency))
 	po_pr_map = get_purchase_receipts_against_purchase_order(item_list)
 
 	data = []
@@ -124,6 +124,8 @@ def _execute(filters=None, additional_table_columns=None):
 			"exchange_rate": d.conversion_rate if d.conversion_rate !=1 else get_current_exchange_rate("USD", company_currency, d.posting_date),
 			"landed_cost_voucher_amount": flt(d.landed_cost_voucher_amount/ d.stock_qty),
 		"rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount / d.stock_qty),
+		"amount_plus_landed_cost": d.base_net_amount + flt(d.landed_cost_voucher_amount / d.stock_qty),
+		"currency":presentation_currency,
 			}
 		row["stock_qty"] = flt(row["stock_qty"]) if row["stock_qty"] else 0
 		total_tax = 0
@@ -138,7 +140,7 @@ def _execute(filters=None, additional_table_columns=None):
 			total_tax += flt(item_tax.get("tax_amount"))
 
 		row.update(
-			{"total_tax": total_tax, "total": d.base_net_amount + total_tax, "currency": company_currency}
+			{"total_tax": total_tax, "total": d.base_net_amount + total_tax, "currency": presentation_currency}
 		)
 
 
@@ -159,7 +161,6 @@ def _execute(filters=None, additional_table_columns=None):
 			add_sub_total_row(row, total_row_map, d.get(group_by_field, ""), tax_columns)
 
 		data.append(row)
-  
 	if filters.get("group_by") and item_list:
 		total_row = total_row_map.get(prev_group_by_value or d.get("item_name"))
 		total_row["percent_gt"] = flt(total_row["total"] / grand_total * 100)
@@ -183,7 +184,7 @@ def get_columns(additional_table_columns, filters):
 	)
 	columns = []
  
-
+	
 	if filters.get("group_by") != ("Item"):
 		columns.extend(
 			[
@@ -194,6 +195,16 @@ def get_columns(additional_table_columns, filters):
 					"options": "Item",
 					"width": 120,
 				},
+				{
+					"label": _("Currency"),
+					"fieldname": "currency",
+					"fieldtype": "Link",
+					"options": "Currency",
+					"width": 80,
+					# "hidden": 1,
+	 
+				},
+	
 				{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 120},
 			]
 		)
@@ -335,37 +346,37 @@ def get_columns(additional_table_columns, filters):
 		{
 			"label": _(f"Rate({presentation_currency})"),
 			"fieldname": "rate",
-			"fieldtype": "Float",
-   			"precision": 2,
+			"fieldtype": "Currency",
+   			"options":"currency",
 			"width": 100,
 		},
   {
 "label": _(f"Current Rate ({presentation_currency})"),
 		"fieldname": "current_rate",
-		"fieldtype": "Float",
-  			"precision": 2,
+		"fieldtype": "Currency",
+   			"options":"currency",
 		"width": 100,
   },
   {
   "label": _(f"Landed Cost ({presentation_currency})"),
   "fieldname":"landed_cost_voucher_amount",
-  "fieldtype":"Float",
-  			"precision": 2,
+  "fieldtype": "Currency",
+   			"options":"currency",
 
   "width":100,
   },
   {
 	"label": _(f"Current Landed Cost ({presentation_currency})"),
 	"fieldname":"current_landed_cost",
-	"fieldtype":"Float",
-  			"precision": 2,
+	"fieldtype": "Currency",
+   			"options":"currency",
 	 "width":100,
   },
   {
 	  "label":f"Rate + LC({presentation_currency})",
 	  "fieldname":"rate_plus_landed_cost",
-	  "fieldtype":"Float",
-   			"precision": 2,
+	  "fieldtype": "Currency",
+   			"options":"currency",
 
 	"width":100,
  
@@ -373,8 +384,8 @@ def get_columns(additional_table_columns, filters):
 	{
 	  "label":"Current Rate + LC({presentation_currency})",
 	  "fieldname":"current_rate_plus_landed_cost",
-	  "fieldtype":"Float",
-   			"precision": 2,
+	 "fieldtype": "Currency",
+   			"options":"currency",
 
 	"width":100,
  
@@ -382,19 +393,25 @@ def get_columns(additional_table_columns, filters):
 		{
 			"label": _(f"Amount ({presentation_currency})"),
 			"fieldname": "amount",
-			"fieldtype": "Float",
-   			"precision": 2,
+			"fieldtype": "Currency",
+   			"options":"currency",
 
 			"width": 100,
 		},
+	{
+		"label": _(f"Amount + LC ({presentation_currency})"),	
+		"fieldname": "amount_plus_landed_cost",
+		"fieldtype": "Currency",
+   			"options":"currency",
+	},
 	]
  
 	columns.append(
 		{
 			"label": _(f"Current Total ({presentation_currency})"),
 			"fieldname": "current_total",
-			"fieldtype": "Float",
-			"precision": 2,
+			"fieldtype": "Currency",
+   			"options":"currency",
 		}
 	)
 
@@ -598,9 +615,9 @@ def get_conversion_factor(item_code, alternative_uom):
 
 '''Bad implementation because we need to consider a warehouse, incase there is a change, use below code'''
 # opening_stock_map = (d["item_code"],d["warehouse"]):d["opening_qty"]
-# import frappe
 
 def convert_alternative_uom(data, filters):
+	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 	alternative_uom = filters.get('alternative_uom')
 	item_codes = {row.get('item_code') for row in data if row.get('item_code')}
 	item_exists_map = {item['item_code']: True for item in frappe.get_all('Item', filters={'item_code': ['in', list(item_codes)]}, fields=['item_code'])}
@@ -622,10 +639,35 @@ def convert_alternative_uom(data, filters):
 			else:
 				invoice_code = item_code 
 				stock_qty=0
+				current_total = 0
+				current_rate = 0
+				current_rate_plus_landed_cost = 0
+				current_landed_cost = 0
+				rate_plus_landed_cost = 0
+				landed_cost = 0
+				amount_plus_landed_cost = 0
+				# frappe.throw(str(data))
 				if invoice_code:
-					for all in data:
-						if item_code==all.get("invoice"):
-							stock_qty += all.get('stock_qty', 0)
+					for d in data:
+						if item_code==d.get("invoice"):
+							
+							stock_qty += d.get('stock_qty', 0)
+							current_total += d.get("current_total")
+							current_rate += d.get("current_rate")
+							current_rate_plus_landed_cost += d.get("rate_plus_landed_cost")
+							current_landed_cost += d.get("landed_cost_voucher_amount")
+							rate_plus_landed_cost += d.get("rate_plus_landed_cost")
+							landed_cost += d.get("landed_cost_voucher_amount")
+							amount_plus_landed_cost += d.get("amount_plus_landed_cost")
+				row["currency"] = presentation_currency
 				row['stock_qty'] = stock_qty
+				row["current_total"] = current_total
+				row["current_rate"] = current_rate
+				row["current_rate_plus_landed_cost"] = current_rate_plus_landed_cost
+				row["current_landed_cost"] = current_landed_cost
+				row["rate_plus_landed_cost"] = rate_plus_landed_cost
+				row["landed_cost_voucher_amount"] = landed_cost
+				row["amount_plus_landed_cost"] = amount_plus_landed_cost
+				# update_sales_invoice_details(item_code, data)
 				
 	return data
