@@ -73,7 +73,6 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 	# Apply UOM conversion before removing precision (if applicable)
 	if filters.get("alternative_uom"):
 		data = convert_alternative_uom(data=data, filters=filters)
-		frappe.msgprint(str(data))
 
 	# Apply remove precision after UOM conversion
 	if filters.get("remove_precision"):
@@ -531,10 +530,13 @@ def convert_alternative_uom(data, filters):
 	if alternative_uom:
 		for row in data:
 			converstion_factor = get_conversion_factor(row[0], alternative_uom)
+			columns_to_convert = [5]
 
-			for idx, value in enumerate(row):
-				if isinstance(value, (int, float)):
-					row[idx] = value / converstion_factor
+			for idx in columns_to_convert:
+				if idx < len(row):
+					value = row[idx]
+					if isinstance(value, (int, float)):
+						row[idx] = value / converstion_factor
 
 	return data
 
