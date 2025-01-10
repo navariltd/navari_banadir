@@ -67,14 +67,23 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 			]
 		)
 
-		if filters.get("remove_precision"):
-			row = [
+
+		data.append(row)
+
+	# Apply UOM conversion before removing precision (if applicable)
+	if filters.get("alternative_uom"):
+		data = convert_alternative_uom(data=data, filters=filters)
+		frappe.msgprint(str(data))
+
+	# Apply remove precision after UOM conversion
+	if filters.get("remove_precision"):
+		data = [
+			[
 				f"{int(col):,}" if isinstance(col, (float, int)) else col
 				for col in row
 			]
-
-
-		data.append(row)
+			for row in data
+		]
 
 	return data
 
@@ -515,3 +524,20 @@ class FIFOSlots:
 		warehouse_results = [x[0] for x in warehouse_results]
 
 		return sle_query.where(sle.warehouse.isin(warehouse_results))
+
+def convert_alternative_uom(data, filters):
+	alternative_uom = filters.get('alternative_uom')
+	
+	if alternative_uom:
+		for row in data:
+			converstion_factor = get_conversion_factor(row[0], alternative_uom)
+
+			for idx, value in enumerate(row):
+				if isinstance(value, (int, float)):
+					row[idx] = value / converstion_factor
+
+	return data
+
+def get_conversion_factor(item_code, alternative_uom):
+	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+	return uom_conversion or 1
