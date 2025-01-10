@@ -624,7 +624,6 @@ def convert_alternative_uom(data, filters):
 	for row in data:
 		item_code = row.get('item_code')
 		if item_code:
-			# item_exists = frappe.get_all('Item', filters={'item_code': item_code}, fields=['name'])
 			
 			if item_exists_map.get(item_code):
 				conversion_factor = get_conversion_factor(item_code, alternative_uom)
@@ -637,37 +636,41 @@ def convert_alternative_uom(data, filters):
 							new_value = value / conversion_factor
 							row[key] = new_value 
 			else:
-				invoice_code = item_code 
-				stock_qty=0
-				current_total = 0
-				current_rate = 0
-				current_rate_plus_landed_cost = 0
-				current_landed_cost = 0
-				rate_plus_landed_cost = 0
-				landed_cost = 0
-				amount_plus_landed_cost = 0
-				# frappe.throw(str(data))
-				if invoice_code:
-					for d in data:
-						if item_code==d.get("invoice"):
-							
-							stock_qty += d.get('stock_qty', 0)
-							current_total += d.get("current_total")
-							current_rate += d.get("current_rate")
-							current_rate_plus_landed_cost += d.get("rate_plus_landed_cost")
-							current_landed_cost += d.get("landed_cost_voucher_amount")
-							rate_plus_landed_cost += d.get("rate_plus_landed_cost")
-							landed_cost += d.get("landed_cost_voucher_amount")
-							amount_plus_landed_cost += d.get("amount_plus_landed_cost")
-				row["currency"] = presentation_currency
-				row['stock_qty'] = stock_qty
-				row["current_total"] = current_total
-				row["current_rate"] = current_rate
-				row["current_rate_plus_landed_cost"] = current_rate_plus_landed_cost
-				row["current_landed_cost"] = current_landed_cost
-				row["rate_plus_landed_cost"] = rate_plus_landed_cost
-				row["landed_cost_voucher_amount"] = landed_cost
-				row["amount_plus_landed_cost"] = amount_plus_landed_cost
-				# update_sales_invoice_details(item_code, data)
+				data = invoice_details(item_code, row, data, presentation_currency)
 				
+	return data
+
+def invoice_details(item_code, row, data, presentation_currency):
+	invoice_code = item_code 
+	stock_qty=0
+	current_total = 0
+	current_rate = 0
+	current_rate_plus_landed_cost = 0
+	current_landed_cost = 0
+	rate_plus_landed_cost = 0
+	landed_cost = 0
+	amount_plus_landed_cost = 0
+
+	if invoice_code:
+		for d in data:
+			if item_code==d.get("invoice"):
+				
+				stock_qty += d.get('stock_qty', 0)
+				current_total += d.get("current_total")
+				current_rate += d.get("current_rate")
+				current_rate_plus_landed_cost += d.get("rate_plus_landed_cost")
+				current_landed_cost += d.get("landed_cost_voucher_amount")
+				rate_plus_landed_cost += d.get("rate_plus_landed_cost")
+				landed_cost += d.get("landed_cost_voucher_amount")
+				amount_plus_landed_cost += d.get("amount_plus_landed_cost")
+	row["currency"] = presentation_currency
+	row['stock_qty'] = stock_qty
+	row["current_total"] = current_total
+	row["current_rate"] = current_rate
+	row["current_rate_plus_landed_cost"] = current_rate_plus_landed_cost
+	row["current_landed_cost"] = current_landed_cost
+	row["rate_plus_landed_cost"] = rate_plus_landed_cost
+	row["landed_cost_voucher_amount"] = landed_cost
+	row["amount_plus_landed_cost"] = amount_plus_landed_cost
+ 
 	return data
