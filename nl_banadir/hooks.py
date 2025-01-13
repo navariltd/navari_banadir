@@ -77,9 +77,11 @@ doc_events = {
 
 # include js in doctype views
 doctype_js = {
-    "Work Order": "public/js/work_order.js",
-    "Purchase Order": "public/js/purchase_order.js",
-}
+    "Work Order" : "public/js/work_order.js",
+    "Purchase Order":"public/js/purchase_order.js",
+    "Production Plan":"public/js/production_plan.js",
+    "Sales Order":"public/js/sales_order.js",
+    }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}

@@ -4,7 +4,9 @@ import frappe
 from frappe.model.naming import make_autoname
 from datetime import datetime
 
+
 def before_save(doc, method=None):
+    
     if not doc.custom_subcontractors:
         currency = frappe.db.get_value("Company", doc.company, "default_currency")
 
@@ -94,17 +96,13 @@ def on_update(doc, method=None):
     """
     Main function to handle the creation of Purchase Invoices for completed operations.
     """
+    validate_operations(doc)
     for operation in doc.custom_subcontractors:
         operation_doc = frappe.get_doc("Work Order Operations Item", operation.get('name'))
-        if (operation_doc.status == "In Progress" or operation_doc.status == "Completed") and operation_doc.supplier is None:
-            frappe.throw("Kindly enter the supplier in Sub-contractor table")
+
         # Only consider operations with status "Completed" and invoice_created flag is 0
         if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
-            if operation_doc.completed_qty > doc.qty:
-                frappe.throw(
-                    f"Completed quantity ({operation_doc.completed_qty}) for operation '{operation_doc.operations}' "
-                    f"cannot exceed the quantity to manufacture ({doc.qty}) on this Work Order."
-                )
+            
             create_purchase_invoice(
                 doc=doc,
                 operation=operation_doc,
@@ -116,7 +114,41 @@ def on_update(doc, method=None):
 
             frappe.msgprint("Purchase Invoices successfully created for all suppliers with completed operations.")
          
-    
 def total_operation_cost(doc, operation_doc):
-    doc.custom_total_operation_cost += operation_doc.amount
+    current_total = doc.custom_total_operation_cost
+    current_total +=operation_doc.amount
+    doc.custom_total_operation_cost = current_total
+    frappe.db.set_value(
+        "Work Order",  
+        doc.name, 
+        "custom_total_operation_cost",  
+        current_total
+    )
+    doc.reload()
+
+def validate_operations(doc):
+    """
+    Validate the subcontractor operations in the custom_subcontractors table.
+    """
+    for operation in doc.custom_subcontractors:
+        operation_doc = frappe.get_doc("Work Order Operations Item", operation.get('name'))
+
+        if (operation_doc.status == "In Progress" or operation_doc.status == "Completed") and operation_doc.supplier is None:
+            frappe.throw("Kindly enter the supplier in the Sub-contractor table.")
+       
+        if operation_doc.in_progress_date > operation_doc.completed_date:
+            frappe.throw("<b>In Progress Date</b> cannot be greater than <b>Completed Date.</b>")
+        
+        if operation_doc.status in ["In Progress", "Completed"]:
+            if operation_doc.completed_qty > doc.qty:
+                frappe.throw(
+                    f"Completed quantity ({operation_doc.completed_qty}) for operation '{operation_doc.operations}' "
+                    f"cannot exceed the quantity to manufacture ({doc.qty}) on this Work Order."
+                )
  
+def validate_dates(operation_doc):
+    if operation_doc.in_progress_date > operation_doc.completed_date:
+        frappe.throw("In Progress Date cannot be greater than Completed Date.")
+    
+    
+   
