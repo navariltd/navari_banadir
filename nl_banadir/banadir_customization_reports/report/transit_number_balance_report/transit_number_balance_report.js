@@ -31,6 +31,11 @@ frappe.query_reports["Transit Number Balance Report"] = {
             "label": __("Alternative UOM"),
             "fieldtype": "Link",
             "options": "UOM",
+        },
+        {
+            "fieldname": "container_no",
+            "label": __("Container No"),
+            "fieldtype": "Check",
         }
 	],
 };
