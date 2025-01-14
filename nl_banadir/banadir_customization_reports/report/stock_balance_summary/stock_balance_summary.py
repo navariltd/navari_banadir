@@ -3,6 +3,7 @@
 
 from operator import itemgetter
 from typing import Any, TypedDict
+from collections import defaultdict
 
 import frappe
 from frappe import _
@@ -19,6 +20,7 @@ from erpnext.stock.doctype.warehouse.warehouse import apply_warehouse_filter
 from erpnext.stock.report.stock_ageing.stock_ageing import FIFOSlots, get_average_age
 from erpnext.stock.utils import add_additional_uom_columns
 
+
 class StockBalanceFilter(TypedDict):
     company: str | None
     from_date: str
@@ -31,6 +33,8 @@ class StockBalanceFilter(TypedDict):
     show_stock_ageing_data: bool
     show_variant_attributes: bool
     remove_precision: bool
+    show_warehouse_totals: bool
+    eliminate_zero_values: bool
 
 
 SLEntry = dict[str, Any]
@@ -74,28 +78,48 @@ class StockBalanceReport:
             self.columns = self.get_columns()
 
         self.add_additional_uom_columns()
+
+        if self.filters.get("show_warehouse_totals"):
+            if self.data:
+                self.get_warehouse_totals(data=self.data)
+
         total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
 
+        # if not self.filters.get("show_warehouse_totals"):
         total_row = {
-            "item_code": _("Total"),
-           
+            "item_code": _("Overall Total"),
             "bal_qty": total_bal_qty,
-            "bal_qty_alt":total_bal_alternative_uom_qty,
+            "bal_qty_alt": total_bal_alternative_uom_qty,
             "bal_val": 0.0,
-           
+            "is_total": True,
         }
-        
+
         self.data.append(total_row)
+
+        if self.filters.get("eliminate_zero_values"):
+            updated_data = []
+            for entry in self.data:
+                if entry.get("bal_qty") > 0:
+                    updated_data.append(entry)
+
+            self.data = updated_data
+
         return self.columns, self.data
+
     def calculate_total_bal_qty(self):
         """
         Calculate the total balance quantity ('bal_qty') and return the total.
         """
-        total_bal_qty = sum(item.get("bal_qty", 0.0) for item in self.data)
-        total_bal_alternative_uom_qty= sum(item.get("bal_qty_alt", 0.0) for item in self.data)
+        total_bal_qty = sum(
+            item.get("bal_qty", 0.0) for item in self.data if not item.get("is_total")
+        )
+        total_bal_alternative_uom_qty = sum(
+            item.get("bal_qty_alt", 0.0)
+            for item in self.data
+            if not item.get("is_total")
+        )
         # frappe.throw(str(self.data))
         return total_bal_qty, total_bal_alternative_uom_qty
-
 
     def prepare_opening_data_from_closing_balance(self) -> None:
         self.opening_data = frappe._dict({})
@@ -183,7 +207,6 @@ class StockBalanceReport:
 
             # Append report data to the data list
             self.data.append(report_data)
-
 
     def get_item_warehouse_map(self):
         item_warehouse_map = {}
@@ -418,6 +441,42 @@ class StockBalanceReport:
             query = query.where(sle.posting_date <= self.to_date)
 
         return query
+
+    def get_warehouse_totals(self, data):
+        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0})
+
+        for entry in data:
+            key = entry["warehouse"]
+            if self.filters.get("include_uom"):
+                grouped_data[key]["bal_qty_alt"] += entry["bal_qty_alt"]
+            grouped_data[key]["bal_qty"] += entry["bal_qty"]
+
+        result = [
+            {
+                "item_code": f"Total - {key}",
+                "warehouse": f"Total - {key}",
+                "bal_qty": value["bal_qty"],
+                "bal_qty_alt": (
+                    value["bal_qty_alt"] if value.get("bal_qty_alt") else 0.0
+                ),
+                "is_total": True,
+            }
+            for key, value in grouped_data.items()
+        ]
+
+        for r in result:
+            self.data.append(r)
+
+        sorted_data = sorted(
+            self.data,
+            key=lambda x: (
+                x["warehouse"][8:]
+                if x["warehouse"].startswith("Total - ")
+                else x["warehouse"]
+            ),
+        )
+
+        self.data = sorted_data
 
     def get_columns(self):
         columns = [

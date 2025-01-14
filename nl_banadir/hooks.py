@@ -29,11 +29,10 @@ fixtures = [
 ]
 
 doc_events = {
-	"Sales Invoice": {
-		"before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.sales_invoice_before_submit",
-		
-	},
- "Purchase Invoice": {
+    "Sales Invoice": {
+        "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.sales_invoice_before_submit",
+    },
+    "Purchase Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
          "autoname":"nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
 
@@ -45,23 +44,22 @@ doc_events = {
         
     },
     "Journal Entry": {
-        "before_save":"nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
-},
-    "Production Plan":{
-        "autoname":"nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
-        "on_submit":"nl_banadir.banadir_customization_reports.controllers.production_plan.sync_sequence"
     },
-     "Work Order":{
-        "autoname":"nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
-        "before_save":"nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
-        "on_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_submit",
-        "on_update_after_submit":"nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
-
+    "Production Plan": {
+        "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
+        "on_submit": "nl_banadir.banadir_customization_reports.controllers.production_plan.sync_sequence",
     },
-     "Stock Entry":{
-         "before_save":"nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
-     }
+    "Work Order": {
+        "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
+        "on_submit": "nl_banadir.banadir_customization_reports.controllers.work_order.on_submit",
+        "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
+    },
+    "Stock Entry": {
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
+    },
 }
 
 # include js, css files in header of desk.html
@@ -120,10 +118,10 @@ doctype_js = {
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "nl_banadir.utils.jinja_methods",
-# 	"filters": "nl_banadir.utils.jinja_filters"
-# }
+jinja = {
+    "methods": "nl_banadir.banadir_customization_reports.utils.qr_code_generator.get_qr_code",
+    # "filters": "nl_banadir.utils.jinja_filters"
+}
 
 # Installation
 # ------------
@@ -288,4 +286,3 @@ doctype_js = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-

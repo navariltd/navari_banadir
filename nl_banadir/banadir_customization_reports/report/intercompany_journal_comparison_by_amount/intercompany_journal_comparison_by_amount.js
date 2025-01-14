@@ -91,7 +91,37 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       fieldname: "compare_by_amount",
       label: __("Compare By Amount"),
       fieldtype: "Check",
-      default: 0,
+      default: 1,
+    },
+    {
+      fieldname: "compare_randomly",
+      label: __("Compare Randomly"),
+      fieldtype: "Check",
+      default: 1,
+    },
+    {
+      fieldname: "ignore_exchange_gain_or_loss",
+      label: __("Ignore Exchange Gain Or Loss"),
+      fieldtype: "Check",
+      default: 1,
     },
   ],
+
+  formatter: function (value, row, column, data, default_formatter) {
+    value = default_formatter(value, row, column, data);
+
+    if (data && data.is_total) {
+      value = `<b>${value}</b>`;
+    }
+
+    if (data && data.is_opening) {
+      value = `<b><span style='color:green'>${value}</span></b>`;
+    }
+
+    if (data && data.highlight) {
+      value = `<span style='color:blue'>${value}</span>`;
+    }
+
+    return value;
+  },
 };
