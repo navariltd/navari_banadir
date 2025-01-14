@@ -34,9 +34,14 @@ doc_events = {
     },
     "Purchase Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
+         "autoname":"nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
+
+        
     },
     "Payment Entry": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.payment_entry_before_submit",
+        "autoname":"nl_banadir.banadir_customization_reports.controllers.payment_entry.auto_name",
+        
     },
     "Journal Entry": {
         "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
