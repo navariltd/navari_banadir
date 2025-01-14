@@ -9,58 +9,67 @@ from frappe.utils import flt
 
 
 def execute(filters: dict | None = None):
-	columns = get_columns()
-	data = get_data(filters)
+    columns = get_columns(filters)
+    data = get_data(filters)
 
-	return columns, data
+    return columns, data
 
 
-def get_columns() -> list[dict]:
-	return [
-		{
-			"fieldname": "transit_no_link", 
-			"label": "Transit Number", 
-			"fieldtype": "HTML", 
-			"width": 200
-		},
+def get_columns(filters: dict | None = None) -> list[dict]:
+    columns = [
         {
-			"fieldname": "name_link", 
-			"label": "Invoice Name", 
-			"fieldtype": "HTML", 
-			"width": 250
-		},
+            "fieldname": "transit_no_link", 
+            "label": "Transit Number", 
+            "fieldtype": "HTML", 
+            "width": 200
+        },
         {
-			"fieldname": "item_code", 
-			"label": "Item Code", 
-			"fieldtype": "Link",
+            "fieldname": "name_link", 
+            "label": "Invoice Name", 
+            "fieldtype": "HTML", 
+            "width": 250
+        },
+        {
+            "fieldname": "item_code", 
+            "label": "Item Code", 
+            "fieldtype": "Link",
             "options": "Item",
-			"width": 250
-		},
+            "width": 250
+        },
         {
-			"fieldname": "uom", 
-			"label": "Item UOM", 
-			"fieldtype": "Data", 
-			"width": 120
-		},
+            "fieldname": "uom", 
+            "label": "Item UOM", 
+            "fieldtype": "Data", 
+            "width": 120
+        },
         {
-			"fieldname": "qty_in", 
-			"label": "Total Qty In", 
-			"fieldtype": "Float", 
-			"width": 120
-		},
+            "fieldname": "qty_in", 
+            "label": "Total Qty In", 
+            "fieldtype": "Float", 
+            "width": 120
+        },
         {
-			"fieldname": "qty_out", 
-			"label": "Total Qty Out", 
-			"fieldtype": "Float", 
-			"width": 120
-		},
+            "fieldname": "qty_out", 
+            "label": "Total Qty Out", 
+            "fieldtype": "Float", 
+            "width": 120
+        },
         {
-			"fieldname": "balance", 
-			"label": "Balance", 
-			"fieldtype": "Float", 
-			"width": 120
-		},
-	]
+            "fieldname": "balance", 
+            "label": "Balance", 
+            "fieldtype": "Float", 
+            "width": 120
+        },
+    ]
+    
+    if filters.get("container_no"):
+        columns.append({
+            "fieldname": "container_no",
+            "label": "Container No",
+            "fieldtype": "Data"
+        })
+    
+    return columns
 
 
 def get_data(filters) -> list[list]:
@@ -113,6 +122,7 @@ def get_data(filters) -> list[list]:
                 pii_agg.total_qty_in - Coalesce(sii_agg.total_qty_out, 0), 2
             ).as_("balance"),
             sii_agg.sales_invoices.as_("sales_invoices"),  # Already grouped
+            PurchaseInvoice.custom_container_no.as_("container_no")
         )
         .where(
             (PurchaseInvoice.custom_is_export_sale == 1)
@@ -174,6 +184,7 @@ def get_data(filters) -> list[list]:
             "qty_in": row['qty_in'],
             "qty_out": row['qty_out'],
             "balance": row['balance'],
+            "container_no": row['container_no'],
         })
 
         # Calculate totals for each transit number
@@ -211,6 +222,7 @@ def get_data(filters) -> list[list]:
                 "qty_in": totals['qty_in'],
                 "qty_out": totals['qty_out'],
                 "balance": totals['balance'],
+                "container_no": "",
             })
             
     # Initialize grand total variables
@@ -231,28 +243,29 @@ def get_data(filters) -> list[list]:
         "qty_in": grand_totals['qty_in'],
         "qty_out": grand_totals['qty_out'],
         "balance": grand_totals['balance'],
+        "container_no": "",
     })
 
     
     return final_data
 
 def convert_alternative_uom(data, filters):
-	alternative_uom = filters.get('alternative_uom')
-	
-	for row in data:
-		item_code = row.get('item_code')
-		
-		if item_code:
-			conversion_factor = get_conversion_factor(item_code, alternative_uom)
-			
-			for key, value in row.items():
-				if isinstance(value, (int, float)):
-					new_value = value / conversion_factor
-					row[key] = new_value 
-	
-	return data
+    alternative_uom = filters.get('alternative_uom')
+    
+    for row in data:
+        item_code = row.get('item_code')
+        
+        if item_code:
+            conversion_factor = get_conversion_factor(item_code, alternative_uom)
+            
+            for key, value in row.items():
+                if isinstance(value, (int, float)):
+                    new_value = value / conversion_factor
+                    row[key] = new_value 
+    
+    return data
 
 def get_conversion_factor(item_code, alternative_uom):
-	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
-	return uom_conversion or 1
+    uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+    return uom_conversion or 1
  
