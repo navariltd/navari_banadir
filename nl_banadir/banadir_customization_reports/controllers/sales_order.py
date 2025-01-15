@@ -36,9 +36,9 @@ def create_payment_entry(sales_order_name):
 		"reference_name": sales_order_name,
 		"total_amount": sales_order.grand_total,
 		"outstanding_amount": sales_order.grand_total,
-		"allocated_amount": sales_order.grand_total,
+		"allocated_amount": sales_order.custom_paid_amount,
 	})
-
+    
 	payment_entry.insert(ignore_permissions=True)
 	payment_entry.submit()
 	frappe.msgprint(_("Payment Entry {0} created successfully").format(payment_entry.name))
