@@ -44,8 +44,9 @@ doc_events = {
         
     },
     "Journal Entry": {
-        "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
-        "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
+        # "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
+        "before_submit": ["nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
+                          "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit"],
     },
     "Production Plan": {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
