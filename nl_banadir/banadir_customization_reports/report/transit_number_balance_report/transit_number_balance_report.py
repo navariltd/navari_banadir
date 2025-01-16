@@ -147,8 +147,8 @@ def get_data(filters) -> list[list]:
         query = query.where(PurchaseInvoice.currency == filters["currency"])
     if filters.get("company"):
         query = query.where(
-            PurchaseInvoice.company == filters["company"]
-            and TransitNumbers.company == filters["company"]
+            (PurchaseInvoice.company == filters["company"])
+            & (TransitNumbers.company == filters["company"])
         )
     if filters.get("branch"):
         query = query.where(PurchaseInvoice.branch == filters["branch"])
