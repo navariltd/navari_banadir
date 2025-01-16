@@ -124,7 +124,7 @@ def _execute(filters=None, additional_table_columns=None):
 			"exchange_rate": d.conversion_rate if d.conversion_rate !=1 else get_current_exchange_rate("USD", company_currency, d.posting_date),
 			"landed_cost_voucher_amount": flt(d.landed_cost_voucher_amount/ d.stock_qty),
 		"rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount / d.stock_qty),
-		"amount_plus_landed_cost": d.base_net_amount + flt(d.landed_cost_voucher_amount / d.stock_qty),
+		"amount_plus_landed_cost": d.base_net_amount + flt(d.landed_cost_voucher_amount),
 		"currency":presentation_currency,
 			}
 		row["stock_qty"] = flt(row["stock_qty"]) if row["stock_qty"] else 0
