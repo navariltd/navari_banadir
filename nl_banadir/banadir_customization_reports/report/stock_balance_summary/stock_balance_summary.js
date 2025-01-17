@@ -119,7 +119,7 @@ frappe.query_reports["Stock Balance Summary"] = {
       fieldname: "show_warehouse_totals",
       label: __("Show Warehouse Totals"),
       fieldtype: "Check",
-      default: 0,
+      default: 1,
     },
     {
       fieldname: "eliminate_zero_values",
