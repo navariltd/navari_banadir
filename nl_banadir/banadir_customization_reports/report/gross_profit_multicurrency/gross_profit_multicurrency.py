@@ -963,6 +963,7 @@ class GrossProfitGenerator:
 				`tabSales Invoice`.customer, `tabSales Invoice`.customer_group,
 				`tabSales Invoice`.territory, `tabSales Invoice Item`.item_code,
 				`tabSales Invoice`.branch,	`tabSales Invoice`.cost_center,
+				`tabSales Invoice`.total_qty,
 				`tabSales Invoice Item`.item_name, `tabSales Invoice Item`.description,
 				`tabSales Invoice Item`.warehouse, `tabSales Invoice Item`.item_group,
 				`tabSales Invoice Item`.brand, `tabSales Invoice Item`.so_detail,
@@ -1072,7 +1073,7 @@ class GrossProfitGenerator:
 				"brand": None,
 				"dn_detail": None,
 				"delivery_note": None,
-				"qty": None,
+				"qty": row.total_qty,
 				"item_row": None,
 				"is_return": row.is_return,
 				"cost_center": row.cost_center,
@@ -1300,21 +1301,29 @@ def convert_currency_columns(data, filters):
 
 
 def convert_alternative_uom(data, filters):
-	alternative_uom = filters.get('alternative_uom')
-	
-	if filters.group_by =='Invoice':
-		
-		for row in data:
-			item_code = row['item_code']
-			
-			if item_code:
-				conversion_factor = get_conversion_factor(item_code, alternative_uom)
-				for key, value in row.items():
-					if key=='qty' and isinstance(value, (int, float)):
-						new_value = value / conversion_factor
-						row[key] = new_value 
-	
-	return data
+    alternative_uom = filters.get('alternative_uom')
+    group_by = filters.get('group_by')
+    
+    for row in data:
+        if group_by == 'Invoice':
+            item_code = row.get('item_code')
+            
+            if item_code and 'qty' in row:
+                qty = row['qty']
+                if isinstance(qty, (int, float)):
+                    conversion_factor = get_conversion_factor(item_code, alternative_uom)
+                    row['qty'] = qty / conversion_factor
+        
+        elif group_by == 'Item Code':
+            if len(row) > 4: 
+                qty = row[4]
+                
+                if isinstance(qty, (int, float)):
+                    conversion_factor = get_conversion_factor(row[0], alternative_uom)
+                    row[4] = qty / conversion_factor
+    
+    return data
+
 
 def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
