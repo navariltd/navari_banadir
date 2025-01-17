@@ -1,17 +1,17 @@
 frappe.ui.form.on('Payment Entry', {
-    mode_of_payment: function(frm) {
-        if (frm.doc.mode_of_payment) {
+    paid_from: function(frm) {
+        if (frm.doc.paid_from) {
             frappe.call({
                 method: 'frappe.client.get',
                 args: {
-                    doctype: 'Mode of Payment',
-                    name: frm.doc.mode_of_payment
+                    doctype: 'Account',
+                    name: frm.doc.paid_from
                 },
                 callback: function(response) {
-                    let mode_of_payment = response.message;
+                    let paid_from = response.message;
                     
-                    if (mode_of_payment && mode_of_payment.type === 'Bank' && !frm.doc.reference_no) {
-                        generate_unique_cheque_number(frm);
+                    if (paid_from && paid_from.account_type === 'Bank' && !frm.doc.reference_no) {
+                        generate_unique_cheque_number(frm, paid_from.name);
                     }
                 }
             });
@@ -19,8 +19,8 @@ frappe.ui.form.on('Payment Entry', {
     }
 });
 
-function generate_unique_cheque_number(frm) {
-    let reference_no = 'CHEQ-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+function generate_unique_cheque_number(frm, account_name) {
+    let reference_no = account_name.substring(0, 4).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
     
     frappe.call({
         method: 'frappe.client.get_list',
