@@ -6,9 +6,11 @@ from typing import TypedDict
 import frappe
 import erpnext
 import copy
-from frappe.query_builder import DocType, Case
+from frappe.query_builder import DocType, Case, Field
 from frappe.utils import getdate
 from erpnext.accounts.report.utils import convert
+
+from collections import defaultdict
 
 
 class InterCompanyFilter(TypedDict):
@@ -40,10 +42,6 @@ class InterCompanyPartiesMatchReport:
         if not self.columns:
             self.columns = self.get_columns()
 
-        # if self.compare_by_amount:
-        #     data = self.compare_journals_by_amount()
-        # else:
-        #     data = self.get_intercompany_journals()
         if (
             not self.filters.get("compare_by_amount")
             and self.filters.get("reference_company")
@@ -52,8 +50,10 @@ class InterCompanyPartiesMatchReport:
             self.get_intercompany_journals()
 
         if self.filters.get("compare_by_amount"):
-            # self.data = []
             self.compare_journals_by_amount()
+
+        if self.filters.get("party_type"):
+            self.get_invoice_data()
 
         self.calculate_closing_balance()
 
@@ -81,13 +81,6 @@ class InterCompanyPartiesMatchReport:
                 "options": "Journal Entry",
                 "width": "200",
             },
-            # {
-            #     "label": "Total Debit or Credit",
-            #     "fieldname": "total_debit_or_credit",
-            #     "fieldtype": "Currency",
-            #     "precision": 2,
-            #     "width": "200",
-            # },
             {
                 "label": "Reference Company Debit",
                 "fieldname": "reference_company_debit",
@@ -148,13 +141,6 @@ class InterCompanyPartiesMatchReport:
                 "precision": 2,
                 "width": "200",
             },
-            # {
-            #     "label": "Total Credit or Debit",
-            #     "fieldname": "total_credit_or_debit",
-            #     "fieldtype": "Currency",
-            #     "precision": 2,
-            #     "width": "200",
-            # },
             {
                 "label": "Representative Company Closing Balance",
                 "fieldname": "representative_company_closing_balance",
@@ -163,6 +149,91 @@ class InterCompanyPartiesMatchReport:
             },
         ]
 
+        if self.filters.get("party_type") == "Customer":
+            columns.insert(
+                5,
+                {
+                    "label": "Sales Invoice",
+                    "fieldname": "s_name",
+                    "fieldtype": "Link",
+                    "options": "Sales Invoice",
+                    "width": "100",
+                },
+            )
+
+            columns.insert(
+                6,
+                {
+                    "label": "Sales Invoice Total",
+                    "fieldname": "s_invoice_total",
+                    "fieldtype": "Currency",
+                    "width": "100",
+                },
+            )
+
+            columns.insert(
+                -1,
+                {
+                    "label": "Purchase Invoice Total",
+                    "fieldname": "p_invoice_total",
+                    "fieldtype": "Currency",
+                    "width": "100",
+                },
+            )
+
+            columns.insert(
+                -2,
+                {
+                    "label": "Purchase Invoice",
+                    "fieldname": "p_name",
+                    "fieldtype": "Link",
+                    "options": "Purchase Invoice",
+                    "width": "100",
+                },
+            )
+
+        if self.filters.get("party_type") == "Supplier":
+            columns.insert(
+                5,
+                {
+                    "label": "Purchase Invoice",
+                    "fieldname": "p_name",
+                    "fieldtype": "Link",
+                    "options": "Purchase Invoice",
+                    "width": "100",
+                },
+            )
+
+            columns.insert(
+                6,
+                {
+                    "label": "Purchase Invoice Total",
+                    "fieldname": "p_invoice_total",
+                    "fieldtype": "Currency",
+                    "width": "100",
+                },
+            )
+
+            columns.insert(
+                -1,
+                {
+                    "label": "Sales Invoice Total",
+                    "fieldname": "s_invoice_total",
+                    "fieldtype": "Currency",
+                    "width": "100",
+                },
+            )
+
+            columns.insert(
+                -2,
+                {
+                    "label": "Sales Invoice",
+                    "fieldname": "s_name",
+                    "fieldtype": "Link",
+                    "options": "Sales Invoice",
+                    "width": "100",
+                },
+            )
         return columns
 
     def get_intercompany_journals(self):
@@ -171,26 +242,6 @@ class InterCompanyPartiesMatchReport:
 
         if self.filters.get("reference_company") and self.filters.get("party_type"):
             party_type = self.filters.get("party_type")
-
-            # total_amount = (
-            #     Case()
-            #     .when(
-            #         Journal_Entry_Account.debit_in_account_currency > 0,
-            #         Journal_Entry_Account.debit_in_account_currency,
-            #     )
-            #     .else_(Journal_Entry_Account.credit_in_account_currency)
-            #     .as_("total_debit_or_credit")
-            #     if party_type == "Customer"
-            #     else (
-            #         Case()
-            #         .when(
-            #             Journal_Entry_Account.credit_in_account_currency > 0,
-            #             Journal_Entry_Account.credit_in_account_currency,
-            #         )
-            #         .else_(Journal_Entry_Account.debit_in_account_currency)
-            #         .as_("total_debit_or_credit")
-            #     )
-            # )
 
             query = (
                 frappe.qb.from_(Journal_Entry_Account)
@@ -201,7 +252,6 @@ class InterCompanyPartiesMatchReport:
                     Journal_Entry_Account.party.as_("representative_company"),
                     Journal_Entry.name.as_("reference_journal"),
                     Journal_Entry.posting_date.as_("reference_journal_posting_date"),
-                    # total_amount,
                     Journal_Entry_Account.debit_in_account_currency.as_(
                         "reference_company_debit"
                     ),
@@ -222,7 +272,6 @@ class InterCompanyPartiesMatchReport:
                     & (Journal_Entry.posting_date <= self.to_date)
                 )
                 .where(
-                    # (Journal_Entry.voucher_type == "Inter Company Journal Entry")
                     (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                     & (Journal_Entry.docstatus == 1)
                 )
@@ -257,7 +306,6 @@ class InterCompanyPartiesMatchReport:
                             "reference_company": journal["reference_company"],
                             "representative_company": journal["representative_company"],
                             "reference_journal": journal_item,
-                            # "total_debit_or_credit": journal["total_debit_or_credit"],
                             "reference_company_debit": journal[
                                 "reference_company_debit"
                             ],
@@ -282,9 +330,6 @@ class InterCompanyPartiesMatchReport:
                         merged_journal["party_journal_posting_date"] = party_data[
                             0
                         ].party_journal_posting_date
-                        # merged_journal["total_credit_or_debit"] = party_data[
-                        #     0
-                        # ].total_credit_or_debit
                         merged_journal["representative_company_debit"] = party_data[
                             0
                         ].representative_company_debit
@@ -305,10 +350,6 @@ class InterCompanyPartiesMatchReport:
                 self.filters.get("compare_by_amount") == False
                 party_journals = self.get_journal_entries()
                 opening_entries = self.get_reverse_opening_entries()
-                print("OPENING ENTRIES", opening_entries)
-
-                # if journals and not party_journals:
-                #     self.process_reference_journals(journals=journals)
 
                 if party_journals and not journals:
                     if opening_entries:
@@ -584,7 +625,6 @@ class InterCompanyPartiesMatchReport:
             .join(Journal_Entry)
             .on(Journal_Entry_Account.parent == Journal_Entry.name)
             .select(
-                # total_amount,
                 Journal_Entry.name.as_("party_journal"),
                 Journal_Entry_Account.debit_in_account_currency.as_(
                     "representative_company_debit"
@@ -603,7 +643,6 @@ class InterCompanyPartiesMatchReport:
                 & (Journal_Entry.posting_date <= self.to_date)
             )
             .where(
-                # (Journal_Entry.voucher_type != "Opening Entry")&
                 (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                 & (Journal_Entry.docstatus == 1)
             )
@@ -641,32 +680,11 @@ class InterCompanyPartiesMatchReport:
             "Customer" if self.filters.get("party_type") == "Supplier" else "Supplier"
         )
 
-        # total_amount = (
-        #     Case()
-        #     .when(
-        #         Journal_Entry_Account.credit_in_account_currency > 0,
-        #         Journal_Entry_Account.credit_in_account_currency,
-        #     )
-        #     .else_(Journal_Entry_Account.debit_in_account_currency)
-        #     .as_("total_credit_or_debit")
-        #     if party_type == "Supplier"
-        #     else (
-        #         Case()
-        #         .when(
-        #             Journal_Entry_Account.debit_in_account_currency > 0,
-        #             Journal_Entry_Account.debit_in_account_currency,
-        #         )
-        #         .else_(Journal_Entry_Account.credit_in_account_currency)
-        #         .as_("total_credit_or_debit")
-        #     )
-        # )
-
         query = (
             frappe.qb.from_(Journal_Entry_Account)
             .join(Journal_Entry)
             .on(Journal_Entry_Account.parent == journal.get("party_journal"))
             .select(
-                # total_amount,
                 Journal_Entry_Account.debit_in_account_currency.as_(
                     "representative_company_debit"
                 ),
@@ -676,13 +694,11 @@ class InterCompanyPartiesMatchReport:
                 Journal_Entry.posting_date.as_("party_journal_posting_date"),
             )
             .where(Journal_Entry_Account.party_type == party_type)
-            # .where(Journal_Entry.company == journal.get("representative_company"))
             .where(
                 (Journal_Entry.posting_date >= self.from_date)
                 & (Journal_Entry.posting_date <= self.to_date)
             )
             .where(
-                # (Journal_Entry.voucher_type == "Inter Company Journal Entry")
                 (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                 & (Journal_Entry.docstatus == 1)
             )
@@ -697,104 +713,12 @@ class InterCompanyPartiesMatchReport:
 
         return query.run(as_dict=True)
 
-    # def filter_by_to_company(self):
-    #     Journal_Entry = DocType("Journal Entry")
-
-    #     query = (
-    #         frappe.qb.from_(Journal_Entry)
-    #         .select(
-    #             Journal_Entry.company.as_("from_company"),
-    #             Journal_Entry.name.as_("journal"),
-    #             Journal_Entry.inter_company_journal_entry_reference.as_(
-    #                 "customer_journal"
-    #             ),
-    #             Journal_Entry.total_amount.as_("total_debit"),
-    #             "posting_date",
-    #         )
-    #         .where(
-    #             (Journal_Entry.posting_date >= self.from_date)
-    #             & (Journal_Entry.posting_date <= self.to_date)
-    #         )
-    #         .where(
-    #             (Journal_Entry.company == self.filters.get("from_company"))
-    #             & (Journal_Entry.voucher_type == "Inter Company Journal Entry")
-    #             & (Journal_Entry.docstatus == 1)
-    #             & (Journal_Entry.inter_company_journal_entry_reference != "")
-    #         )
-    #     )
-
-    #     journals = query.run(as_dict=True)
-
-    #     for journal in journals:
-    #         new_journal = (
-    #             frappe.qb.from_(Journal_Entry)
-    #             .select(
-    #                 Journal_Entry.company.as_("to_company"),
-    #                 Journal_Entry.total_amount.as_("total_credit"),
-    #             )
-    #             .where(
-    #                 (Journal_Entry.name == journal.customer_journal)
-    #                 & (Journal_Entry.company == self.filters.get("to_company"))
-    #             )
-    #             .run(as_dict=True)
-    #         )
-
-    #         if len(new_journal) > 0:
-    #             merged_journal = journal.copy()
-    #             merged_journal["to_company"] = new_journal[0].to_company
-    #             merged_journal["total_credit"] = new_journal[0].total_credit
-    #             self.data.append(merged_journal)
-
-    # def get_journals(self, company_key, journal_key, amount_field):
-    #     Journal_Entry = DocType("Journal Entry")
-    #     Journal_Entry_Account = DocType("Journal Entry Account")
-
-    #     query = (
-    #         frappe.qb.from_(Journal_Entry_Account)
-    #         .join(Journal_Entry)
-    #         .on(Journal_Entry_Account.parent == Journal_Entry.name)
-    #         .select(
-    #             Journal_Entry_Account.parent.as_(journal_key),
-    #             Journal_Entry.company.as_(company_key),
-    #             Journal_Entry.total_amount.as_(amount_field),
-    #         )
-    #         .where(Journal_Entry_Account.party_type != "")
-    #         .where(Journal_Entry.company == self.filters.get(company_key))
-    #         .where(
-    #             (Journal_Entry.posting_date >= self.from_date)
-    #             & (Journal_Entry.posting_date <= self.to_date)
-    #         )
-    #         .where(Journal_Entry.docstatus == 1)
-    #     )
-
-    #     return query.run(as_dict=True)
-
     def compare_journals_by_amount(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
         Journal_Entry = DocType("Journal Entry")
 
         if self.filters.get("reference_company") and self.filters.get("party_type"):
             party_type = self.filters.get("party_type")
-
-            # total_amount = (
-            #     Case()
-            #     .when(
-            #         Journal_Entry_Account.debit_in_account_currency > 0,
-            #         Journal_Entry_Account.debit_in_account_currency,
-            #     )
-            #     .else_(Journal_Entry_Account.credit_in_account_currency)
-            #     .as_("total_debit_or_credit")
-            #     if party_type == "Customer"
-            #     else (
-            #         Case()
-            #         .when(
-            #             Journal_Entry_Account.credit_in_account_currency > 0,
-            #             Journal_Entry_Account.credit_in_account_currency,
-            #         )
-            #         .else_(Journal_Entry_Account.debit_in_account_currency)
-            #         .as_("total_debit_or_credit")
-            #     )
-            # )
 
             query = (
                 frappe.qb.from_(Journal_Entry_Account)
@@ -813,9 +737,6 @@ class InterCompanyPartiesMatchReport:
                         "reference_company_credit"
                     ),
                     Journal_Entry.voucher_type,
-                    # Journal_Entry.inter_company_journal_entry_reference.as_(
-                    #     "party_journal"
-                    # ),
                 )
                 .where(
                     Journal_Entry_Account.party_type == self.filters.get("party_type")
@@ -826,7 +747,6 @@ class InterCompanyPartiesMatchReport:
                     & (Journal_Entry.posting_date <= self.to_date)
                 )
                 .where(
-                    # (Journal_Entry.voucher_type == "Inter Company Journal Entry")
                     (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                     & (Journal_Entry.docstatus == 1)
                 )
@@ -846,28 +766,6 @@ class InterCompanyPartiesMatchReport:
 
             if self.filters.get("compare_by_amount"):
                 party_type = "Supplier" if party_type == "Customer" else "Customer"
-
-                # amount_journals = []
-
-                # total_amount = (
-                #     Case()
-                #     .when(
-                #         Journal_Entry_Account.credit_in_account_currency > 0,
-                #         Journal_Entry_Account.credit_in_account_currency,
-                #     )
-                #     .else_(Journal_Entry_Account.debit_in_account_currency)
-                #     .as_("total_credit_or_debit")
-                #     if party_type == "Supplier"
-                #     else (
-                #         Case()
-                #         .when(
-                #             Journal_Entry_Account.debit_in_account_currency > 0,
-                #             Journal_Entry_Account.debit_in_account_currency,
-                #         )
-                #         .else_(Journal_Entry_Account.credit_in_account_currency)
-                #         .as_("total_credit_or_debit")
-                #     )
-                # )
 
                 if party_type == "Customer":
                     amount_query = (
@@ -895,16 +793,11 @@ class InterCompanyPartiesMatchReport:
                             Journal_Entry_Account.party
                             == self.filters.get("reference_company")
                         )
-                        # .where(
-                        #     Journal_Entry.company
-                        #     == self.filters.get("reference_company")
-                        # )
                         .where(
                             (Journal_Entry.posting_date >= self.from_date)
                             & (Journal_Entry.posting_date <= self.to_date)
                         )
                         .where(
-                            # (Journal_Entry.voucher_type != "Opening Entry")&
                             (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                             & (Journal_Entry.docstatus == 1)
                         )
@@ -947,16 +840,11 @@ class InterCompanyPartiesMatchReport:
                             Journal_Entry_Account.party
                             == self.filters.get("reference_company")
                         )
-                        # .where(
-                        #     Journal_Entry.company
-                        #     == self.filters.get("reference_company")
-                        # )
                         .where(
                             (Journal_Entry.posting_date >= self.from_date)
                             & (Journal_Entry.posting_date <= self.to_date)
                         )
                         .where(
-                            # (Journal_Entry.voucher_type != "Opening Entry")&
                             (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
                             & (Journal_Entry.docstatus == 1)
                         )
@@ -981,9 +869,6 @@ class InterCompanyPartiesMatchReport:
                 for journal in journals:
                     journal_item = journal["reference_journal"]
                     if journal_item in merged_reference_journals:
-                        # merged_reference_journals[journal_item][
-                        #     "total_debit_or_credit"
-                        # ] += journal["total_debit_or_credit"]
                         merged_reference_journals[journal_item][
                             "reference_company_credit"
                         ] += journal["reference_company_credit"]
@@ -999,7 +884,6 @@ class InterCompanyPartiesMatchReport:
                             "reference_journal_posting_date": journal[
                                 "reference_journal_posting_date"
                             ],
-                            # "total_debit_or_credit": journal["total_debit_or_credit"],
                             "reference_company_credit": journal[
                                 "reference_company_credit"
                             ],
@@ -1141,7 +1025,6 @@ class InterCompanyPartiesMatchReport:
 
                             if updated_journal not in self.data:
                                 self.data.append(updated_journal)
-                        # else:
 
                     if not matched:
                         if journal.get("voucher_type") != "Opening Entry":
@@ -1160,7 +1043,6 @@ class InterCompanyPartiesMatchReport:
                     ):
                         updated_data = {
                             "highlight": True,
-                            # "representative_company": item.get("company"),  # Check how this works
                             "reference_company_debit": None,
                             "reference_company_credit": None,
                         }
@@ -1231,7 +1113,6 @@ class InterCompanyPartiesMatchReport:
             .join(Journal_Entry)
             .on(Journal_Entry_Account.parent == Journal_Entry.name)
             .select(
-                # total_amount,
                 Journal_Entry.name.as_("party_journal"),
                 Journal_Entry_Account.debit_in_account_currency.as_(
                     "representative_company_debit"
@@ -1275,6 +1156,119 @@ class InterCompanyPartiesMatchReport:
 
         return list(merged_journals.values())
 
+    def invoice_query(self, invoice_doctype, invoice_type):
+        # Ensure the invoice_type is lowercased for comparisons
+        invoice_type = invoice_type.lower()
+
+        company_field = Field("company").as_(
+            "s_company" if invoice_type == "sales" else "p_company"
+        )
+
+        total_field = Field("grand_total").as_(
+            "p_invoice_total" if invoice_type == "purchase" else "s_invoice_total"
+        )
+
+        party_field = (
+            Field("supplier") if invoice_type == "purchase" else Field("customer")
+        )
+
+        voucher = Field("name").as_("s_name" if invoice_type == "sales" else "p_name")
+
+        # Build the query using Frappe Query Builder
+        query = frappe.qb.from_(invoice_doctype).select(
+            company_field, total_field, party_field, voucher
+        )
+
+        if invoice_type == "sales" and self.filters.get("party_type") == "Customer":
+            query = query.where(
+                invoice_doctype.company == self.filters.get("reference_company")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(
+                    invoice_doctype.customer == self.filters.get("party")[0]
+                )
+
+        if invoice_type == "purchase" and self.filters.get("party_type") == "Customer":
+            query = query.where(
+                invoice_doctype.supplier == self.filters.get("reference_company")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(
+                    invoice_doctype.company == self.filters.get("party")[0]
+                )
+
+        if invoice_type == "sales" and self.filters.get("party_type") == "Supplier":
+            query = query.where(
+                invoice_doctype.customer == self.filters.get("reference_company")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(
+                    invoice_doctype.company == self.filters.get("party")[0]
+                )
+
+        if invoice_type == "purchase" and self.filters.get("party_type") == "Supplier":
+            query = query.where(
+                invoice_doctype.company == self.filters.get("reference_company")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(
+                    invoice_doctype.supplier == self.filters.get("party")[0]
+                )
+
+        return query.where(
+            (invoice_doctype.posting_date >= self.from_date)
+            & (invoice_doctype.posting_date <= self.to_date)
+        ).run(as_dict=True)
+
+    def get_invoice_data(self):
+        SI_DOCTYPE = DocType("Sales Invoice")
+        PI_DOCTYPE = DocType("Purchase Invoice")
+
+        s_invoices = self.invoice_query(SI_DOCTYPE, "sales")
+        p_invoices = self.invoice_query(PI_DOCTYPE, "purchase")
+
+        combined_invoices = self.get_combined_dicts_with_missing_values(
+            s_invoices, p_invoices
+        )
+
+        opening_entries_and_totals = self.get_opening_entries_and_totals(self.data)
+
+        filtered_list = self.exclude_opening_entries_and_totals(self.data)
+        updated_data = self.get_combined_dicts_with_missing_values(
+            filtered_list, combined_invoices
+        )
+
+        for entry in opening_entries_and_totals:
+            updated_data.append(entry)
+
+        self.data = updated_data
+
+    def get_combined_dicts_with_missing_values(self, list_a, list_b):
+        combined = []
+        max_length = max(len(list_a), len(list_b))
+
+        list_a = list_a + ([{}] * (max_length - len(list_a)))
+        list_b = list_b + ([{}] * (max_length - len(list_b)))
+
+        for i in range(max_length):
+            keys_a = list_a[i].keys() if len(list_a) > 0 else {}
+            keys_b = list_b[i].keys() if len(list_b) > 0 else {}
+            new_dict = {key: list_a[i].get(key) for key in keys_a}
+            new_dict.update({key: list_b[i].get(key) for key in keys_b})
+            combined.append(new_dict)
+
+        return combined
+
+    def exclude_opening_entries_and_totals(self, dict_list):
+        return [d for d in dict_list if "is_opening" not in d and "is_total" not in d]
+
+    def get_opening_entries_and_totals(self, dict_list):
+        return [d for d in dict_list if "is_opening" in d or "is_total" in d]
+
 
 def convert_currency_fields(self, data, filters, company_key, amount_field):
     date = filters.get("to_date") or frappe.utils.now()
@@ -1292,8 +1286,3 @@ def convert_currency_fields(self, data, filters, company_key, amount_field):
         )
 
     return data
-
-
-# Exchange Gain or Loss
-# Difference Entry
-# Contra Entry
