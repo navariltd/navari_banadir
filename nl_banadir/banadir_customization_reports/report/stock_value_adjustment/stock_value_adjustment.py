@@ -125,6 +125,7 @@ def _execute(filters=None, additional_table_columns=None):
 			"landed_cost_voucher_amount": flt(d.landed_cost_voucher_amount/ d.stock_qty),
 		"rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount / d.stock_qty),
 		"amount_plus_landed_cost": d.base_net_amount + flt(d.landed_cost_voucher_amount),
+			"total_landed_cost": d.landed_cost_voucher_amount,
 		"currency":presentation_currency,
 			}
 		row["stock_qty"] = flt(row["stock_qty"]) if row["stock_qty"] else 0
@@ -398,6 +399,12 @@ def get_columns(additional_table_columns, filters):
 
 			"width": 100,
 		},
+  {
+		"label": _(f"Total LC ({presentation_currency})"),	
+		"fieldname": "total_landed_cost",
+		"fieldtype": "Currency",
+   			"options":"currency",
+	},
 	{
 		"label": _(f"Amount + LC ({presentation_currency})"),	
 		"fieldname": "amount_plus_landed_cost",
@@ -550,6 +557,8 @@ def convert_currency_fields(data, filters):
 			entry['rate_plus_landed_cost'] = convert(entry.get('rate_plus_landed_cost', 0), from_currency, to_currency, date)
 			entry['total_tax']=convert(entry.get('total_tax',0), from_currency, to_currency, date)
 			entry['total'] = convert(entry.get('total', 0), from_currency, to_currency, date)
+			entry["amount_plus_landed_cost"] = convert(entry.get("amount_plus_landed_cost", 0), from_currency, to_currency, date)
+			entry["total_landed_cost"] = convert(entry.get("total_landed_cost", 0), from_currency, to_currency, date)
 			if filters.get('presentation_currency') != 'USD':
 				entry['current_rate'] = convert(entry.get('current_rate', 0), from_currency, to_currency, date)
 				entry['current_rate_plus_landed_cost'] = convert(entry.get('current_rate_plus_landed_cost', 0), from_currency, to_currency, date)
@@ -650,6 +659,7 @@ def invoice_details(item_code, row, data, presentation_currency):
 	rate_plus_landed_cost = 0
 	landed_cost = 0
 	amount_plus_landed_cost = 0
+	total_landed_cost = 0
 
 	if invoice_code:
 		for d in data:
@@ -663,6 +673,7 @@ def invoice_details(item_code, row, data, presentation_currency):
 				rate_plus_landed_cost += d.get("rate_plus_landed_cost")
 				landed_cost += d.get("landed_cost_voucher_amount")
 				amount_plus_landed_cost += d.get("amount_plus_landed_cost")
+				total_landed_cost += d.get("total_landed_cost")
 	row["currency"] = presentation_currency
 	row['stock_qty'] = stock_qty
 	row["current_total"] = current_total
@@ -672,5 +683,6 @@ def invoice_details(item_code, row, data, presentation_currency):
 	row["rate_plus_landed_cost"] = rate_plus_landed_cost
 	row["landed_cost_voucher_amount"] = landed_cost
 	row["amount_plus_landed_cost"] = amount_plus_landed_cost
+	row["total_landed_cost"] = total_landed_cost
  
 	return data
