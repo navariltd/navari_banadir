@@ -816,6 +816,49 @@ class InterCompanyPartiesMatchReport:
 
         return query.run(as_dict=True)
 
+    def get_amount_query(self, Journal_Entry, Journal_Entry_Account, party_type):
+        amount_query = (
+            frappe.qb.from_(Journal_Entry_Account)
+            .join(Journal_Entry)
+            .on(Journal_Entry_Account.parent == Journal_Entry.name)
+            .select(
+                Journal_Entry.company.as_("company"),
+                # Journal_Entry_Account.party.as_("representative_company"),
+                Journal_Entry.name.as_("party_journal"),
+                Journal_Entry.posting_date.as_("party_journal_posting_date"),
+                # total_amount,
+                Journal_Entry_Account.debit_in_account_currency.as_(
+                    "representative_company_debit"
+                ),
+                Journal_Entry_Account.credit_in_account_currency.as_(
+                    "representative_company_credit"
+                ),
+                Journal_Entry.voucher_type,
+            )
+            .where(Journal_Entry_Account.party_type == party_type)
+            .where(Journal_Entry_Account.party == self.filters.get("reference_company"))
+            .where(
+                (Journal_Entry.posting_date >= self.from_date)
+                & (Journal_Entry.posting_date <= self.to_date)
+            )
+            .where(
+                (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
+                & (Journal_Entry.docstatus == 1)
+            )
+        )
+
+        if self.filters.get("party"):
+            amount_query = amount_query.where(
+                Journal_Entry.company == self.filters.get("party")[0]
+            )
+
+        if self.filters.get("ignore_exchange_gain_or_loss"):
+            amount_query = amount_query.where(
+                Journal_Entry.voucher_type != "Exchange Gain Or Loss"
+            )
+
+        return amount_query
+
     def compare_journals_by_amount(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
         Journal_Entry = DocType("Journal Entry")
@@ -871,101 +914,17 @@ class InterCompanyPartiesMatchReport:
                 party_type = "Supplier" if party_type == "Customer" else "Customer"
 
                 if party_type == "Customer":
-                    ######################### START
-                    amount_query = (
-                        frappe.qb.from_(Journal_Entry_Account)
-                        .join(Journal_Entry)
-                        .on(Journal_Entry_Account.parent == Journal_Entry.name)
-                        .select(
-                            Journal_Entry.company.as_("company"),
-                            # Journal_Entry_Account.party.as_("representative_company"),
-                            Journal_Entry.name.as_("party_journal"),
-                            Journal_Entry.posting_date.as_(
-                                "party_journal_posting_date"
-                            ),
-                            # total_amount,
-                            Journal_Entry_Account.debit_in_account_currency.as_(
-                                "representative_company_debit"
-                            ),
-                            Journal_Entry_Account.credit_in_account_currency.as_(
-                                "representative_company_credit"
-                            ),
-                            Journal_Entry.voucher_type,
-                        )
-                        .where(Journal_Entry_Account.party_type == party_type)
-                        .where(
-                            Journal_Entry_Account.party
-                            == self.filters.get("reference_company")
-                        )
-                        .where(
-                            (Journal_Entry.posting_date >= self.from_date)
-                            & (Journal_Entry.posting_date <= self.to_date)
-                        )
-                        .where(
-                            (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
-                            & (Journal_Entry.docstatus == 1)
-                        )
+                    amount_query = self.get_amount_query(
+                        Journal_Entry, Journal_Entry_Account, party_type
                     )
-
-                    if self.filters.get("party"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.company == self.filters.get("party")[0]
-                        )
-
-                    if self.filters.get("ignore_exchange_gain_or_loss"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.voucher_type != "Exchange Gain Or Loss"
-                        )
 
                     self.amount_journals = amount_query.run(as_dict=True)
                 else:
-                    amount_query = (
-                        frappe.qb.from_(Journal_Entry_Account)
-                        .join(Journal_Entry)
-                        .on(Journal_Entry_Account.parent == Journal_Entry.name)
-                        .select(
-                            Journal_Entry.company.as_("company"),
-                            # Journal_Entry_Account.party.as_("representative_company"),
-                            Journal_Entry.name.as_("party_journal"),
-                            Journal_Entry.posting_date.as_(
-                                "party_journal_posting_date"
-                            ),
-                            # total_amount,
-                            Journal_Entry_Account.debit_in_account_currency.as_(
-                                "representative_company_debit"
-                            ),
-                            Journal_Entry_Account.credit_in_account_currency.as_(
-                                "representative_company_credit"
-                            ),
-                            Journal_Entry.voucher_type,
-                        )
-                        .where(Journal_Entry_Account.party_type == party_type)
-                        .where(
-                            Journal_Entry_Account.party
-                            == self.filters.get("reference_company")
-                        )
-                        .where(
-                            (Journal_Entry.posting_date >= self.from_date)
-                            & (Journal_Entry.posting_date <= self.to_date)
-                        )
-                        .where(
-                            (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
-                            & (Journal_Entry.docstatus == 1)
-                        )
+                    amount_query = self.get_amount_query(
+                        Journal_Entry, Journal_Entry_Account, party_type
                     )
 
-                    if self.filters.get("party"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.company == self.filters.get("party")[0]
-                        )
-
-                    if self.filters.get("ignore_exchange_gain_or_loss"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.voucher_type != "Exchange Gain Or Loss"
-                        )
-
                     self.amount_journals = amount_query.run(as_dict=True)
-            ######################################## END
             merged_reference_journals = {}
             merged_party_journals = {}
 
@@ -1378,8 +1337,6 @@ class InterCompanyPartiesMatchReport:
                     updated_data.insert(0, entry)
                 else:
                     updated_data.append(entry)
-
-            # sorted_data = sorted(updated_data, key=lambda x: x.get("is_opening"))
 
             self.data = updated_data
 
