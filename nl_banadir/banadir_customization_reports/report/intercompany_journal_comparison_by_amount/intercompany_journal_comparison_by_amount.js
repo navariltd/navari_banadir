@@ -74,19 +74,6 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       reqd: 1,
       default: frappe.datetime.get_today(),
     },
-    // {
-    //   fieldname: "journal",
-    //   label: __("Journal"),
-    //   fieldtype: "Link",
-    //   options: "Journal Entry",
-    //   get_query: function () {
-    //     return {
-    //       filters: {
-    //         voucher_type: "Inter Company Journal Entry",
-    //       },
-    //     };
-    //   },
-    // },
     {
       fieldname: "compare_by_amount",
       label: __("Compare By Amount"),
@@ -104,6 +91,12 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       label: __("Ignore Exchange Gain Or Loss"),
       fieldtype: "Check",
       default: 1,
+    },
+    {
+      fieldname: "invoice_only",
+      label: __("Invoice Only"),
+      fieldtype: "Check",
+      default: 0,
     },
   ],
 
