@@ -19,7 +19,7 @@ def create_todo_and_share(doc, party_doc, reference_type):
         user = email.user
         if user:
             frappe.share.add_docshare(
-                doc.doctype, doc.name, user, write=1, submit=1, share=1, flags={"ignore_share_permission": True}
+                doc.doctype, doc.name, user, write=0, submit=0, share=0, flags={"ignore_share_permission": True}
             )
 
 def sales_invoice_before_submit(doc, method=None):
