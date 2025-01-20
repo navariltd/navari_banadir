@@ -22,6 +22,7 @@ class InterCompanyFilter(TypedDict):
     compare_by_amount: bool
     compare_randomly: bool
     ignore_exchange_gain_or_loss: bool
+    invoice_only: bool
 
 
 def execute(filters: InterCompanyFilter | None = None):
@@ -55,11 +56,16 @@ class InterCompanyPartiesMatchReport:
         if self.filters.get("party_type"):
             self.get_invoice_data()
 
-        self.calculate_closing_balance()
+        if not self.filters.get("invoice_only"):
+            self.calculate_closing_balance()
 
         return self.columns, self.data
 
     def get_columns(self):
+
+        if self.filters.get("invoice_only"):
+            return self.get_invoice_columns()
+
         columns = [
             {
                 "label": "Reference Journal Posting Date",
@@ -235,6 +241,103 @@ class InterCompanyPartiesMatchReport:
                 },
             )
         return columns
+
+    def get_invoice_columns(self):
+        if self.filters.get("invoice_only"):
+            columns = [
+                {
+                    "label": "Reference Company",
+                    "fieldname": "reference_company",
+                    "fieldtype": "Link",
+                    "options": "Company",
+                    "width": "200",
+                },
+                {
+                    "label": "Representative Company",
+                    "fieldname": "representative_company",
+                    "fieldtype": "Link",
+                    "options": "Company",
+                    "width": "200",
+                },
+            ]
+
+            if self.filters.get("party_type") == "Customer":
+                columns.insert(
+                    1,
+                    {
+                        "label": "Sales Invoice",
+                        "fieldname": "s_name",
+                        "fieldtype": "Link",
+                        "options": "Sales Invoice",
+                        "width": "100",
+                    },
+                )
+                columns.insert(
+                    2,
+                    {
+                        "label": "Sales Invoice Total",
+                        "fieldname": "s_invoice_total",
+                        "fieldtype": "Currency",
+                        "width": "100",
+                    },
+                )
+                columns.append(
+                    {
+                        "label": "Purchase Invoice",
+                        "fieldname": "p_name",
+                        "fieldtype": "Link",
+                        "options": "Purchase Invoice",
+                        "width": "100",
+                    },
+                )
+                columns.append(
+                    {
+                        "label": "Purchase Invoice Total",
+                        "fieldname": "p_invoice_total",
+                        "fieldtype": "Currency",
+                        "width": "100",
+                    },
+                )
+
+            if self.filters.get("party_type") == "Supplier":
+                columns.insert(
+                    1,
+                    {
+                        "label": "Purchase Invoice",
+                        "fieldname": "p_name",
+                        "fieldtype": "Link",
+                        "options": "Purchase Invoice",
+                        "width": "100",
+                    },
+                )
+                columns.insert(
+                    2,
+                    {
+                        "label": "Purchase Invoice Total",
+                        "fieldname": "p_invoice_total",
+                        "fieldtype": "Currency",
+                        "width": "100",
+                    },
+                )
+                columns.append(
+                    {
+                        "label": "Sales Invoice",
+                        "fieldname": "s_name",
+                        "fieldtype": "Link",
+                        "options": "Sales Invoice",
+                        "width": "100",
+                    },
+                )
+                columns.append(
+                    {
+                        "label": "Sales Invoice Total",
+                        "fieldname": "s_invoice_total",
+                        "fieldtype": "Currency",
+                        "width": "100",
+                    },
+                )
+
+            return columns
 
     def get_intercompany_journals(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
@@ -713,6 +816,49 @@ class InterCompanyPartiesMatchReport:
 
         return query.run(as_dict=True)
 
+    def get_amount_query(self, Journal_Entry, Journal_Entry_Account, party_type):
+        amount_query = (
+            frappe.qb.from_(Journal_Entry_Account)
+            .join(Journal_Entry)
+            .on(Journal_Entry_Account.parent == Journal_Entry.name)
+            .select(
+                Journal_Entry.company.as_("company"),
+                # Journal_Entry_Account.party.as_("representative_company"),
+                Journal_Entry.name.as_("party_journal"),
+                Journal_Entry.posting_date.as_("party_journal_posting_date"),
+                # total_amount,
+                Journal_Entry_Account.debit_in_account_currency.as_(
+                    "representative_company_debit"
+                ),
+                Journal_Entry_Account.credit_in_account_currency.as_(
+                    "representative_company_credit"
+                ),
+                Journal_Entry.voucher_type,
+            )
+            .where(Journal_Entry_Account.party_type == party_type)
+            .where(Journal_Entry_Account.party == self.filters.get("reference_company"))
+            .where(
+                (Journal_Entry.posting_date >= self.from_date)
+                & (Journal_Entry.posting_date <= self.to_date)
+            )
+            .where(
+                (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
+                & (Journal_Entry.docstatus == 1)
+            )
+        )
+
+        if self.filters.get("party"):
+            amount_query = amount_query.where(
+                Journal_Entry.company == self.filters.get("party")[0]
+            )
+
+        if self.filters.get("ignore_exchange_gain_or_loss"):
+            amount_query = amount_query.where(
+                Journal_Entry.voucher_type != "Exchange Gain Or Loss"
+            )
+
+        return amount_query
+
     def compare_journals_by_amount(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
         Journal_Entry = DocType("Journal Entry")
@@ -768,100 +914,17 @@ class InterCompanyPartiesMatchReport:
                 party_type = "Supplier" if party_type == "Customer" else "Customer"
 
                 if party_type == "Customer":
-                    amount_query = (
-                        frappe.qb.from_(Journal_Entry_Account)
-                        .join(Journal_Entry)
-                        .on(Journal_Entry_Account.parent == Journal_Entry.name)
-                        .select(
-                            Journal_Entry.company.as_("company"),
-                            # Journal_Entry_Account.party.as_("representative_company"),
-                            Journal_Entry.name.as_("party_journal"),
-                            Journal_Entry.posting_date.as_(
-                                "party_journal_posting_date"
-                            ),
-                            # total_amount,
-                            Journal_Entry_Account.debit_in_account_currency.as_(
-                                "representative_company_debit"
-                            ),
-                            Journal_Entry_Account.credit_in_account_currency.as_(
-                                "representative_company_credit"
-                            ),
-                            Journal_Entry.voucher_type,
-                        )
-                        .where(Journal_Entry_Account.party_type == party_type)
-                        .where(
-                            Journal_Entry_Account.party
-                            == self.filters.get("reference_company")
-                        )
-                        .where(
-                            (Journal_Entry.posting_date >= self.from_date)
-                            & (Journal_Entry.posting_date <= self.to_date)
-                        )
-                        .where(
-                            (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
-                            & (Journal_Entry.docstatus == 1)
-                        )
+                    amount_query = self.get_amount_query(
+                        Journal_Entry, Journal_Entry_Account, party_type
                     )
-
-                    if self.filters.get("party"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.company == self.filters.get("party")[0]
-                        )
-
-                    if self.filters.get("ignore_exchange_gain_or_loss"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.voucher_type != "Exchange Gain Or Loss"
-                        )
 
                     self.amount_journals = amount_query.run(as_dict=True)
                 else:
-                    amount_query = (
-                        frappe.qb.from_(Journal_Entry_Account)
-                        .join(Journal_Entry)
-                        .on(Journal_Entry_Account.parent == Journal_Entry.name)
-                        .select(
-                            Journal_Entry.company.as_("company"),
-                            # Journal_Entry_Account.party.as_("representative_company"),
-                            Journal_Entry.name.as_("party_journal"),
-                            Journal_Entry.posting_date.as_(
-                                "party_journal_posting_date"
-                            ),
-                            # total_amount,
-                            Journal_Entry_Account.debit_in_account_currency.as_(
-                                "representative_company_debit"
-                            ),
-                            Journal_Entry_Account.credit_in_account_currency.as_(
-                                "representative_company_credit"
-                            ),
-                            Journal_Entry.voucher_type,
-                        )
-                        .where(Journal_Entry_Account.party_type == party_type)
-                        .where(
-                            Journal_Entry_Account.party
-                            == self.filters.get("reference_company")
-                        )
-                        .where(
-                            (Journal_Entry.posting_date >= self.from_date)
-                            & (Journal_Entry.posting_date <= self.to_date)
-                        )
-                        .where(
-                            (Journal_Entry.voucher_type != "Exchange Rate Revaluation")
-                            & (Journal_Entry.docstatus == 1)
-                        )
+                    amount_query = self.get_amount_query(
+                        Journal_Entry, Journal_Entry_Account, party_type
                     )
 
-                    if self.filters.get("party"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.company == self.filters.get("party")[0]
-                        )
-
-                    if self.filters.get("ignore_exchange_gain_or_loss"):
-                        amount_query = amount_query.where(
-                            Journal_Entry.voucher_type != "Exchange Gain Or Loss"
-                        )
-
                     self.amount_journals = amount_query.run(as_dict=True)
-
             merged_reference_journals = {}
             merged_party_journals = {}
 
@@ -1235,17 +1298,47 @@ class InterCompanyPartiesMatchReport:
             s_invoices, p_invoices
         )
 
-        opening_entries_and_totals = self.get_opening_entries_and_totals(self.data)
+        if self.filters.get("invoice_only"):
+            prepared_data = defaultdict(
+                lambda: {
+                    "reference_company": "",
+                    "p_name": "",
+                    "p_invoice_total": "",
+                    "representative_company": "",
+                    "s_name": "",
+                    "s_invoice_total": "",
+                }
+            )
 
-        filtered_list = self.exclude_opening_entries_and_totals(self.data)
-        updated_data = self.get_combined_dicts_with_missing_values(
-            filtered_list, combined_invoices
-        )
+            reference_company = self.filters.get("reference_company", None)
+            representative_company = self.filters.get("party")[0] or None
 
-        for entry in opening_entries_and_totals:
-            updated_data.append(entry)
+            for pd in combined_invoices:
+                key = (pd.get("p_name"), pd.get("s_name"))
+                prepared_data[key]["reference_company"] = reference_company
+                prepared_data[key]["p_name"] = pd.get("p_name", None)
+                prepared_data[key]["p_invoice_total"] = pd.get("p_invoice_total", 0.0)
+                prepared_data[key]["representative_company"] = representative_company
+                prepared_data[key]["s_name"] = pd.get("s_name", None)
+                prepared_data[key]["s_invoice_total"] = pd.get("s_invoice_total", 0.0)
 
-        self.data = updated_data
+            self.data = list(prepared_data.values())
+
+        else:
+            opening_entries_and_totals = self.get_opening_entries_and_totals(self.data)
+
+            filtered_list = self.exclude_opening_entries_and_totals(self.data)
+            updated_data = self.get_combined_dicts_with_missing_values(
+                filtered_list, combined_invoices
+            )
+
+            for entry in opening_entries_and_totals:
+                if entry.get("is_opening"):
+                    updated_data.insert(0, entry)
+                else:
+                    updated_data.append(entry)
+
+            self.data = updated_data
 
     def get_combined_dicts_with_missing_values(self, list_a, list_b):
         combined = []
