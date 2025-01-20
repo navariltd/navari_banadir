@@ -10,7 +10,7 @@
  "is_standard": "Yes",
  "letter_head": "Banadir",
  "letterhead": null,
- "modified": "2024-09-20 11:12:09.449766",
+ "modified": "2025-01-20 14:14:59.219059",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
  "name": "Stock Value Adjustment",
@@ -32,5 +32,6 @@
   {
    "role": "Accounts Manager"
   }
- ]
+ ],
+ "timeout": 0
 }

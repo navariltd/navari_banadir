@@ -76,6 +76,12 @@ frappe.query_reports["Stock Value Adjustment"] = {
             width: "100",
             reqd: 0,
         },
+		{
+			fieldname: "hide_column",
+			label: __("Hide Columns"),
+			fieldtype: "Check",
+			default: 0,
+		},
 	],
 	formatter: function (value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);
