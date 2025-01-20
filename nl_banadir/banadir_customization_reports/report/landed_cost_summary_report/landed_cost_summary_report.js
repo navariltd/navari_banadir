@@ -32,6 +32,11 @@ frappe.query_reports["Landed Cost Summary Report"] = {
             fieldname: "to_date",
             label: __("To Date"),
             fieldtype: "Date",
+        },
+        {
+            fieldname: "without_landed_cost",
+            label: __("Without Landed Cost"),
+            fieldtype: "Check",
         }
 	],
     "formatter": function (value, row, column, data, default_formatter) {
