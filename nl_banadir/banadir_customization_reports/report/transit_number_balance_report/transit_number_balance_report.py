@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.query_builder import DocType
-from frappe.query_builder.functions import Sum, Round, GroupConcat, Coalesce
+from frappe.query_builder.functions import Sum, Round, GroupConcat, Coalesce, Avg
 from frappe.utils import flt
 
 
@@ -115,6 +115,7 @@ def get_data(filters) -> list[list]:
             PurchaseInvoiceItem.item_code,
             PurchaseInvoiceItem.uom,
             Sum(PurchaseInvoiceItem.qty).as_("total_qty_in"),
+            Avg(PurchaseInvoiceItem.amount).as_("avg_purchase_amount"),
         )
         .groupby(PurchaseInvoiceItem.parent, PurchaseInvoiceItem.item_code)
     )
@@ -126,6 +127,7 @@ def get_data(filters) -> list[list]:
             SalesInvoiceItem.item_code,
             Sum(SalesInvoiceItem.qty).as_("total_qty_out"),
             GroupConcat(SalesInvoiceItem.parent).as_("sales_invoices"),
+            Avg(SalesInvoiceItem.amount).as_("avg_sales_amount"),
         )
         .groupby(SalesInvoiceItem.custom_purchase_invoice, SalesInvoiceItem.item_code)
     )
@@ -152,11 +154,11 @@ def get_data(filters) -> list[list]:
             Round(
                 pii_agg.total_qty_in - Coalesce(sii_agg.total_qty_out, 0), 2
             ).as_("balance"),
+            Round(Coalesce(pii_agg.avg_purchase_amount, 0), 2).as_("purchase_invoice_amount"),
+            Round(Coalesce(sii_agg.avg_sales_amount, 0), 2).as_("sales_invoice_amount"),
             sii_agg.sales_invoices.as_("sales_invoices"),  # Already grouped
             PurchaseInvoice.custom_container_no.as_("container_no"),
-            PurchaseInvoice.total.as_("purchase_invoice_amount"),
             PurchaseInvoice.currency.as_("purchase_invoice_currency"),
-            Round(SalesInvoice.total, 2).as_("sales_invoice_amount"),
             SalesInvoice.currency.as_("sales_invoice_currency"),
         )
         .where(
@@ -231,12 +233,18 @@ def get_data(filters) -> list[list]:
             transit_totals[row["transit_no"]] = {
                 "qty_in": 0.0,
                 "qty_out": 0.0,
-                "balance": 0.0
+                "balance": 0.0,
+                "purchase_invoice_amount": 0.0,
+                "sales_invoice_amount": 0.0,
+                "purchase_invoice_currency": row['purchase_invoice_currency'],
+                "sales_invoice_currency": row['sales_invoice_currency']
             }
         
         transit_totals[row["transit_no"]]["qty_in"] += row["qty_in"]
         transit_totals[row["transit_no"]]["qty_out"] += row["qty_out"]
         transit_totals[row["transit_no"]]["balance"] += row["balance"]
+        transit_totals[row["transit_no"]]["purchase_invoice_amount"] += row["purchase_invoice_amount"]
+        transit_totals[row["transit_no"]]["sales_invoice_amount"] += row["sales_invoice_amount"]
 
     # Append totals for each transit number after their respective items
     final_data = []
@@ -254,6 +262,7 @@ def get_data(filters) -> list[list]:
             # We need to add the total row for the current transit_no
             totals = transit_totals[current_transit_no]
             final_data.append({
+                "is_total_row": True,
                 "transit_no_link": f"<b>Total for {current_transit_no}</b>",
                 "name_link": "",
                 "item_code": "",
@@ -262,23 +271,28 @@ def get_data(filters) -> list[list]:
                 "qty_out": totals['qty_out'],
                 "balance": totals['balance'],
                 "container_no": "",
-                "purchase_invoice_amount": "",
-                "sales_invoice_amount": "",
-                "purchase_invoice_currency": "",
-                "sales_invoice_currency": ""
+                "purchase_invoice_amount": totals['purchase_invoice_amount'],
+                "sales_invoice_amount": totals['sales_invoice_amount'],
+                "purchase_invoice_currency": totals['purchase_invoice_currency'],
+                "sales_invoice_currency": totals['sales_invoice_currency']
             })
             
     # Initialize grand total variables
-    grand_totals = {"qty_in": 0.0, "qty_out": 0.0, "balance": 0.0}
+    grand_totals = {"qty_in": 0.0, "qty_out": 0.0, "balance": 0.0, "purchase_invoice_amount": 0.0, "sales_invoice_amount": 0.0, "purchase_invoice_currency": "", "sales_invoice_currency": ""}
 
     # Calculate grand totals while processing transit totals
     for transit, totals in transit_totals.items():
-        grand_totals["qty_in"] = grand_totals["qty_in"] + totals["qty_in"]
-        grand_totals["qty_out"] = grand_totals["qty_out"] + totals["qty_out"]
-        grand_totals["balance"] = grand_totals["balance"] + totals["balance"]
+        grand_totals["qty_in"] += totals["qty_in"]
+        grand_totals["qty_out"] += totals["qty_out"]
+        grand_totals["balance"] += totals["balance"]
+        grand_totals["purchase_invoice_amount"] += totals["purchase_invoice_amount"]
+        grand_totals["sales_invoice_amount"] += totals["sales_invoice_amount"]
+        grand_totals["purchase_invoice_currency"] = totals["purchase_invoice_currency"]
+        grand_totals["sales_invoice_currency"] = totals["sales_invoice_currency"]
 
     # Append the grand totals row to the final data
     final_data.append({
+        "is_total_row": True,
         "transit_no_link": "<b>Grand Total</b>",
         "name_link": "",
         "item_code": "",
@@ -287,10 +301,10 @@ def get_data(filters) -> list[list]:
         "qty_out": grand_totals['qty_out'],
         "balance": grand_totals['balance'],
         "container_no": "",
-        "purchase_invoice_amount": "",
-        "sales_invoice_amount": "",
-        "purchase_invoice_currency": "",
-        "sales_invoice_currency": ""
+        "purchase_invoice_amount": grand_totals['purchase_invoice_amount'],
+        "sales_invoice_amount": grand_totals['sales_invoice_amount'],
+        "purchase_invoice_currency": grand_totals['purchase_invoice_currency'],
+        "sales_invoice_currency": grand_totals['sales_invoice_currency']
     })
 
     
