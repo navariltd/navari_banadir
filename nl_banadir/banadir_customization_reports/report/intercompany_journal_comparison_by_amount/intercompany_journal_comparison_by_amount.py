@@ -155,91 +155,91 @@ class InterCompanyPartiesMatchReport:
             },
         ]
 
-        if self.filters.get("party_type") == "Customer":
-            columns.insert(
-                5,
-                {
-                    "label": "Sales Invoice",
-                    "fieldname": "s_name",
-                    "fieldtype": "Link",
-                    "options": "Sales Invoice",
-                    "width": "100",
-                },
-            )
+        # if self.filters.get("party_type") == "Customer":
+        #     columns.insert(
+        #         5,
+        #         {
+        #             "label": "Sales Invoice",
+        #             "fieldname": "s_name",
+        #             "fieldtype": "Link",
+        #             "options": "Sales Invoice",
+        #             "width": "100",
+        #         },
+        #     )
 
-            columns.insert(
-                6,
-                {
-                    "label": "Sales Invoice Total",
-                    "fieldname": "s_invoice_total",
-                    "fieldtype": "Currency",
-                    "width": "100",
-                },
-            )
+        #     columns.insert(
+        #         6,
+        #         {
+        #             "label": "Sales Invoice Total",
+        #             "fieldname": "s_invoice_total",
+        #             "fieldtype": "Currency",
+        #             "width": "100",
+        #         },
+        #     )
 
-            columns.insert(
-                -1,
-                {
-                    "label": "Purchase Invoice Total",
-                    "fieldname": "p_invoice_total",
-                    "fieldtype": "Currency",
-                    "width": "100",
-                },
-            )
+        #     columns.insert(
+        #         -1,
+        #         {
+        #             "label": "Purchase Invoice Total",
+        #             "fieldname": "p_invoice_total",
+        #             "fieldtype": "Currency",
+        #             "width": "100",
+        #         },
+        #     )
 
-            columns.insert(
-                -2,
-                {
-                    "label": "Purchase Invoice",
-                    "fieldname": "p_name",
-                    "fieldtype": "Link",
-                    "options": "Purchase Invoice",
-                    "width": "100",
-                },
-            )
+        #     columns.insert(
+        #         -2,
+        #         {
+        #             "label": "Purchase Invoice",
+        #             "fieldname": "p_name",
+        #             "fieldtype": "Link",
+        #             "options": "Purchase Invoice",
+        #             "width": "100",
+        #         },
+        #     )
 
-        if self.filters.get("party_type") == "Supplier":
-            columns.insert(
-                5,
-                {
-                    "label": "Purchase Invoice",
-                    "fieldname": "p_name",
-                    "fieldtype": "Link",
-                    "options": "Purchase Invoice",
-                    "width": "100",
-                },
-            )
+        # if self.filters.get("party_type") == "Supplier":
+        #     columns.insert(
+        #         5,
+        #         {
+        #             "label": "Purchase Invoice",
+        #             "fieldname": "p_name",
+        #             "fieldtype": "Link",
+        #             "options": "Purchase Invoice",
+        #             "width": "100",
+        #         },
+        #     )
 
-            columns.insert(
-                6,
-                {
-                    "label": "Purchase Invoice Total",
-                    "fieldname": "p_invoice_total",
-                    "fieldtype": "Currency",
-                    "width": "100",
-                },
-            )
+        #     columns.insert(
+        #         6,
+        #         {
+        #             "label": "Purchase Invoice Total",
+        #             "fieldname": "p_invoice_total",
+        #             "fieldtype": "Currency",
+        #             "width": "100",
+        #         },
+        #     )
 
-            columns.insert(
-                -1,
-                {
-                    "label": "Sales Invoice Total",
-                    "fieldname": "s_invoice_total",
-                    "fieldtype": "Currency",
-                    "width": "100",
-                },
-            )
+        #     columns.insert(
+        #         -1,
+        #         {
+        #             "label": "Sales Invoice Total",
+        #             "fieldname": "s_invoice_total",
+        #             "fieldtype": "Currency",
+        #             "width": "100",
+        #         },
+        #     )
 
-            columns.insert(
-                -2,
-                {
-                    "label": "Sales Invoice",
-                    "fieldname": "s_name",
-                    "fieldtype": "Link",
-                    "options": "Sales Invoice",
-                    "width": "100",
-                },
-            )
+        #     columns.insert(
+        #         -2,
+        #         {
+        #             "label": "Sales Invoice",
+        #             "fieldname": "s_name",
+        #             "fieldtype": "Link",
+        #             "options": "Sales Invoice",
+        #             "width": "100",
+        #         },
+        #     )
         return columns
 
     def get_invoice_columns(self):
