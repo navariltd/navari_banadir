@@ -60,6 +60,34 @@ def get_columns(filters: dict | None = None) -> list[dict]:
             "fieldtype": "Float", 
             "width": 120
         },
+        {
+            "fieldname": "purchase_invoice_amount",
+            "label": "Purchase Invoice Amount",
+            "fieldtype": "Currency",
+            "width": 150,
+            "options": "purchase_invoice_currency"
+        },
+        {
+            "fieldname": "sales_invoice_amount",
+            "label": "Sales Invoice Amount",
+            "fieldtype": "Currency",
+            "width": 150,
+            "options": "sales_invoice_currency"
+        },
+        {
+            "fieldname": "purchase_invoice_currency",
+            "label": "Purchase Invoice Currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "hidden": 1
+        },
+        {
+            "fieldname": "sales_invoice_currency",
+            "label": "Sales Invoice Currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "hidden": 1
+        }
     ]
     
     if filters.get("container_no"):
@@ -78,6 +106,7 @@ def get_data(filters) -> list[list]:
     TransitNumbers = DocType("Transit Numbers")
     PurchaseInvoiceItem = DocType("Purchase Invoice Item")
     SalesInvoiceItem = DocType("Sales Invoice Item")
+    SalesInvoice = DocType("Sales Invoice")
 
     pii_agg = (
         frappe.qb.from_(PurchaseInvoiceItem)
@@ -112,6 +141,8 @@ def get_data(filters) -> list[list]:
             (sii_agg.item_code == pii_agg.item_code)
             & (sii_agg.transit_no == TransitNumbers.transit_no)
         )
+        .left_join(SalesInvoice)
+        .on(SalesInvoice.name == sii_agg.sales_invoices)
         .select(
             TransitNumbers.transit_no.as_("transit_no"),
             pii_agg.item_code.as_("item_code"),
@@ -122,7 +153,11 @@ def get_data(filters) -> list[list]:
                 pii_agg.total_qty_in - Coalesce(sii_agg.total_qty_out, 0), 2
             ).as_("balance"),
             sii_agg.sales_invoices.as_("sales_invoices"),  # Already grouped
-            PurchaseInvoice.custom_container_no.as_("container_no")
+            PurchaseInvoice.custom_container_no.as_("container_no"),
+            PurchaseInvoice.total.as_("purchase_invoice_amount"),
+            PurchaseInvoice.currency.as_("purchase_invoice_currency"),
+            Round(SalesInvoice.total, 2).as_("sales_invoice_amount"),
+            SalesInvoice.currency.as_("sales_invoice_currency"),
         )
         .where(
             (PurchaseInvoice.custom_is_export_sale == 1)
@@ -185,6 +220,10 @@ def get_data(filters) -> list[list]:
             "qty_out": row['qty_out'],
             "balance": row['balance'],
             "container_no": row['container_no'],
+            "purchase_invoice_amount": row['purchase_invoice_amount'],
+            "sales_invoice_amount": row['sales_invoice_amount'],
+            "purchase_invoice_currency": row['purchase_invoice_currency'],
+            "sales_invoice_currency": row['sales_invoice_currency']
         })
 
         # Calculate totals for each transit number
@@ -223,6 +262,10 @@ def get_data(filters) -> list[list]:
                 "qty_out": totals['qty_out'],
                 "balance": totals['balance'],
                 "container_no": "",
+                "purchase_invoice_amount": "",
+                "sales_invoice_amount": "",
+                "purchase_invoice_currency": "",
+                "sales_invoice_currency": ""
             })
             
     # Initialize grand total variables
@@ -244,6 +287,10 @@ def get_data(filters) -> list[list]:
         "qty_out": grand_totals['qty_out'],
         "balance": grand_totals['balance'],
         "container_no": "",
+        "purchase_invoice_amount": "",
+        "sales_invoice_amount": "",
+        "purchase_invoice_currency": "",
+        "sales_invoice_currency": ""
     })
 
     
