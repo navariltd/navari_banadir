@@ -393,7 +393,7 @@ def get_columns(additional_table_columns, filters):
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
-            "label": f"Rate + LC({presentation_currency})",
+            "label": f"Rate + LC ({presentation_currency})",
             "fieldname": "rate_plus_landed_cost",
             "fieldtype": "Float",
             "precision": 2,
@@ -401,7 +401,7 @@ def get_columns(additional_table_columns, filters):
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
-            "label": "Current Rate + LC({presentation_currency})",
+            "label": f"Current Rate + LC({presentation_currency})",
             "fieldname": "current_rate_plus_landed_cost",
             "fieldtype": "Float",
             "precision": 2,  
@@ -409,7 +409,7 @@ def get_columns(additional_table_columns, filters):
             # "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
-            "label": _(f"Amount ({presentation_currency})"),
+            "label": _(f"Amount({presentation_currency})"),
             "fieldname": "amount",
             "fieldtype": "Float",
             "precision": 2,  
