@@ -29,28 +29,32 @@ def get_columns(filters=None):
             "fieldname": "landed_cost", 
             "fieldtype": "Link",
             "options": "Landed Cost Voucher",
-            "width": "220"
+            "width": "220",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Expense Account", 
             "fieldname": "expense_account", 
             "fieldtype": "Link", 
             "options": "Account",
-            "width": "200"
+            "width": "200",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Expense Booked", 
             "fieldname": "expense_booked", 
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "150"
+            "width": "150",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Amount", 
             "fieldname": "amount", 
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "150"
+            "width": "150",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Currency", 
@@ -78,6 +82,15 @@ def get_columns(filters=None):
             "fieldtype": "Data"
         }
     ]
+
+    if filters.get("without_landed_cost"):
+        columns.insert(2, {
+            "label": "Marka (Branch)",
+            "fieldname": "branch",
+            "fieldtype": "Link",
+            "options": "Branch",
+            "width": "150"
+        })
 
     if filters.get("currency"):
         convert_currency = filters.get("currency")
@@ -178,6 +191,7 @@ def get_data(filters):
             Company.default_currency.as_("currency"),
             PurchaseInvoice.posting_date.as_("posting_date"),
             PurchaseInvoice.currency.as_("invoice_currency"),
+            PurchaseInvoice.branch.as_("branch"),
             PurchaseInvoice.conversion_rate.as_("conversion_rate"),
             ConstantColumn("").as_("expense_account"),
             PurchaseInvoice.custom_container_no.as_("container_no"),
