@@ -198,7 +198,7 @@ def get_columns(additional_table_columns, filters):
                     "fieldtype": "Link",
                     "options": "Item",
                     "width": 120,
-                    "hidden": 1 if filters.get("hide_column") else 0,
+                    # "hidden": 1 if filters.get("hide_column") else 0,
                 },
                 {
                     "label": _("Currency"),
@@ -208,7 +208,8 @@ def get_columns(additional_table_columns, filters):
                     "width": 80,
                     "hidden": 1,
                 },
-                {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 120},
+                {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data",                     "hidden": 1 if filters.get("hide_column") else 0,
+"width": 120},
             ]
         )
 
@@ -392,7 +393,7 @@ def get_columns(additional_table_columns, filters):
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
-            "label": f"Rate + LC({presentation_currency})",
+            "label": f"Rate + LC ({presentation_currency})",
             "fieldname": "rate_plus_landed_cost",
             "fieldtype": "Float",
             "precision": 2,
@@ -400,15 +401,15 @@ def get_columns(additional_table_columns, filters):
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
-            "label": "Current Rate + LC({presentation_currency})",
+            "label": f"Current Rate + LC({presentation_currency})",
             "fieldname": "current_rate_plus_landed_cost",
             "fieldtype": "Float",
             "precision": 2,  
             "width": 100,
-            "hidden": 1 if filters.get("hide_column") else 0,
+            # "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
-            "label": _(f"Amount ({presentation_currency})"),
+            "label": _(f"Amount({presentation_currency})"),
             "fieldname": "amount",
             "fieldtype": "Float",
             "precision": 2,  
