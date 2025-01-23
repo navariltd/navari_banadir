@@ -38,7 +38,7 @@ def get_qty_from_first_work_order(work_order):
         "Work Order Item",
         filters={
             "parent": work_order.name,
-            "custom_item_group": "FOOTWEAR INDIA"
+            "custom_item_group": "UPPER STOCK"
         },
         fields=["item_code"]
     )
