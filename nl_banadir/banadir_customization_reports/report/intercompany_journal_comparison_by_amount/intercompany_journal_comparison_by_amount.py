@@ -23,6 +23,7 @@ class InterCompanyFilter(TypedDict):
     compare_randomly: bool
     ignore_exchange_gain_or_loss: bool
     invoice_only: bool
+    payment_entry_only: bool
 
 
 def execute(filters: InterCompanyFilter | None = None):
@@ -53,10 +54,15 @@ class InterCompanyPartiesMatchReport:
         if self.filters.get("compare_by_amount"):
             self.compare_journals_by_amount()
 
-        if self.filters.get("party_type"):
+        if self.filters.get("party_type") and self.filters.get("invoice_only"):
             self.get_invoice_data()
 
-        if not self.filters.get("invoice_only"):
+        if self.filters.get("party_type") and self.filters.get("payment_entry_only"):
+            self.get_payment_entry_data()
+
+        if not self.filters.get("invoice_only") and not self.filters.get(
+            "payment_entry_only"
+        ):
             self.calculate_closing_balance()
 
         return self.columns, self.data
@@ -65,6 +71,9 @@ class InterCompanyPartiesMatchReport:
 
         if self.filters.get("invoice_only"):
             return self.get_invoice_columns()
+
+        if self.filters.get("payment_entry_only"):
+            return self.get_payment_entry_columns()
 
         columns = [
             {
@@ -338,6 +347,60 @@ class InterCompanyPartiesMatchReport:
                 )
 
             return columns
+
+    def get_payment_entry_columns(self):
+        columns = [
+            {
+                "label": "Reference Company",
+                "fieldname": "reference_company",
+                "fieldtype": "Link",
+                "options": "Company",
+                "width": "200",
+            },
+            {
+                "label": "Reference Payment Entry",
+                "fieldname": "reference_pe",
+                "fieldtype": "Link",
+                "options": "Payment Entry",
+                "width": "100",
+            },
+            {
+                "label": (
+                    "Paid Amount"
+                    if self.filters.get("party_type") == "Supplier"
+                    else "Received Amount"
+                ),
+                "fieldname": "paid_amount",
+                "fieldtype": "Currency",
+                "width": "100",
+            },
+            {
+                "label": "Representative Company",
+                "fieldname": "representative_company",
+                "fieldtype": "Link",
+                "options": "Company",
+                "width": "200",
+            },
+            {
+                "label": "Representative Payment Entry",
+                "fieldname": "representative_pe",
+                "fieldtype": "Link",
+                "options": "Payment Entry",
+                "width": "100",
+            },
+            {
+                "label": (
+                    "Received Amount"
+                    if self.filters.get("party_type") == "Supplier"
+                    else "Paid Amount"
+                ),
+                "fieldname": "received_amount",
+                "fieldtype": "Currency",
+                "width": "100",
+            },
+        ]
+
+        return columns
 
     def get_intercompany_journals(self):
         Journal_Entry_Account = DocType("Journal Entry Account")
@@ -1311,7 +1374,9 @@ class InterCompanyPartiesMatchReport:
             )
 
             reference_company = self.filters.get("reference_company", None)
-            representative_company = self.filters.get("party")[0] or None
+            representative_company = (
+                self.filters.get("party")[0] if self.filters.get("party") else None
+            )
 
             for pd in combined_invoices:
                 key = (pd.get("p_name"), pd.get("s_name"))
@@ -1339,6 +1404,124 @@ class InterCompanyPartiesMatchReport:
                     updated_data.append(entry)
 
             self.data = updated_data
+
+    def payment_entry_query(self, payment_type, company_type):
+        payment_type = payment_type.lower()
+        PE_DOCTYPE = DocType("Payment Entry")
+
+        query = ""
+
+        query_1 = frappe.qb.from_(PE_DOCTYPE).select(
+            PE_DOCTYPE.company.as_("reference_company"),
+            PE_DOCTYPE.name.as_("reference_pe"),
+            PE_DOCTYPE.paid_amount,
+        )
+        query_2 = frappe.qb.from_(PE_DOCTYPE).select(
+            PE_DOCTYPE.company.as_("representative_company"),
+            PE_DOCTYPE.name.as_("representative_pe"),
+            PE_DOCTYPE.paid_amount.as_("received_amount"),
+        )
+
+        if (
+            payment_type == "receive"
+            and self.filters.get("party_type") == "Customer"
+            and company_type == "ref_company"
+        ):
+            query = query_1.where(
+                (PE_DOCTYPE.company == self.filters.get("reference_company"))
+                & (PE_DOCTYPE.payment_type == "Receive")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
+
+        if (
+            payment_type == "receive"
+            and self.filters.get("party_type") == "Customer"
+            and company_type == "rep_company"
+        ):
+            query = query_2.where(
+                (PE_DOCTYPE.party == self.filters.get("reference_company"))
+                & (PE_DOCTYPE.payment_type == "Pay")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
+
+        if (
+            payment_type == "pay"
+            and self.filters.get("party_type") == "Supplier"
+            and company_type == "ref_company"
+        ):
+            query = query_1.where(
+                (PE_DOCTYPE.company == self.filters.get("reference_company"))
+                & (PE_DOCTYPE.payment_type == "Pay")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
+
+        if (
+            payment_type == "pay"
+            and self.filters.get("party_type") == "Supplier"
+            and company_type == "rep_company"
+        ):
+            query = query_2.where(
+                (PE_DOCTYPE.party == self.filters.get("reference_company"))
+                & (PE_DOCTYPE.payment_type == "Receive")
+            )
+
+            if self.filters.get("party"):
+                query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
+
+        return query.where(
+            (PE_DOCTYPE.posting_date >= self.from_date)
+            & (PE_DOCTYPE.posting_date <= self.to_date)
+        ).run(as_dict=True)
+
+    def get_payment_entry_data(self):
+        ref_payments = []
+        rep_payments = []
+
+        if self.filters.get("party_type") == "Customer":
+            ref_payments = self.payment_entry_query("receive", "ref_company")
+            rep_payments = self.payment_entry_query("receive", "rep_company")
+        else:
+            ref_payments = self.payment_entry_query("pay", "ref_company")
+            rep_payments = self.payment_entry_query("pay", "rep_company")
+
+        combined_payment_entries = self.get_combined_dicts_with_missing_values(
+            ref_payments, rep_payments
+        )
+
+        if self.filters.get("payment_entry_only"):
+            prepared_data = defaultdict(
+                lambda: {
+                    "reference_company": "",
+                    "reference_pe": "",
+                    "paid_amount": "",
+                    "representative_company": "",
+                    "representative_pe": "",
+                    "received_amount": "",
+                }
+            )
+
+            for entry in combined_payment_entries:
+                key = (entry.get("reference_pe"), entry.get("representative_pe"))
+                prepared_data[key]["reference_company"] = entry.get("reference_company")
+                prepared_data[key]["reference_pe"] = entry.get("reference_pe", None)
+                prepared_data[key]["paid_amount"] = entry.get("paid_amount", None)
+                prepared_data[key]["representative_company"] = entry.get(
+                    "representative_company"
+                )
+                prepared_data[key]["representative_pe"] = entry.get(
+                    "representative_pe", None
+                )
+                prepared_data[key]["received_amount"] = entry.get(
+                    "received_amount", None
+                )
+
+            self.data = list(prepared_data.values())
 
     def get_combined_dicts_with_missing_values(self, list_a, list_b):
         combined = []
