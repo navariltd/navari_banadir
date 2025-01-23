@@ -98,6 +98,12 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       fieldtype: "Check",
       default: 0,
     },
+    {
+      fieldname: "payment_entry_only",
+      label: __("Payment Entry Only"),
+      fieldtype: "Check",
+      default: 0,
+    },
   ],
 
   formatter: function (value, row, column, data, default_formatter) {
