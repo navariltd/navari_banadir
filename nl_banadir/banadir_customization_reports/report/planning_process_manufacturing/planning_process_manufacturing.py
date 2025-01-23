@@ -43,6 +43,10 @@ def get_columns():
         {"label": "Received Quantity", "fieldname": "received_quantity", "fieldtype": "Int", "width": 120},
         {"label": "Balance Quantity", "fieldname": "balance_quantity", "fieldtype": "Int", "width": 120},
         {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": "Link","options":"Item", "width": 120},
+        {"label":"Qty Issued(Machine)", "fieldname":"qty_issued_machine", "fieldtype":"Int", "width":120},
+        {"label":"Fresh Qty Issued", "fieldname":"fresh_qty_issued", "fieldtype":"Int", "width":120},
+        {"label":"Rejected Qty Issued", "fieldname":"rejected_qty_issued", "fieldtype":"Int", "width":120},
+        {"label":"Balance to Issue", "fieldname":"balance_to_issue", "fieldtype":"Int", "width":120},
     ]
 
 def get_data(filters):
@@ -79,6 +83,10 @@ def get_data(filters):
             csp.completed_qty AS printed_embossed_pairs,
             csp.supplier AS printing_embossing_contractor,
             csp.qty_issued AS qty_issued_printing,
+            mp.qty_issued AS qty_issued_machine,
+            # cso.qty_issued AS fresh_qty_issued,
+            # cso.rejected_qty AS rejected_qty_issued,
+            # (cso.qty_issued - cso.completed_qty) AS balance_to_issue,
             # '' AS balance_to_print_emboss,
             '' AS insole_stock,
             '' AS issued_date,
@@ -106,6 +114,9 @@ def get_data(filters):
         LEFT JOIN
             `tabWork Order Operations Item` csp 
              ON insole_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
+        LEFT JOIN
+        `tabWork Order Operations Item` mp 
+            ON fg_work_order.name = mp.parent AND mp.operations = 'MOULDING & PACKING'
         LEFT JOIN
             `tabWork Order Item` required_items 
              ON fg_work_order.name = required_items.parent
@@ -178,7 +189,6 @@ WHERE
 
         record.update(
             {
-                "upper_item": insole_data["insole_stock_item"],
                 "quantity_issued": insole_data["issued_qty"],
                 "issued_date": insole_data["issued_date"],
                 "received_quantity": received_qty,
@@ -190,7 +200,6 @@ WHERE
     else:
         record.update(
             {
-                "upper_item": None,
                 "quantity_issued": 0,
                 "received_quantity": 0,
                 "balance_quantity": 0,
@@ -199,9 +208,20 @@ WHERE
                 "issued_date": None,
             }
         )
-
+  
+    record.update({
+        "upper_item": update_upper_stock_item(finished_goods_work_order_no),
+    })
     return record
 
+def update_upper_stock_item(finished_goods_work_order_no):
+    work_order=frappe.get_doc("Work Order",finished_goods_work_order_no)
+    required_items = work_order.get("required_items")
+    for item in required_items:
+        if item.custom_item_group == "UPPER STOCK":
+            return item.item_code
+    
+    
 def update_insole_stock_qty(record):
     printed_embossed_pairs = record.get("printed_embossed_pairs") or 0
     quantity_issued = record.get("quantity_issued") or 0
