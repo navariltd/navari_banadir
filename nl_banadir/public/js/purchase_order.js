@@ -2,12 +2,14 @@
 frappe.ui.form.on("Purchase Order Item",{
 
     item_code: function(frm, cdt, cdn){
-      if(frm.doc.custom_production_plan){
+      
         var child = locals[cdt][cdn];
+        if(child.custom_work_order){
         frappe.call({
             method: "nl_banadir.banadir_customization_reports.controllers.purchase_order.get_qty_from_first_work_order",
             args: {
                 production_plan: frm.doc.custom_production_plan,
+                work_order: child.custom_work_order,
             },
             callback: function(response){
                 if(response.message){
@@ -20,6 +22,26 @@ frappe.ui.form.on("Purchase Order Item",{
         });
       }
     
+    },
+    custom_work_order: function(frm, cdt, cdn){
+      
+        var child = locals[cdt][cdn];
+        frappe.call({
+            method: "nl_banadir.banadir_customization_reports.controllers.purchase_order.get_qty_from_first_work_order",
+            args: {
+                production_plan: frm.doc.custom_production_plan,
+                work_order: child.custom_work_order,
+            },
+            callback: function(response){
+                if(response.message){
+                    frappe.model.set_value(cdt, cdn, "fg_item_qty", response.message.work_order_qty);
+                    frappe.model.set_value(cdt, cdn, "fg_item", response.message.upper_stock_items);
+
+
+                }
+            }
+        });
+      
     }
 })
 
