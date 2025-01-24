@@ -75,7 +75,6 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
     purchase_invoice.insert()
     purchase_invoice.submit()
 
-    # Mark the operation as "invoice_created = 1"
     frappe.db.set_value(
         "Work Order Operations Item",
         operation.name,  
@@ -136,7 +135,7 @@ def validate_operations(doc):
         if (operation_doc.status == "In Progress" or operation_doc.status == "Completed") and operation_doc.supplier is None:
             frappe.throw("Kindly enter the supplier in the Sub-contractor table.")
        
-        if operation_doc.in_progress_date > operation_doc.completed_date:
+        if operation_doc.status == "Completed" and (operation_doc.in_progress_date > operation_doc.completed_date):
             frappe.throw("<b>In Progress Date</b> cannot be greater than <b>Completed Date.</b>")
         
         if operation_doc.status in ["In Progress", "Completed"]:

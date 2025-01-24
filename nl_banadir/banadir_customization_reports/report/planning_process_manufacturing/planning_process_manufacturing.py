@@ -45,8 +45,11 @@ def get_columns():
         {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": "Link","options":"Item", "width": 120},
         {"label":"Qty Issued(Machine)", "fieldname":"qty_issued_machine", "fieldtype":"Int", "width":120},
         {"label":"Fresh Qty Issued", "fieldname":"fresh_qty_issued", "fieldtype":"Int", "width":120},
+                {"label":"B Qty Issued", "fieldname":"b_qty_issued", "fieldtype":"Int", "width":120},
+
         {"label":"Rejected Qty Issued", "fieldname":"rejected_qty_issued", "fieldtype":"Int", "width":120},
-        {"label":"Balance to Issue", "fieldname":"balance_to_issue", "fieldtype":"Int", "width":120},
+        {"label":"Balance(In Machine)", "fieldname":"balance_to_issue", "fieldtype":"Int", "width":120},
+                {"label":"Stock Entry", "fieldname":"stock_entry", "fieldtype":"Link","options":"Stock Entry", "width":120},
     ]
 
 def get_data(filters):
@@ -84,9 +87,6 @@ def get_data(filters):
             csp.supplier AS printing_embossing_contractor,
             csp.qty_issued AS qty_issued_printing,
             mp.qty_issued AS qty_issued_machine,
-            # cso.qty_issued AS fresh_qty_issued,
-            # cso.rejected_qty AS rejected_qty_issued,
-            # (cso.qty_issued - cso.completed_qty) AS balance_to_issue,
             # '' AS balance_to_print_emboss,
             '' AS insole_stock,
             '' AS issued_date,
@@ -127,6 +127,7 @@ def get_data(filters):
     result= frappe.db.sql(query, as_dict=True)
     main_data = [add_insole_stock_data(record) for record in result]
     [update_insole_stock_qty(record) for record in main_data]
+    [update_stock_details(record) for record in main_data]
     return main_data
 
 def add_insole_stock_data(record):
@@ -231,3 +232,34 @@ def update_insole_stock_qty(record):
     else:
         raise ValueError("Fields 'printed_embossed_pairs' and 'quantity_issued' must be numeric.")
     
+
+def update_stock_details(record):
+    finished_goods_work_order = record.get("finished_goods_work_order_no")
+    fresh_qty_issued = record.get("fresh_qty_issued") or 0
+    qty_issued_machine = record.get("qty_issued_machine") or 0
+    stock_entry = frappe.db.get_value("Stock Entry", {"work_order": finished_goods_work_order}, "name")
+    
+    if not stock_entry:
+        return record
+        # frappe.throw(f"No Stock Entry found for Work Order {finished_goods_work_order}")
+    
+    stock_entry_doc = frappe.get_doc("Stock Entry", stock_entry)
+    stock_entry_items = stock_entry_doc.get("items")
+    
+    # Initialize variables to avoid UnboundLocalError
+    rejected_qty_issued = 0
+    is_finished_item_qty = 0
+    
+    for item in stock_entry_items:
+        if item.item_group == "Rejection Items India":
+            rejected_qty_issued += item.qty or 0
+        if item.is_finished_item == 1:
+            is_finished_item_qty = item.qty or 0
+    
+    record.update({
+        "stock_entry": stock_entry,
+        "rejected_qty_issued": rejected_qty_issued,
+        "fresh_qty_issued":is_finished_item_qty,
+        "balance_to_issue": qty_issued_machine - (is_finished_item_qty + rejected_qty_issued),
+    })
+    return record
