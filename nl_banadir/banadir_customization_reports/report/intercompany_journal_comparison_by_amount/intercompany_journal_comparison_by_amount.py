@@ -1300,7 +1300,6 @@ class InterCompanyPartiesMatchReport:
 
         voucher = Field("name").as_("s_name" if invoice_type == "sales" else "p_name")
 
-        # Build the query using Frappe Query Builder
         query = frappe.qb.from_(invoice_doctype).select(
             company_field, total_field, party_field, voucher
         )
@@ -1348,6 +1347,7 @@ class InterCompanyPartiesMatchReport:
         return query.where(
             (invoice_doctype.posting_date >= self.from_date)
             & (invoice_doctype.posting_date <= self.to_date)
+            & (invoice_doctype.docstatus < 2)
         ).run(as_dict=True)
 
     def get_invoice_data(self):
@@ -1477,6 +1477,7 @@ class InterCompanyPartiesMatchReport:
         return query.where(
             (PE_DOCTYPE.posting_date >= self.from_date)
             & (PE_DOCTYPE.posting_date <= self.to_date)
+            & (PE_DOCTYPE.docstatus < 2)
         ).run(as_dict=True)
 
     def get_payment_entry_data(self):
