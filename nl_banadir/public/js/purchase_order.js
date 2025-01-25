@@ -1,6 +1,13 @@
 
 frappe.ui.form.on("Purchase Order Item",{
+  validate: function(frm, cdt, cdn) {
+    var child = locals[cdt][cdn];
 
+    if (child.qty !== child.fg_item_qty) {
+        frappe.msgprint(__("The quantity (qty) must be the same as the FG Item Quantity (fg_item_qty). Please correct the values."));
+        frappe.validated = false;  
+    }
+},
     item_code: function(frm, cdt, cdn){
       
         var child = locals[cdt][cdn];
