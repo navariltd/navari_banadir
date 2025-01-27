@@ -16,6 +16,7 @@ from collections import defaultdict
 class InterCompanyFilter(TypedDict):
     reference_company: str | None
     party_type: str | None
+    # payment_type: str | None
     party: str | None
     from_date: str
     to_date: str
@@ -365,12 +366,8 @@ class InterCompanyPartiesMatchReport:
                 "width": "100",
             },
             {
-                "label": (
-                    "Paid Amount"
-                    if self.filters.get("party_type") == "Supplier"
-                    else "Received Amount"
-                ),
-                "fieldname": "paid_amount",
+                "label": "Reference Amount",
+                "fieldname": "reference_amount",
                 "fieldtype": "Currency",
                 "width": "100",
             },
@@ -389,12 +386,8 @@ class InterCompanyPartiesMatchReport:
                 "width": "100",
             },
             {
-                "label": (
-                    "Received Amount"
-                    if self.filters.get("party_type") == "Supplier"
-                    else "Paid Amount"
-                ),
-                "fieldname": "received_amount",
+                "label": "Representative Amount",
+                "fieldname": "representative_amount",
                 "fieldtype": "Currency",
                 "width": "100",
             },
@@ -1405,91 +1398,153 @@ class InterCompanyPartiesMatchReport:
 
             self.data = updated_data
 
-    def payment_entry_query(self, payment_type, company_type):
-        payment_type = payment_type.lower()
+    def payment_entry_query(self, is_reference_company=False):
         PE_DOCTYPE = DocType("Payment Entry")
 
-        query = ""
-
-        query_1 = frappe.qb.from_(PE_DOCTYPE).select(
-            PE_DOCTYPE.company.as_("reference_company"),
-            PE_DOCTYPE.name.as_("reference_pe"),
-            PE_DOCTYPE.paid_amount,
+        company_field = Field("company").as_(
+            "reference_company" if is_reference_company else "representative_company"
         )
-        query_2 = frappe.qb.from_(PE_DOCTYPE).select(
-            PE_DOCTYPE.company.as_("representative_company"),
-            PE_DOCTYPE.name.as_("representative_pe"),
-            PE_DOCTYPE.paid_amount.as_("received_amount"),
+        pe_field = Field("name").as_(
+            "reference_pe" if is_reference_company else "representative_pe"
+        )
+        amount_field = Field("paid_amount").as_(
+            "reference_amount" if is_reference_company else "representative_amount"
         )
 
-        if (
-            payment_type == "receive"
-            and self.filters.get("party_type") == "Customer"
-            and company_type == "ref_company"
-        ):
-            query = query_1.where(
-                (PE_DOCTYPE.company == self.filters.get("reference_company"))
-                & (PE_DOCTYPE.payment_type == "Receive")
+        query = frappe.qb.from_(PE_DOCTYPE).select(
+            company_field, pe_field, amount_field
+        )
+
+        if self.filters.get("party_type") == "Customer" and is_reference_company:
+            query = query.where(
+                PE_DOCTYPE.company == self.filters.get("reference_company")
             )
 
             if self.filters.get("party"):
                 query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
 
-        if (
-            payment_type == "receive"
-            and self.filters.get("party_type") == "Customer"
-            and company_type == "rep_company"
-        ):
-            query = query_2.where(
-                (PE_DOCTYPE.party == self.filters.get("reference_company"))
-                & (PE_DOCTYPE.payment_type == "Pay")
+        if self.filters.get("party_type") == "Customer" and not is_reference_company:
+            query = query.where(
+                PE_DOCTYPE.party == self.filters.get("reference_company")
             )
 
             if self.filters.get("party"):
                 query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
 
-        if (
-            payment_type == "pay"
-            and self.filters.get("party_type") == "Supplier"
-            and company_type == "ref_company"
-        ):
-            query = query_1.where(
-                (PE_DOCTYPE.company == self.filters.get("reference_company"))
-                & (PE_DOCTYPE.payment_type == "Pay")
+        if self.filters.get("party_type") == "Supplier" and is_reference_company:
+            query = query.where(
+                PE_DOCTYPE.company == self.filters.get("reference_company")
             )
 
             if self.filters.get("party"):
                 query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
 
-        if (
-            payment_type == "pay"
-            and self.filters.get("party_type") == "Supplier"
-            and company_type == "rep_company"
-        ):
-            query = query_2.where(
-                (PE_DOCTYPE.party == self.filters.get("reference_company"))
-                & (PE_DOCTYPE.payment_type == "Receive")
+        if self.filters.get("party_type") == "Supplier" and not is_reference_company:
+            query = query.where(
+                PE_DOCTYPE.party == self.filters.get("reference_company")
             )
 
             if self.filters.get("party"):
                 query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
 
-        return query.where(
-            (PE_DOCTYPE.posting_date >= self.from_date)
+        query = query.where(
+            (PE_DOCTYPE.docstatus < 2)
+            & (PE_DOCTYPE.posting_date >= self.from_date)
             & (PE_DOCTYPE.posting_date <= self.to_date)
-            & (PE_DOCTYPE.docstatus < 2)
-        ).run(as_dict=True)
+        )
+
+        return query.run(as_dict=True)
+
+    # def payment_entry_query(self, payment_type, company_type):
+    #     payment_type = payment_type.lower()
+    #     PE_DOCTYPE = DocType("Payment Entry")
+
+    #     query = ""
+
+    #     query_1 = frappe.qb.from_(PE_DOCTYPE).select(
+    #         PE_DOCTYPE.company.as_("reference_company"),
+    #         PE_DOCTYPE.name.as_("reference_pe"),
+    #         PE_DOCTYPE.paid_amount,
+    #     )
+    #     query_2 = frappe.qb.from_(PE_DOCTYPE).select(
+    #         PE_DOCTYPE.company.as_("representative_company"),
+    #         PE_DOCTYPE.name.as_("representative_pe"),
+    #         PE_DOCTYPE.paid_amount.as_("received_amount"),
+    #     )
+
+    #     if (
+    #         payment_type == "receive"
+    #         and self.filters.get("party_type") == "Customer"
+    #         and company_type == "ref_company"
+    #     ):
+    #         query = query_1.where(
+    #             (PE_DOCTYPE.company == self.filters.get("reference_company"))
+    #             & (PE_DOCTYPE.payment_type == "Receive")
+    #         )
+
+    #         if self.filters.get("party"):
+    #             query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
+
+    #     if (
+    #         payment_type == "receive"
+    #         and self.filters.get("party_type") == "Customer"
+    #         and company_type == "rep_company"
+    #     ):
+    #         query = query_2.where(
+    #             (PE_DOCTYPE.party == self.filters.get("reference_company"))
+    #             & (PE_DOCTYPE.payment_type == "Pay")
+    #         )
+
+    #         if self.filters.get("party"):
+    #             query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
+
+    #     if (
+    #         payment_type == "pay"
+    #         and self.filters.get("party_type") == "Supplier"
+    #         and company_type == "ref_company"
+    #     ):
+    #         query = query_1.where(
+    #             (PE_DOCTYPE.company == self.filters.get("reference_company"))
+    #             & (PE_DOCTYPE.payment_type == "Pay")
+    #         )
+
+    #         if self.filters.get("party"):
+    #             query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
+
+    #     if (
+    #         payment_type == "pay"
+    #         and self.filters.get("party_type") == "Supplier"
+    #         and company_type == "rep_company"
+    #     ):
+    #         query = query_2.where(
+    #             (PE_DOCTYPE.party == self.filters.get("reference_company"))
+    #             & (PE_DOCTYPE.payment_type == "Receive")
+    #         )
+
+    #         if self.filters.get("party"):
+    #             query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
+
+    #     return query.where(
+    #         (PE_DOCTYPE.posting_date >= self.from_date)
+    #         & (PE_DOCTYPE.posting_date <= self.to_date)
+    #         & (PE_DOCTYPE.docstatus < 2)
+    #     ).run(as_dict=True)
 
     def get_payment_entry_data(self):
         ref_payments = []
         rep_payments = []
 
-        if self.filters.get("party_type") == "Customer":
-            ref_payments = self.payment_entry_query("receive", "ref_company")
-            rep_payments = self.payment_entry_query("receive", "rep_company")
-        else:
-            ref_payments = self.payment_entry_query("pay", "ref_company")
-            rep_payments = self.payment_entry_query("pay", "rep_company")
+        ref_payments = self.payment_entry_query(is_reference_company=True)
+        rep_payments = self.payment_entry_query()
+        print("REF PAYMENTS", ref_payments)
+        print("REP PAYMENTS", rep_payments)
+
+        # if self.filters.get("party_type") == "Customer":
+        #     ref_payments = self.payment_entry_query2(is_reference_company=True)
+        #     rep_payments = self.payment_entry_query("receive", "rep_company")
+        # else:
+        #     ref_payments = self.payment_entry_query("pay", "ref_company")
+        #     rep_payments = self.payment_entry_query("pay", "rep_company")
 
         combined_payment_entries = self.get_combined_dicts_with_missing_values(
             ref_payments, rep_payments
@@ -1500,10 +1555,10 @@ class InterCompanyPartiesMatchReport:
                 lambda: {
                     "reference_company": "",
                     "reference_pe": "",
-                    "paid_amount": "",
+                    "reference_amount": "",
                     "representative_company": "",
                     "representative_pe": "",
-                    "received_amount": "",
+                    "representative_amount": "",
                 }
             )
 
@@ -1511,17 +1566,19 @@ class InterCompanyPartiesMatchReport:
                 key = (entry.get("reference_pe"), entry.get("representative_pe"))
                 prepared_data[key]["reference_company"] = entry.get("reference_company")
                 prepared_data[key]["reference_pe"] = entry.get("reference_pe", None)
-                prepared_data[key]["paid_amount"] = entry.get("paid_amount", None)
+                prepared_data[key]["reference_amount"] = entry.get(
+                    "reference_amount", None
+                )
                 prepared_data[key]["representative_company"] = entry.get(
                     "representative_company"
                 )
                 prepared_data[key]["representative_pe"] = entry.get(
                     "representative_pe", None
                 )
-                prepared_data[key]["received_amount"] = entry.get(
-                    "received_amount", None
+                prepared_data[key]["representative_amount"] = entry.get(
+                    "representative_amount", None
                 )
-
+            print("DATA", list(prepared_data.values()))
             self.data = list(prepared_data.values())
 
     def get_combined_dicts_with_missing_values(self, list_a, list_b):
