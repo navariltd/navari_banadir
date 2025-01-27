@@ -80,6 +80,16 @@ frappe.ui.form.on("Purchase Order", {
         __("Get Items From")
       );
     },
+  validate: function(frm) {
+        if(frm.doc.is_subcontracted == 1){
+        frm.doc.items.forEach(function(child) {
+            if (child.qty !== child.fg_item_qty) {
+                frappe.msgprint(__("The <b>quantity</b> must be the same as the <b>FG Item Quantity</b>. Please correct the values."));
+                frappe.validated = false;
+                return;
+            }
+        })
+      }},
   });
   
   

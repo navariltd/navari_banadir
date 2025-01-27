@@ -47,5 +47,7 @@ def get_qty_from_first_work_order(work_order):
     if required_materials:
         response["upper_stock_items"] = required_materials[0]["item_code"]
     frappe.response["message"] = response
+    
+    
 
 
