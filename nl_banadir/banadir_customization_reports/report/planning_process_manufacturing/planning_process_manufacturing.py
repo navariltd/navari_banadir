@@ -187,7 +187,7 @@ WHERE
         received_qty = receipt[0].received_quantity if receipt else 0
         balance_quantity = insole_data["issued_qty"] - received_qty
 
-        upper_stock = received_qty - insole_data["issued_qty"] if received_qty > insole_data["issued_qty"] else 0
+        upper_stock = received_qty - record.get("qty_issued_machine")
         record.update(
             {
                 "quantity_issued": insole_data["issued_qty"],
