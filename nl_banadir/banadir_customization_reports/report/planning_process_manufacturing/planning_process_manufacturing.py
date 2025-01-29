@@ -20,9 +20,9 @@ def get_columns():
         {"label": "Insole Work Order", "fieldname": "insole_work_order", "fieldtype": "Link", "options": "Work Order", "width": 150},
         {"label": "Sequence No (Finished Goods)", "fieldname": "sequence_no", "fieldtype": "Data", "width": 150},  # Added column for sequence number
         {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 100},
-        {"label": "Item Name (Finished Goods)", "fieldname": "finished_goods_item", "fieldtype": "Data", "width": 200},
-        {"label": "Item Name (Insole)", "fieldname": "insole_item", "fieldtype": "Data", "width": 200},
-        {"label": "Item Name (Upper)", "fieldname": "upper_item", "fieldtype": "Data", "width": 200},
+        {"label": "Item Name (Finished Goods)", "fieldname": "finished_goods_item", "fieldtype": "Link","options":"Item", "width": 200},
+        {"label": "Item Name (Insole)", "fieldname": "insole_item","fieldtype": "Link","options":"Item", "width": 200},
+        {"label": "Item Name (Upper)", "fieldname": "upper_item", "fieldtype": "Link","options":"Item", "width": 200},
         {"label": "Order/Pairs", "fieldname": "order_pairs", "fieldtype": "Int", "width": 100},
         {"label": "Date of Issue(In Progress)", "fieldname": "in_progress_date", "fieldtype": "Date", "width": 120},
         {"label": "Qty Issued", "fieldname": "qty_issued", "fieldtype": "float", "width": 120},
@@ -42,7 +42,14 @@ def get_columns():
         {"label": "Quantity Issued", "fieldname": "quantity_issued", "fieldtype": "Int", "width": 120},
         {"label": "Received Quantity", "fieldname": "received_quantity", "fieldtype": "Int", "width": 120},
         {"label": "Balance Quantity", "fieldname": "balance_quantity", "fieldtype": "Int", "width": 120},
-        {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": "Link","options":"Item", "width": 120},
+        {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": "Int", "width": 120},
+        {"label":"Qty Issued(Machine)", "fieldname":"qty_issued_machine", "fieldtype":"Int", "width":120},
+        {"label":"Fresh Qty", "fieldname":"fresh_qty_issued", "fieldtype":"Int", "width":120},
+                {"label":"B Qty", "fieldname":"b_qty_issued", "fieldtype":"Int", "width":120},
+
+        {"label":"Rejected Qty", "fieldname":"rejected_qty_issued", "fieldtype":"Int", "width":120},
+        {"label":"Balance(In Machine)", "fieldname":"balance_to_issue", "fieldtype":"Int", "width":120},
+                {"label":"Stock Entry", "fieldname":"stock_entry", "fieldtype":"Link","options":"Stock Entry", "width":120},
     ]
 
 def get_data(filters):
@@ -79,6 +86,7 @@ def get_data(filters):
             csp.completed_qty AS printed_embossed_pairs,
             csp.supplier AS printing_embossing_contractor,
             csp.qty_issued AS qty_issued_printing,
+            mp.qty_issued AS qty_issued_machine,
             # '' AS balance_to_print_emboss,
             '' AS insole_stock,
             '' AS issued_date,
@@ -107,6 +115,9 @@ def get_data(filters):
             `tabWork Order Operations Item` csp 
              ON insole_work_order.name = csp.parent AND csp.operations = 'Printing & Embosing'
         LEFT JOIN
+        `tabWork Order Operations Item` mp 
+            ON fg_work_order.name = mp.parent AND mp.operations = 'MOULDING & PACKING'
+        LEFT JOIN
             `tabWork Order Item` required_items 
              ON fg_work_order.name = required_items.parent
              AND required_items.custom_item_group = 'UPPER STOCK'
@@ -116,6 +127,7 @@ def get_data(filters):
     result= frappe.db.sql(query, as_dict=True)
     main_data = [add_insole_stock_data(record) for record in result]
     [update_insole_stock_qty(record) for record in main_data]
+    [update_stock_details(record) for record in main_data]
     return main_data
 
 def add_insole_stock_data(record):
@@ -174,11 +186,10 @@ WHERE
 
         received_qty = receipt[0].received_quantity if receipt else 0
         balance_quantity = insole_data["issued_qty"] - received_qty
-        upper_stock = receipt[0].upper_stock if receipt else None
 
+        upper_stock = received_qty - record.get("qty_issued_machine")
         record.update(
             {
-                "upper_item": insole_data["insole_stock_item"],
                 "quantity_issued": insole_data["issued_qty"],
                 "issued_date": insole_data["issued_date"],
                 "received_quantity": received_qty,
@@ -190,7 +201,6 @@ WHERE
     else:
         record.update(
             {
-                "upper_item": None,
                 "quantity_issued": 0,
                 "received_quantity": 0,
                 "balance_quantity": 0,
@@ -199,9 +209,22 @@ WHERE
                 "issued_date": None,
             }
         )
-
+  
+    record.update({
+        "upper_item": update_upper_stock_item(finished_goods_work_order_no),
+    })
     return record
 
+def update_upper_stock_item(finished_goods_work_order_no):
+    work_order=frappe.get_doc("Work Order",finished_goods_work_order_no)
+    required_items = work_order.get("required_items")
+    for item in required_items:
+        item_doc = frappe.get_doc("Item", item.item_code)
+        
+        if item_doc.item_group == "UPPER STOCK":
+            return item.item_code
+    
+    
 def update_insole_stock_qty(record):
     printed_embossed_pairs = record.get("printed_embossed_pairs") or 0
     quantity_issued = record.get("quantity_issued") or 0
@@ -211,3 +234,37 @@ def update_insole_stock_qty(record):
     else:
         raise ValueError("Fields 'printed_embossed_pairs' and 'quantity_issued' must be numeric.")
     
+
+def update_stock_details(record):
+    finished_goods_work_order = record.get("finished_goods_work_order_no")
+    fresh_qty_issued = record.get("fresh_qty_issued") or 0
+    qty_issued_machine = record.get("qty_issued_machine") or 0
+    stock_entry = frappe.db.get_value("Stock Entry", {"work_order": finished_goods_work_order, "docstatus": 1}, "name")
+    
+    if not stock_entry:
+        return record
+    
+    stock_entry_doc = frappe.get_doc("Stock Entry", stock_entry)
+    stock_entry_items = stock_entry_doc.get("items")
+    
+    # Initialize variables to avoid UnboundLocalError
+    rejected_qty_issued = 0
+    is_finished_item_qty = 0
+    b_qty_issued = 0
+    
+    for item in stock_entry_items:
+        if item.item_group == "Rejection Items India":
+            rejected_qty_issued += item.qty or 0
+        if item.is_finished_item == 1:
+            is_finished_item_qty = item.qty or 0
+        if item.item_group == "B STOCK":
+            b_qty_issued += item.qty
+    
+    record.update({
+        "stock_entry": stock_entry,
+        "rejected_qty_issued": rejected_qty_issued,
+        "fresh_qty_issued":is_finished_item_qty,
+        "b_qty_issued": b_qty_issued,
+        "balance_to_issue": qty_issued_machine - (is_finished_item_qty + rejected_qty_issued),
+    })
+    return record

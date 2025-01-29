@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import nowdate
 from frappe.query_builder import DocType
 from frappe.query_builder.functions import IfNull
+from frappe.query_builder.custom import ConstantColumn
 from erpnext.accounts.report.utils import convert
 
 def execute(filters=None):
@@ -28,28 +29,32 @@ def get_columns(filters=None):
             "fieldname": "landed_cost", 
             "fieldtype": "Link",
             "options": "Landed Cost Voucher",
-            "width": "220"
+            "width": "220",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Expense Account", 
             "fieldname": "expense_account", 
             "fieldtype": "Link", 
             "options": "Account",
-            "width": "200"
+            "width": "200",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Expense Booked", 
             "fieldname": "expense_booked", 
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "150"
+            "width": "150",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Amount", 
             "fieldname": "amount", 
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "150"
+            "width": "150",
+            "hidden": 1 if filters.get("without_landed_cost") else 0
         },
         {
             "label": "Currency", 
@@ -77,6 +82,15 @@ def get_columns(filters=None):
             "fieldtype": "Data"
         }
     ]
+
+    if filters.get("without_landed_cost"):
+        columns.insert(2, {
+            "label": "Marka (Branch)",
+            "fieldname": "branch",
+            "fieldtype": "Link",
+            "options": "Branch",
+            "width": "150"
+        })
 
     if filters.get("currency"):
         convert_currency = filters.get("currency")
@@ -165,8 +179,39 @@ def get_data(filters):
         .where(LandedCostVoucher.docstatus == 1)
     )
 
+    without_landed_cost_query = (
+        frappe.qb.from_(PurchaseInvoice)
+        .left_join(LandedCostPurchaseReceipt)
+        .on(LandedCostPurchaseReceipt.receipt_document == PurchaseInvoice.name)
+        .left_join(LandedCostVoucher)
+        .on(LandedCostVoucher.name == LandedCostPurchaseReceipt.parent)
+        .select(
+            ConstantColumn("").as_("landed_cost"),
+            PurchaseInvoice.name.as_("invoice_number"),
+            Company.default_currency.as_("currency"),
+            PurchaseInvoice.posting_date.as_("posting_date"),
+            PurchaseInvoice.currency.as_("invoice_currency"),
+            PurchaseInvoice.branch.as_("branch"),
+            PurchaseInvoice.conversion_rate.as_("conversion_rate"),
+            ConstantColumn("").as_("expense_account"),
+            PurchaseInvoice.custom_container_no.as_("container_no"),
+            PurchaseInvoice.custom_bill_of_lading.as_("bl_number"),
+            ConstantColumn(int(0)).as_("amount"),
+            ConstantColumn(int(0)).as_("expense_booked"),
+            ConstantColumn("").as_("description")
+        )
+        .left_join(Company)
+        .on(PurchaseInvoice.company == Company.name)
+        .where(LandedCostVoucher.name.isnull())
+        .where(PurchaseInvoice.docstatus == 1)
+    )
+
+    if filters.get("without_landed_cost") and filters.get("company"):
+        query = without_landed_cost_query
+        query = query.where(PurchaseInvoice.company == filters.get("company"))
+
     # Apply filters if provided
-    if filters.get("company"):
+    if filters.get("company") and not filters.get("without_landed_cost"):
         query = query.where(LandedCostVoucher.company == filters.get("company"))
     
     if filters.get("purchase_invoice"):
@@ -211,8 +256,9 @@ def get_data(filters):
                 "currency": original_currency,
             }
 
-        totals_dict[invoice_number]["total_expense_booked"] += row["expense_booked"]
-        totals_dict[invoice_number]["total_amount"] += row["amount"]
+        if not filters.get("without_landed_cost"):
+            totals_dict[invoice_number]["total_expense_booked"] += row["expense_booked"]
+            totals_dict[invoice_number]["total_amount"] += row["amount"]
 
         # Convert currency if necessary
         if selected_currency:

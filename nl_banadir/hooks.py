@@ -41,8 +41,9 @@ doc_events = {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.payment_entry.auto_name",
     },
     "Journal Entry": {
-        "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
-        "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
+        # "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
+        "before_submit": ["nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
+                          "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit"],
     },
     "Production Plan": {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
@@ -83,6 +84,7 @@ doctype_js = {
     "Purchase Order": "public/js/purchase_order.js",
     "Production Plan": "public/js/production_plan.js",
     "Sales Order": "public/js/sales_order.js",
+    "Payment Entry": "public/js/payment_entry.js",  
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
 }
 

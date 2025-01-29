@@ -70,6 +70,7 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
 def execute(filters=None):
 	return _execute(filters)
 
+# def get_container_no
 def _execute(filters=None, additional_table_columns=None):
 	if not filters:
 		filters = {}
@@ -106,6 +107,7 @@ def _execute(filters=None, additional_table_columns=None):
 			"item_group": d.pi_item_group if d.pi_item_group else d.i_item_group,
 			"description": d.description,
 			"invoice": d.parent,
+			"container_no": d.custom_container_no,
 			"posting_date": d.posting_date,
 			"supplier": d.supplier,
 			"supplier_name": d.supplier_name,
@@ -124,7 +126,8 @@ def _execute(filters=None, additional_table_columns=None):
 			"exchange_rate": d.conversion_rate if d.conversion_rate !=1 else get_current_exchange_rate("USD", company_currency, d.posting_date),
 			"landed_cost_voucher_amount": flt(d.landed_cost_voucher_amount/ d.stock_qty),
 		"rate_plus_landed_cost": flt(d.base_net_amount / d.stock_qty) + flt(d.landed_cost_voucher_amount / d.stock_qty),
-		"amount_plus_landed_cost": d.base_net_amount + flt(d.landed_cost_voucher_amount / d.stock_qty),
+		"amount_plus_landed_cost": d.base_net_amount + flt(d.landed_cost_voucher_amount),
+			"total_landed_cost": d.landed_cost_voucher_amount,
 		"currency":presentation_currency,
 			}
 		row["stock_qty"] = flt(row["stock_qty"]) if row["stock_qty"] else 0
@@ -161,267 +164,289 @@ def _execute(filters=None, additional_table_columns=None):
 			add_sub_total_row(row, total_row_map, d.get(group_by_field, ""), tax_columns)
 
 		data.append(row)
+	# frappe.throw(str(data))
 	if filters.get("group_by") and item_list:
 		total_row = total_row_map.get(prev_group_by_value or d.get("item_name"))
 		total_row["percent_gt"] = flt(total_row["total"] / grand_total * 100)
+		# total_row[""]
 		data.append(total_row)
 		data.append({})
 		add_sub_total_row(total_row, total_row_map, "total_row", tax_columns)
-		data.append(total_row_map.get("total_row"))
+		# data.append(total_row_map.get("total_row"))
 		skip_total_row = 1
 
 	data=append_opening_qty(data, filters)
 	data=convert_as_per_current_exchange_rate(data, filters, "USD", presentation_currency)
 	data=convert_currency_fields(data, filters)
 	data=convert_alternative_uom(data, filters)
+	data=append_total_row(data)
 
 	return columns, data, None, None, None, skip_total_row
 	
-	
 def get_columns(additional_table_columns, filters):
-	presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
-		"Company", filters.company, "default_currency"
-	)
-	columns = []
- 
-	
-	if filters.get("group_by") != ("Item"):
-		columns.extend(
-			[
-				{
-					"label": _("Item Code"),
-					"fieldname": "item_code",
-					"fieldtype": "Link",
-					"options": "Item",
-					"width": 120,
-				},
-				{
-					"label": _("Currency"),
-					"fieldname": "currency",
-					"fieldtype": "Link",
-					"options": "Currency",
-					"width": 80,
-					# "hidden": 1,
-	 
-				},
-	
-				{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 120},
-			]
-		)
+    presentation_currency = filters.get("presentation_currency") or frappe.get_cached_value(
+        "Company", filters.company, "default_currency"
+    )
+    columns = []
+    
+    if filters.get("group_by") != "Item":
+        columns.extend(
+            [
+                {
+                    "label": _("Item Code"),
+                    "fieldname": "item_code",
+                    "fieldtype": "Link",
+                    "options": "Item",
+                    "width": 120,
+                    # "hidden": 1 if filters.get("hide_column") else 0,
+                },
+                {
+                    "label": _("Currency"),
+                    "fieldname": "currency",
+                    "fieldtype": "Link",
+                    "options": "Currency",
+                    "width": 80,
+                    "hidden": 1,
+                },
+                {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data",                     "hidden": 1 if filters.get("hide_column") else 0,
+"width": 120},
+            ]
+        )
 
-	if filters.get("group_by") not in ("Item", "Item Group"):
-		columns.extend(
-			[
-				{
-					"label": _("Item Group"),
-					"fieldname": "item_group",
-					"fieldtype": "Link",
-					"options": "Item Group",
-					"width": 120,
-				}
-			]
-		)
+    if filters.get("group_by") not in ("Item", "Item Group"):
+        columns.extend(
+            [
+                {
+                    "label": _("Item Group"),
+                    "fieldname": "item_group",
+                    "fieldtype": "Link",
+                    "options": "Item Group",
+                    "width": 120,
+                }
+            ]
+        )
 
-	columns.extend(
-		[
-			{"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 150},
-			{
-				"label": _("Invoice"),
-				"fieldname": "invoice",
-				"fieldtype": "Link",
-				"options": "Purchase Invoice",
-				"width": 120,
-			},
-			{"label": _("Posting Date"), "fieldname": "posting_date", "fieldtype": "Date", "width": 120},
-		]
-	)
+    columns.extend(
+        [
+            {"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "hidden": 1 if filters.get("hide_column") else 0, "width": 150},
+            {
+                "label": _("Invoice"),
+                "fieldname": "invoice",
+                "fieldtype": "Link",
+                "options": "Purchase Invoice",
+                "width": 120,
+            },
+            {
+                "label": _("Container No"),
+                "fieldname": "container_no",
+                "fieldtype": "Data",
+                "width": 120,
+            },
+            {"label": _("Posting Date"), "fieldname": "posting_date", "fieldtype": "Date", "width": 120},
+        ]
+    )
 
-	if filters.get("group_by") != "Supplier":
-		columns.extend(
-			[
-				{
-					"label": _("Supplier"),
-					"fieldname": "supplier",
-					"fieldtype": "Link",
-					"options": "Supplier",
-					"width": 120,
-				},
-				
-			]
-		)
+    if filters.get("group_by") != "Supplier":
+        columns.extend(
+            [
+                {
+                    "label": _("Supplier"),
+                    "fieldname": "supplier",
+                    "fieldtype": "Link",
+                    "options": "Supplier",
+                    "width": 120,
+                    "hidden": 1 if filters.get("hide_column") else 0,
+                },
+            ]
+        )
 
-	if additional_table_columns:
-		columns += additional_table_columns
+    if additional_table_columns:
+        columns += additional_table_columns
 
-	columns += [
-		{
-			"label": _("Payable Account"),
-			"fieldname": "credit_to",
-			"fieldtype": "Link",
-			"options": "Account",
-			"width": 80,
-		},
-		{
-			"label": _("Mode Of Payment"),
-			"fieldname": "mode_of_payment",
-			"fieldtype": "Link",
-			"options": "Mode of Payment",
-			"width": 120,
-		},
-		{
-			"label": _("Project"),
-			"fieldname": "project",
-			"fieldtype": "Link",
-			"options": "Project",
-			"width": 80,
-		},
-		{
-			"label": _("Company"),
-			"fieldname": "company",
-			"fieldtype": "Link",
-			"options": "Company",
-			"width": 80,
-		},
-		{
-			"label": _("Purchase Order"),
-			"fieldname": "purchase_order",
-			"fieldtype": "Link",
-			"options": "Purchase Order",
-			"width": 100,
-		},
-		{
-			"label": _("Purchase Receipt"),
-			"fieldname": "purchase_receipt",
-			"fieldtype": "Link",
-			"options": "Purchase Receipt",
-			"width": 100,
-		},
-		{
-			"label": _("Expense Account"),
-			"fieldname": "expense_account",
-			"fieldtype": "Link",
-			"options": "Account",
-			"width": 100,
-		},
-  		{"label": _("Opening Stock"), "fieldname": "opening_stock_qty", "fieldtype": "Float", "width": 100, "hidden":1},
+    columns += [
+        {
+            "label": _("Payable Account"),
+            "fieldname": "credit_to",
+            "fieldtype": "Link",
+            "options": "Account",
+            "width": 80,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _("Mode Of Payment"),
+            "fieldname": "mode_of_payment",
+            "fieldtype": "Link",
+            "options": "Mode of Payment",
+            "width": 120,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _("Project"),
+            "fieldname": "project",
+            "fieldtype": "Link",
+            "options": "Project",
+            "width": 80,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _("Company"),
+            "fieldname": "company",
+            "fieldtype": "Link",
+            "options": "Company",
+            "width": 80,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _("Purchase Order"),
+            "fieldname": "purchase_order",
+            "fieldtype": "Link",
+            "options": "Purchase Order",
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _("Purchase Receipt"),
+            "fieldname": "purchase_receipt",
+            "fieldtype": "Link",
+            "options": "Purchase Receipt",
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _("Expense Account"),
+            "fieldname": "expense_account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {"label": _("Opening Stock"), "fieldname": "opening_stock_qty", "fieldtype": "Float", "width": 100, "hidden": 1},
+        {"label": _("Stock Qty"), "fieldname": "stock_qty", "fieldtype": "Float", "width": 100},
+        {
+            "label": _("Stock UOM"),
+            "fieldname": "stock_uom",
+            "fieldtype": "Link",
+            "options": "UOM",
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+    ]
 
-		{"label": _("Stock Qty"), "fieldname": "stock_qty", "fieldtype": "Float", "width": 100},
-		{
-			"label": _("Stock UOM"),
-			"fieldname": "stock_uom",
-			"fieldtype": "Link",
-			"options": "UOM",
-			"width": 100,
-		},
-  
-	]
+    # Add the Alternative UOM column after Stock UOM
+    if filters.get("alternative_uom"):
+        columns.append(
+            {
+                "label": _("<span style='color:red'>Alternative UOM</span>"),
+                "fieldname": "uom",
+                "fieldtype": "Link",
+                "options": "UOM",
+                "width": 100,
+                "hidden": 1 if filters.get("hide_column") else 0,
+            }
+        )
 
-	# Add the Alternative UOM column after Stock UOM
-	if filters.get("alternative_uom"):
-		columns.append(
-			{
-				"label": _("<span style='color:red'>Alternative UOM</span>"),
-				"fieldname": "uom",
-				"fieldtype": "Link",
-				"options": "UOM",
-				"width": 100,
-			}
-		)
+    columns += [
+        {
+            "label": _("Exchange Rate"),
+            "fieldname": "exchange_rate",
+            "fieldtype": "Float",
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": "Current Exchange Rate",
+            "fieldname": "current_exchange_rate",
+            "fieldtype": "Float",
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _(f"Rate ({presentation_currency})"),
+            "fieldname": "rate",
+            "fieldtype": "Float",
+            "precision": 2,  
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _(f"Current Rate ({presentation_currency})"),
+            "fieldname": "current_rate",
+            "fieldtype": "Float",
+            "precision": 2,  
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _(f"Landed Cost ({presentation_currency})"),
+            "fieldname": "landed_cost_voucher_amount",
+            "fieldtype": "Float",
+            "precision": 2,  
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _(f"Current Landed Cost ({presentation_currency})"),
+            "fieldname": "current_landed_cost",
+            "fieldtype": "Float",
+            "precision": 2,  
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": f"Rate + LC ({presentation_currency})",
+            "fieldname": "rate_plus_landed_cost",
+            "fieldtype": "Float",
+            "precision": 2,
+            "width": 100,
+            "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": f"Current Rate + LC({presentation_currency})",
+            "fieldname": "current_rate_plus_landed_cost",
+            "fieldtype": "Float",
+            "precision": 2,  
+            "width": 100,
+            # "hidden": 1 if filters.get("hide_column") else 0,
+        },
+        {
+            "label": _(f"Amount({presentation_currency})"),
+            "fieldname": "amount",
+            "fieldtype": "Float",
+            "precision": 2,  
+            "width": 100,
+        },
+        {
+            "label": _(f"Total LC ({presentation_currency})"),
+            "fieldname": "total_landed_cost",
+            "fieldtype": "Float",
+            "precision": 2, 
+            "width": 100,
+        },
+        {
+            "label": _(f"Amount + LC ({presentation_currency})"),
+            "fieldname": "amount_plus_landed_cost",
+            "fieldtype": "Float",
+            "precision": 2,  
+            "width": 100,
+        },
+    ]
 
-	columns += [
-		{
-		"label": _("Exchange Rate"),
-		"fieldname": "exchange_rate",
-		"fieldtype": "Float",
-		"width": 100,
-		},
-  {
-	  "label":"Current Exchange Rate",
- 		"fieldname":"current_exchange_rate",
-		"fieldtype":"Float",
-  
-		"width":100,
-   		
-  },
-		{
-			"label": _(f"Rate({presentation_currency})"),
-			"fieldname": "rate",
-			"fieldtype": "Currency",
-   			"options":"currency",
-			"width": 100,
-		},
-  {
-"label": _(f"Current Rate ({presentation_currency})"),
-		"fieldname": "current_rate",
-		"fieldtype": "Currency",
-   			"options":"currency",
-		"width": 100,
-  },
-  {
-  "label": _(f"Landed Cost ({presentation_currency})"),
-  "fieldname":"landed_cost_voucher_amount",
-  "fieldtype": "Currency",
-   			"options":"currency",
+    columns.append(
+        {
+            "label": _(f"Current Total ({presentation_currency})"),
+            "fieldname": "current_total",
+            "fieldtype": "Float",
+            "precision": 2, 
+            "hidden": 1 if filters.get("hide_column") else 0,
+        }
+    )
 
-  "width":100,
-  },
-  {
-	"label": _(f"Current Landed Cost ({presentation_currency})"),
-	"fieldname":"current_landed_cost",
-	"fieldtype": "Currency",
-   			"options":"currency",
-	 "width":100,
-  },
-  {
-	  "label":f"Rate + LC({presentation_currency})",
-	  "fieldname":"rate_plus_landed_cost",
-	  "fieldtype": "Currency",
-   			"options":"currency",
+    if filters.get("group_by"):
+        columns.append(
+            {"label": _("% Of Grand Total"), "fieldname": "percent_gt", "fieldtype": "Float", "width": 80}
+        )
 
-	"width":100,
- 
-  },
-	{
-	  "label":"Current Rate + LC({presentation_currency})",
-	  "fieldname":"current_rate_plus_landed_cost",
-	 "fieldtype": "Currency",
-   			"options":"currency",
-
-	"width":100,
- 
-  },
-		{
-			"label": _(f"Amount ({presentation_currency})"),
-			"fieldname": "amount",
-			"fieldtype": "Currency",
-   			"options":"currency",
-
-			"width": 100,
-		},
-	{
-		"label": _(f"Amount + LC ({presentation_currency})"),	
-		"fieldname": "amount_plus_landed_cost",
-		"fieldtype": "Currency",
-   			"options":"currency",
-	},
-	]
- 
-	columns.append(
-		{
-			"label": _(f"Current Total ({presentation_currency})"),
-			"fieldname": "current_total",
-			"fieldtype": "Currency",
-   			"options":"currency",
-		}
-	)
-
-	if filters.get("group_by"):
-		columns.append(
-			{"label": _("% Of Grand Total"), "fieldname": "percent_gt", "fieldtype": "Float", "width": 80}
-		)
-  
-
-	return columns
+    return columns
 
 
 def apply_conditions(query, pi, pii, filters):
@@ -468,6 +493,7 @@ def get_items(filters, additional_table_columns):
 			pi.credit_to,
 			pi.company,
 			pi.supplier,
+			pi.custom_container_no,
 			pi.remarks,
 			pi.base_net_total,
 			pi.unrealized_profit_loss_account,
@@ -550,6 +576,8 @@ def convert_currency_fields(data, filters):
 			entry['rate_plus_landed_cost'] = convert(entry.get('rate_plus_landed_cost', 0), from_currency, to_currency, date)
 			entry['total_tax']=convert(entry.get('total_tax',0), from_currency, to_currency, date)
 			entry['total'] = convert(entry.get('total', 0), from_currency, to_currency, date)
+			entry["amount_plus_landed_cost"] = convert(entry.get("amount_plus_landed_cost", 0), from_currency, to_currency, date)
+			entry["total_landed_cost"] = convert(entry.get("total_landed_cost", 0), from_currency, to_currency, date)
 			if filters.get('presentation_currency') != 'USD':
 				entry['current_rate'] = convert(entry.get('current_rate', 0), from_currency, to_currency, date)
 				entry['current_rate_plus_landed_cost'] = convert(entry.get('current_rate_plus_landed_cost', 0), from_currency, to_currency, date)
@@ -607,8 +635,6 @@ def append_opening_qty(data, filters):
 	return data
 
 
-
-
 def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	return uom_conversion or 1
@@ -650,6 +676,7 @@ def invoice_details(item_code, row, data, presentation_currency):
 	rate_plus_landed_cost = 0
 	landed_cost = 0
 	amount_plus_landed_cost = 0
+	total_landed_cost = 0
 
 	if invoice_code:
 		for d in data:
@@ -663,6 +690,7 @@ def invoice_details(item_code, row, data, presentation_currency):
 				rate_plus_landed_cost += d.get("rate_plus_landed_cost")
 				landed_cost += d.get("landed_cost_voucher_amount")
 				amount_plus_landed_cost += d.get("amount_plus_landed_cost")
+				total_landed_cost += d.get("total_landed_cost")
 	row["currency"] = presentation_currency
 	row['stock_qty'] = stock_qty
 	row["current_total"] = current_total
@@ -672,5 +700,39 @@ def invoice_details(item_code, row, data, presentation_currency):
 	row["rate_plus_landed_cost"] = rate_plus_landed_cost
 	row["landed_cost_voucher_amount"] = landed_cost
 	row["amount_plus_landed_cost"] = amount_plus_landed_cost
+	row["total_landed_cost"] = total_landed_cost
  
 	return data
+
+def append_total_row(data):
+    if not data:
+        return data
+
+    total_row = {key: 0 for key in data[0].keys() if isinstance(data[0][key], (int, float))}
+    total_row["bold"] = 1  
+
+    for row in data:
+        if not item_exists(row.get('item_code')):
+            continue
+
+        for key, value in row.items():
+            if isinstance(value, (int, float)): 
+                total_row[key] = total_row.get(key, 0) + value
+            elif isinstance(value, str) and value.startswith('$'): 
+                try:
+                    total_row[key] = total_row.get(key, 0) + float(value.strip('$'))
+                except ValueError:
+                    total_row[key] = total_row.get(key, 0)  
+
+    total_row["item_code"] = "Totals"
+    data.append(total_row)
+    return data
+
+
+def item_exists(item_code):
+    """Check if the given item_code exists in the Item doctype."""
+    if not item_code:
+        return False
+
+    # Check existence of the item in the database
+    return frappe.db.exists("Item", item_code)
