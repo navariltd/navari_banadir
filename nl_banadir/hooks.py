@@ -34,14 +34,11 @@ doc_events = {
     },
     "Purchase Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
-         "autoname":"nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
-
-        
+        "autoname": "nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
     },
     "Payment Entry": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.payment_entry_before_submit",
-        "autoname":"nl_banadir.banadir_customization_reports.controllers.payment_entry.auto_name",
-        
+        "autoname": "nl_banadir.banadir_customization_reports.controllers.payment_entry.auto_name",
     },
     "Journal Entry": {
         # "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
@@ -83,12 +80,13 @@ doc_events = {
 
 # include js in doctype views
 doctype_js = {
-    "Work Order" : "public/js/work_order.js",
-    "Purchase Order":"public/js/purchase_order.js",
-    "Production Plan":"public/js/production_plan.js",
-    "Sales Order":"public/js/sales_order.js",
-    "Payment Entry": "public/js/payment_entry.js",
-    }
+    "Work Order": "public/js/work_order.js",
+    "Purchase Order": "public/js/purchase_order.js",
+    "Production Plan": "public/js/production_plan.js",
+    "Sales Order": "public/js/sales_order.js",
+    "Payment Entry": "public/js/payment_entry.js",  
+    "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
+}
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -221,9 +219,9 @@ jinja = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "nl_banadir.event.get_events"
-# }
+override_whitelisted_methods = {
+    "erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.download_statements": "nl_banadir.banadir_customization_reports.overrides.process_of_statements.download_statements"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
