@@ -165,91 +165,6 @@ class InterCompanyPartiesMatchReport:
             },
         ]
 
-        # if self.filters.get("party_type") == "Customer":
-        #     columns.insert(
-        #         5,
-        #         {
-        #             "label": "Sales Invoice",
-        #             "fieldname": "s_name",
-        #             "fieldtype": "Link",
-        #             "options": "Sales Invoice",
-        #             "width": "100",
-        #         },
-        #     )
-
-        #     columns.insert(
-        #         6,
-        #         {
-        #             "label": "Sales Invoice Total",
-        #             "fieldname": "s_invoice_total",
-        #             "fieldtype": "Currency",
-        #             "width": "100",
-        #         },
-        #     )
-
-        #     columns.insert(
-        #         -1,
-        #         {
-        #             "label": "Purchase Invoice Total",
-        #             "fieldname": "p_invoice_total",
-        #             "fieldtype": "Currency",
-        #             "width": "100",
-        #         },
-        #     )
-
-        #     columns.insert(
-        #         -2,
-        #         {
-        #             "label": "Purchase Invoice",
-        #             "fieldname": "p_name",
-        #             "fieldtype": "Link",
-        #             "options": "Purchase Invoice",
-        #             "width": "100",
-        #         },
-        #     )
-
-        # if self.filters.get("party_type") == "Supplier":
-        #     columns.insert(
-        #         5,
-        #         {
-        #             "label": "Purchase Invoice",
-        #             "fieldname": "p_name",
-        #             "fieldtype": "Link",
-        #             "options": "Purchase Invoice",
-        #             "width": "100",
-        #         },
-        #     )
-
-        #     columns.insert(
-        #         6,
-        #         {
-        #             "label": "Purchase Invoice Total",
-        #             "fieldname": "p_invoice_total",
-        #             "fieldtype": "Currency",
-        #             "width": "100",
-        #         },
-        #     )
-
-        #     columns.insert(
-        #         -1,
-        #         {
-        #             "label": "Sales Invoice Total",
-        #             "fieldname": "s_invoice_total",
-        #             "fieldtype": "Currency",
-        #             "width": "100",
-        #         },
-        #     )
-
-        #     columns.insert(
-        #         -2,
-        #         {
-        #             "label": "Sales Invoice",
-        #             "fieldname": "s_name",
-        #             "fieldtype": "Link",
-        #             "options": "Sales Invoice",
-        #             "width": "100",
-        #         },
-        #     )
         return columns
 
     def get_invoice_columns(self):
@@ -1455,96 +1370,12 @@ class InterCompanyPartiesMatchReport:
 
         return query.run(as_dict=True)
 
-    # def payment_entry_query(self, payment_type, company_type):
-    #     payment_type = payment_type.lower()
-    #     PE_DOCTYPE = DocType("Payment Entry")
-
-    #     query = ""
-
-    #     query_1 = frappe.qb.from_(PE_DOCTYPE).select(
-    #         PE_DOCTYPE.company.as_("reference_company"),
-    #         PE_DOCTYPE.name.as_("reference_pe"),
-    #         PE_DOCTYPE.paid_amount,
-    #     )
-    #     query_2 = frappe.qb.from_(PE_DOCTYPE).select(
-    #         PE_DOCTYPE.company.as_("representative_company"),
-    #         PE_DOCTYPE.name.as_("representative_pe"),
-    #         PE_DOCTYPE.paid_amount.as_("received_amount"),
-    #     )
-
-    #     if (
-    #         payment_type == "receive"
-    #         and self.filters.get("party_type") == "Customer"
-    #         and company_type == "ref_company"
-    #     ):
-    #         query = query_1.where(
-    #             (PE_DOCTYPE.company == self.filters.get("reference_company"))
-    #             & (PE_DOCTYPE.payment_type == "Receive")
-    #         )
-
-    #         if self.filters.get("party"):
-    #             query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
-
-    #     if (
-    #         payment_type == "receive"
-    #         and self.filters.get("party_type") == "Customer"
-    #         and company_type == "rep_company"
-    #     ):
-    #         query = query_2.where(
-    #             (PE_DOCTYPE.party == self.filters.get("reference_company"))
-    #             & (PE_DOCTYPE.payment_type == "Pay")
-    #         )
-
-    #         if self.filters.get("party"):
-    #             query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
-
-    #     if (
-    #         payment_type == "pay"
-    #         and self.filters.get("party_type") == "Supplier"
-    #         and company_type == "ref_company"
-    #     ):
-    #         query = query_1.where(
-    #             (PE_DOCTYPE.company == self.filters.get("reference_company"))
-    #             & (PE_DOCTYPE.payment_type == "Pay")
-    #         )
-
-    #         if self.filters.get("party"):
-    #             query = query.where(PE_DOCTYPE.party == self.filters.get("party")[0])
-
-    #     if (
-    #         payment_type == "pay"
-    #         and self.filters.get("party_type") == "Supplier"
-    #         and company_type == "rep_company"
-    #     ):
-    #         query = query_2.where(
-    #             (PE_DOCTYPE.party == self.filters.get("reference_company"))
-    #             & (PE_DOCTYPE.payment_type == "Receive")
-    #         )
-
-    #         if self.filters.get("party"):
-    #             query = query.where(PE_DOCTYPE.company == self.filters.get("party")[0])
-
-    #     return query.where(
-    #         (PE_DOCTYPE.posting_date >= self.from_date)
-    #         & (PE_DOCTYPE.posting_date <= self.to_date)
-    #         & (PE_DOCTYPE.docstatus < 2)
-    #     ).run(as_dict=True)
-
     def get_payment_entry_data(self):
         ref_payments = []
         rep_payments = []
 
         ref_payments = self.payment_entry_query(is_reference_company=True)
         rep_payments = self.payment_entry_query()
-        print("REF PAYMENTS", ref_payments)
-        print("REP PAYMENTS", rep_payments)
-
-        # if self.filters.get("party_type") == "Customer":
-        #     ref_payments = self.payment_entry_query2(is_reference_company=True)
-        #     rep_payments = self.payment_entry_query("receive", "rep_company")
-        # else:
-        #     ref_payments = self.payment_entry_query("pay", "ref_company")
-        #     rep_payments = self.payment_entry_query("pay", "rep_company")
 
         combined_payment_entries = self.get_combined_dicts_with_missing_values(
             ref_payments, rep_payments
@@ -1578,7 +1409,6 @@ class InterCompanyPartiesMatchReport:
                 prepared_data[key]["representative_amount"] = entry.get(
                     "representative_amount", None
                 )
-            print("DATA", list(prepared_data.values()))
             self.data = list(prepared_data.values())
 
     def get_combined_dicts_with_missing_values(self, list_a, list_b):

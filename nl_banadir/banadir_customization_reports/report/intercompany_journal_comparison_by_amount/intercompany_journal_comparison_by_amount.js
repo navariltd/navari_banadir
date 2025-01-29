@@ -20,12 +20,6 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
         frappe.query_report.set_filter_value("party", "");
       },
     },
-    // {
-    //   fieldname: "payment_type",
-    //   label: __("Payment Type"),
-    //   fieldtype: "Autocomplete",
-    //   options: "Pay\nReceive",
-    // },
     {
       fieldname: "party",
       label: __("Party"),
@@ -111,26 +105,6 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       default: 0,
     },
   ],
-  // onload: function (report) {
-  //   function toggleFilterDisplay() {
-  //     const payment_entry_only =
-  //       frappe.query_report.get_filter_value("payment_entry_only");
-
-  //     frappe.query_report.toggle_filter_display(
-  //       "payment_type",
-  //       !payment_entry_only
-  //     );
-  //   }
-
-  //   // call the function on load
-  //   toggleFilterDisplay();
-
-  //   frappe.query_report.on("filter-change", (filter) => {
-  //     if (filter.fieldname === "payment_entry_only") {
-  //       toggleFilterDisplay();
-  //     }
-  //   });
-  // },
 
   formatter: function (value, row, column, data, default_formatter) {
     value = default_formatter(value, row, column, data);
