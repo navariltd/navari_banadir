@@ -42,8 +42,10 @@ doc_events = {
     },
     "Journal Entry": {
         # "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
-        "before_submit": ["nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
-                          "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit"],
+        "before_submit": [
+            "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
+            "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
+        ],
     },
     "Production Plan": {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
@@ -84,7 +86,7 @@ doctype_js = {
     "Purchase Order": "public/js/purchase_order.js",
     "Production Plan": "public/js/production_plan.js",
     "Sales Order": "public/js/sales_order.js",
-    "Payment Entry": "public/js/payment_entry.js",  
+    "Payment Entry": "public/js/payment_entry.js",
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
 }
 
@@ -219,9 +221,10 @@ jinja = {
 # Overriding Methods
 # ------------------------------
 #
-override_whitelisted_methods = {
-    "erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.download_statements": "nl_banadir.banadir_customization_reports.overrides.process_of_statements.download_statements"
-}
+# override_whitelisted_methods = {
+#     "erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.download_statements": "nl_banadir.banadir_customization_reports.overrides.process_of_statements.download_statements",
+#     "erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.send_emails": "nl_banadir.banadir_customization_reports.overrides.process_of_statements.send_emails",
+# }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
