@@ -1,6 +1,7 @@
 import frappe
 from frappe.www.printview import get_letter_head, get_print_style
 from frappe.utils.pdf import get_pdf
+from frappe.utils import add_days, add_months, getdate, today
 
 from erpnext import get_company_currency
 from erpnext.accounts.party import get_party_account_currency
@@ -13,6 +14,8 @@ from erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of
     get_gl_filters,
     set_ageing,
     get_common_filters,
+    get_context,
+    get_recipients_and_cc,
 )
 
 
@@ -129,3 +132,66 @@ def download_statements(document_name):
         frappe.local.response.filename = doc.name + ".pdf"
         frappe.local.response.filecontent = report
         frappe.local.response.type = "download"
+
+
+@frappe.whitelist()
+def send_emails(document_name, from_scheduler=False, posting_date=None):
+    doc = frappe.get_doc("Process Statement Of Accounts", document_name)
+    report = get_report_pdf(doc, consolidated=False)
+
+    if report:
+        for customer, report_pdf in report.items():
+            context = get_context(customer, doc)
+            filename = frappe.render_template(doc.pdf_name, context)
+            attachments = [{"fname": filename + ".pdf", "fcontent": report_pdf}]
+
+            recipients, cc = get_recipients_and_cc(customer, doc)
+            if not recipients:
+                continue
+
+            subject = frappe.render_template(doc.subject, context)
+            message = frappe.render_template(doc.body, context)
+
+            if doc.sender:
+                sender_email = frappe.db.get_value(
+                    "Email Account", doc.sender, "email_id"
+                )
+            else:
+                sender_email = frappe.session.user
+
+            frappe.enqueue(
+                queue="short",
+                method=frappe.sendmail,
+                recipients=recipients,
+                sender=sender_email,
+                cc=cc,
+                subject=subject,
+                message=message,
+                now=True,
+                reference_doctype="Process Statement Of Accounts",
+                reference_name=document_name,
+                attachments=attachments,
+                expose_recipients="header",
+            )
+
+        if doc.enable_auto_email and from_scheduler:
+            new_to_date = getdate(posting_date or today())
+            if doc.frequency == "Weekly":
+                new_to_date = add_days(new_to_date, 7)
+            else:
+                new_to_date = add_months(
+                    new_to_date, 1 if doc.frequency == "Monthly" else 3
+                )
+            new_from_date = add_months(new_to_date, -1 * doc.filter_duration)
+            doc.add_comment(
+                "Comment",
+                "Emails sent on: " + frappe.utils.format_datetime(frappe.utils.now()),
+            )
+            if doc.report == "General Ledger":
+                doc.db_set("to_date", new_to_date, commit=True)
+                doc.db_set("from_date", new_from_date, commit=True)
+            else:
+                doc.db_set("posting_date", new_to_date, commit=True)
+        return True
+    else:
+        return False
