@@ -4,4 +4,5 @@
 
 [post_model_sync]
 nl_banadir.banadir_customization_reports.patches.gl_entry
+nl_banadir.banadir_customization_reports.patches.stock_ledger_entry
 
