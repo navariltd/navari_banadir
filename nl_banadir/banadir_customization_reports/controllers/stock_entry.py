@@ -30,4 +30,11 @@ def get_operation_cost(work_order):
 def before_save(doc, method=None):
     if doc.work_order and doc.stock_entry_type=="Manufacture":
         add_total_operation_cost(doc)
-    
+
+@frappe.whitelist(allow_guest=False)
+def get_default_stock_uom(item_code):
+    item = frappe.get_doc("Item", item_code)
+    if item.custom_default_stock_uom:
+        return item.custom_default_stock_uom
+    else:
+        return item.stock_uom
