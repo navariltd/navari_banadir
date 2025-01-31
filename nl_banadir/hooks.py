@@ -88,6 +88,7 @@ doctype_js = {
     "Sales Order": "public/js/sales_order.js",
     "Payment Entry": "public/js/payment_entry.js",
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
+    "Stock Entry":"public/js/stock_entry.js",
 }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
