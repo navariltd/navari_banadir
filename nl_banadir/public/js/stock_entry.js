@@ -1,8 +1,7 @@
 frappe.ui.form.on('Stock Entry Detail', {
     item_code: function(frm, cdt, cdn) {
-        let child_row = locals[cdt][cdn];  // Get the current child row
+        let child_row = locals[cdt][cdn];  
         if (child_row.item_code) {
-            // Call the server-side function to get the default UOM
             frappe.call({
                 method: 'nl_banadir.banadir_customization_reports.controllers.stock_entry.get_default_stock_uom',
                 args: {
