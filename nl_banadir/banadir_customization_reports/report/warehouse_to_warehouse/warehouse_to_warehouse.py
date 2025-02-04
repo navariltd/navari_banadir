@@ -74,3 +74,24 @@ def get_data(filters):
     """
 
     return frappe.db.sql(query, values, as_dict=True)
+
+
+def convert_alternative_uom(data, filters):
+	alternative_uom = filters.get('alternative_uom')
+	
+	for row in data:
+		item_code = row.get('item_code')
+		
+		if item_code:
+			conversion_factor = get_conversion_factor(item_code, alternative_uom)
+			
+			for key, value in row.items():
+				if isinstance(value, (int, float)):
+					new_value = value / conversion_factor
+					row[key] = new_value 
+	
+	return data
+
+def get_conversion_factor(item_code, alternative_uom):
+	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
+	return uom_conversion or 1
