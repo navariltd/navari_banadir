@@ -35,6 +35,31 @@ frappe.query_reports["Warehouse To Warehouse"] = {
 			"fieldtype": "Link",
 			"options": "Company",
 			"default": frappe.defaults.get_user_default("Company")
+		},
+		{
+			"fieldname": "item_code",
+			"label": "Item Code",
+			"fieldtype": "Link",
+			"options": "Item"
+
+		},
+		{
+			"fieldname": "alternative_uom",
+			"label": "Alternative UOM",
+			"fieldtype": "Link",
+			"options": "UOM"
+			
 		}
-	]
+	],
+	"formatter": function (value, row, column, data, default_formatter) {
+		value = default_formatter(value, row, column, data);
+
+		// Check if the row is a total row
+		if (data && data.is_total) {
+			value = `<b>${value}</b>`;
+		}
+
+		return value;
+	}
+
 };
