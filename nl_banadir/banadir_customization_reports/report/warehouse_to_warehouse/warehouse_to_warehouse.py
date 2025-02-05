@@ -53,8 +53,8 @@ def get_conditions(filters):
 
     return " AND ".join(conditions), values
 
-def get_data(filters):
-    """ Fetches data based on filters. """
+def fetch_stock_data(filters):
+    """Fetches stock entry data based on filters."""
     conditions, values = get_conditions(filters)
 
     query = f"""
@@ -70,13 +70,83 @@ def get_data(filters):
         FROM `tabStock Entry` se
         JOIN `tabStock Entry Detail` sed ON se.name = sed.parent
         WHERE {conditions}
-        ORDER BY se.posting_date DESC
+        ORDER BY se.posting_date DESC, se.name
     """
 
-    data = frappe.db.sql(query, values, as_dict=True)
+    return frappe.db.sql(query, values, as_dict=True)
+
+def calculate_subtotals(data):
+    """Processes data to calculate subtotals and grand totals."""
+    formatted_data = []
+    current_stock_entry = None
+    subtotal_qty = 0
+    subtotal_current_qty = 0
+    total_qty = 0
+    total_current_qty = 0
+
+    for row in data:
+        if current_stock_entry and current_stock_entry != row["stock_entry"]:
+            formatted_data.append({
+                "posting_date": "",
+                "stock_entry": f"Total for {current_stock_entry}",
+                "item_code": "",
+                "item_name": "",
+                "from_warehouse": "",
+                "to_warehouse": "",
+                "qty": subtotal_qty,
+                "current_qty": subtotal_current_qty,
+                "is_total": True,
+            })
+            total_qty += subtotal_qty
+            total_current_qty += subtotal_current_qty
+            subtotal_qty = 0
+            subtotal_current_qty = 0
+
+        formatted_data.append(row)
+        subtotal_qty += row.get("qty", 0)
+        subtotal_current_qty += row.get("current_qty", 0) if row.get("current_qty") is not None else 0
+        current_stock_entry = row["stock_entry"]
+
+    # Add last subtotal row
+    if current_stock_entry:
+        formatted_data.append({
+            "posting_date": "",
+            "stock_entry": f"Total for {current_stock_entry}",
+            "item_code": "",
+            "item_name": "",
+            "from_warehouse": "",
+            "to_warehouse": "",
+            "qty": subtotal_qty,
+            "current_qty": subtotal_current_qty,
+            "is_total": True,
+        })
+        total_qty += subtotal_qty
+        total_current_qty += subtotal_current_qty
+
+    return formatted_data, total_qty, total_current_qty
+
+def get_data(filters):
+    """Fetches stock data, processes subtotals, and adds a grand total row."""
+    data = fetch_stock_data(filters)
     data = convert_alternative_uom(data, filters)
-    
-    return data
+
+    formatted_data, total_qty, total_current_qty = calculate_subtotals(data)
+
+    # Append the final grand total row
+    formatted_data.append({
+        "posting_date": "",
+        "stock_entry": "Grand Total",
+        "item_code": "",
+        "item_name": "",
+        "from_warehouse": "",
+        "to_warehouse": "",
+        "qty": total_qty,
+        "current_qty": total_current_qty,
+        "is_total": True,
+    })
+
+    return formatted_data
+
 
 
 def convert_alternative_uom(data, filters):
@@ -98,3 +168,8 @@ def convert_alternative_uom(data, filters):
 def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	return uom_conversion or 1
+
+def formatter(value, row, column, data, default_formatter):
+    if "Total for" in str(value):
+        return f'<b style="color: blue;">{value}</b>'
+    return default_formatter(value, row, column, data)

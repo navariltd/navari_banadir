@@ -50,5 +50,16 @@ frappe.query_reports["Warehouse To Warehouse"] = {
 			"options": "UOM"
 			
 		}
-	]
+	],
+	"formatter": function (value, row, column, data, default_formatter) {
+		value = default_formatter(value, row, column, data);
+
+		// Check if the row is a total row
+		if (data && data.is_total) {
+			value = `<b>${value}</b>`;
+		}
+
+		return value;
+	}
+
 };
