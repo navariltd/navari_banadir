@@ -24,7 +24,7 @@ frappe.ui.form.on("Process Statement Of Accounts", {
             },
           });
         },
-        __("No Remarks")
+        __("Custom Download")
       );
       frm.add_custom_button(
         __("Download"),
@@ -48,7 +48,7 @@ frappe.ui.form.on("Process Statement Of Accounts", {
             },
           });
         },
-        __("No Remarks")
+        __("Custom Download")
       );
     }
   },
