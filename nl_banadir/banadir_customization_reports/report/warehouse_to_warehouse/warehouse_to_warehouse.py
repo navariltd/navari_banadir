@@ -73,7 +73,10 @@ def get_data(filters):
         ORDER BY se.posting_date DESC
     """
 
-    return frappe.db.sql(query, values, as_dict=True)
+    data = frappe.db.sql(query, values, as_dict=True)
+    data = convert_alternative_uom(data, filters)
+    
+    return data
 
 
 def convert_alternative_uom(data, filters):
