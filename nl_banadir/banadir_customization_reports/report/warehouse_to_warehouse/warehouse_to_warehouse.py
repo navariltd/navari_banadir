@@ -25,6 +25,8 @@ def get_columns():
         {"label": "Transferred Qty", "fieldname": "qty", "fieldtype": "Float", "width": 120},
         {"label": "Current Qty in Destination", "fieldname": "current_qty", "fieldtype": "Float", "width": 150, "hidden":1},
         {"label":"Valuation Rate", "fieldname":"valuation_rate", "fieldtype":"Currency","options":"currency", "width": 120},
+        {"label":"Rate", "fieldname":"rate", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency"},
+        {"label":"Amount", "fieldname":"amount", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency"},
         {"label":"Currency", "fieldname":"currency", "fieldtype":"Link","options":"Currency", "width": 12, "hidden":1},
         
     ]
@@ -70,6 +72,8 @@ def fetch_stock_data(filters):
             sed.t_warehouse AS to_warehouse, 
             sed.qty,
             sed.valuation_rate,
+            sed.basic_rate as rate,
+            sed.amount,
             (SELECT actual_qty FROM `tabBin` WHERE item_code = sed.item_code AND warehouse = sed.t_warehouse) AS current_qty
         FROM `tabStock Entry` se
         JOIN `tabStock Entry Detail` sed ON se.name = sed.parent
