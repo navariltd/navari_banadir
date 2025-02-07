@@ -19,11 +19,16 @@ def get_columns():
         {"label": "Date", "fieldname": "posting_date", "fieldtype": "Date", "width": 100},
         {"label": "Stock Entry", "fieldname": "stock_entry", "fieldtype": "Link", "options": "Stock Entry", "width": 120},
         {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
-        {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 150},
+        {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 150, "hidden":1},
         {"label": "From Warehouse", "fieldname": "from_warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
         {"label": "To Warehouse", "fieldname": "to_warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
         {"label": "Transferred Qty", "fieldname": "qty", "fieldtype": "Float", "width": 120},
-        {"label": "Current Qty in Destination", "fieldname": "current_qty", "fieldtype": "Float", "width": 150}
+        {"label": "Current Qty in Destination", "fieldname": "current_qty", "fieldtype": "Float", "width": 150, "hidden":1},
+        {"label":"Valuation Rate", "fieldname":"valuation_rate", "fieldtype":"Currency","options":"currency", "width": 120},
+        {"label":"Rate", "fieldname":"rate", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency"},
+        {"label":"Amount", "fieldname":"amount", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency"},
+        {"label":"Currency", "fieldname":"currency", "fieldtype":"Link","options":"Currency", "width": 12, "hidden":1},
+        
     ]
 
 def get_conditions(filters):
@@ -66,6 +71,9 @@ def fetch_stock_data(filters):
             sed.s_warehouse AS from_warehouse, 
             sed.t_warehouse AS to_warehouse, 
             sed.qty,
+            sed.valuation_rate,
+            sed.basic_rate as rate,
+            sed.amount,
             (SELECT actual_qty FROM `tabBin` WHERE item_code = sed.item_code AND warehouse = sed.t_warehouse) AS current_qty
         FROM `tabStock Entry` se
         JOIN `tabStock Entry Detail` sed ON se.name = sed.parent
@@ -75,7 +83,7 @@ def fetch_stock_data(filters):
 
     return frappe.db.sql(query, values, as_dict=True)
 
-def calculate_subtotals(data):
+def calculate_subtotals(data, filters):
     """Processes data to calculate subtotals and grand totals."""
     formatted_data = []
     current_stock_entry = None
@@ -119,6 +127,7 @@ def calculate_subtotals(data):
             "qty": subtotal_qty,
             "current_qty": subtotal_current_qty,
             "is_total": True,
+            "currency":frappe.get_cached_value('Company',  filters.get('company'),  'default_currency')
         })
         total_qty += subtotal_qty
         total_current_qty += subtotal_current_qty
@@ -129,8 +138,9 @@ def get_data(filters):
     """Fetches stock data, processes subtotals, and adds a grand total row."""
     data = fetch_stock_data(filters)
     data = convert_alternative_uom(data, filters)
-
-    formatted_data, total_qty, total_current_qty = calculate_subtotals(data)
+    data = currency_(data, filters)
+    
+    formatted_data, total_qty, total_current_qty = calculate_subtotals(data, filters)
 
     # Append the final grand total row
     formatted_data.append({
@@ -143,6 +153,8 @@ def get_data(filters):
         "qty": total_qty,
         "current_qty": total_current_qty,
         "is_total": True,
+        "currency":frappe.get_cached_value('Company',  filters.get('company'),  'default_currency')
+
     })
 
     return formatted_data
@@ -169,7 +181,9 @@ def get_conversion_factor(item_code, alternative_uom):
 	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
 	return uom_conversion or 1
 
-def formatter(value, row, column, data, default_formatter):
-    if "Total for" in str(value):
-        return f'<b style="color: blue;">{value}</b>'
-    return default_formatter(value, row, column, data)
+def currency_(data, filters):
+    company = filters.get('company')
+    currency = frappe.db.get_value("Company", company, "default_currency")
+    for row in data:
+        row['currency'] = currency
+    return data

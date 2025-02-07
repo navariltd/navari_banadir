@@ -34,7 +34,8 @@ frappe.query_reports["Warehouse To Warehouse"] = {
 			"label": "Company",
 			"fieldtype": "Link",
 			"options": "Company",
-			"default": frappe.defaults.get_user_default("Company")
+			"default": frappe.defaults.get_user_default("Company"),
+			"reqd": 1
 		},
 		{
 			"fieldname": "item_code",
