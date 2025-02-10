@@ -50,6 +50,13 @@ frappe.query_reports["Warehouse To Warehouse"] = {
 			"fieldtype": "Link",
 			"options": "UOM"
 			
+		},
+		{
+			"fieldname": "hide_column",
+			"label": "Hide",
+			"fieldtype": "Check",
+			
+			
 		}
 	],
 	"formatter": function (value, row, column, data, default_formatter) {

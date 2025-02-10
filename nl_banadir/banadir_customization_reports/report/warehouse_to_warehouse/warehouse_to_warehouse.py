@@ -8,12 +8,12 @@ def execute(filters=None):
     if not filters:
         filters = {}
 
-    columns = get_columns()
+    columns = get_columns(filters)
     data = get_data(filters)
 
     return columns, data
 
-def get_columns():
+def get_columns(filters):
     """ Returns the report column structure. """
     return [
         {"label": "Date", "fieldname": "posting_date", "fieldtype": "Date", "width": 100},
@@ -24,12 +24,13 @@ def get_columns():
         {"label": "To Warehouse", "fieldname": "to_warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
         {"label": "Transferred Qty", "fieldname": "qty", "fieldtype": "Float", "width": 120},
         {"label": "Current Qty in Destination", "fieldname": "current_qty", "fieldtype": "Float", "width": 150, "hidden":1},
-        {"label":"Valuation Rate", "fieldname":"valuation_rate", "fieldtype":"Currency","options":"currency", "width": 120},
-        {"label":"Rate", "fieldname":"rate", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency"},
-        {"label":"Amount", "fieldname":"amount", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency"},
+        {"label":"Valuation Rate", "fieldname":"valuation_rate", "fieldtype":"Currency","options":"currency", "width": 120, "hidden":1 if filters.get('hide_column') else 0},
+        {"label":"Rate", "fieldname":"rate", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency","hidden":1 if filters.get('hide_column') else 0},
+        {"label":"Amount", "fieldname":"amount", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency","hidden":1 if filters.get('hide_column') else 0},
         {"label":"Currency", "fieldname":"currency", "fieldtype":"Link","options":"Currency", "width": 12, "hidden":1},
         
     ]
+
 
 def get_conditions(filters):
     """ Generates SQL conditions dynamically based on filters. """
