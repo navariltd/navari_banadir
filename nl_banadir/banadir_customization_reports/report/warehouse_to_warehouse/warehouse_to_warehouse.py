@@ -71,7 +71,7 @@ def fetch_stock_data(filters):
             sed.item_name, 
             sed.s_warehouse AS from_warehouse, 
             sed.t_warehouse AS to_warehouse, 
-            sed.qty,
+            sed.transfer_qty as qty,
             sed.valuation_rate,
             sed.basic_rate as rate,
             sed.amount,
