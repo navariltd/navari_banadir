@@ -95,6 +95,7 @@ def calculate_subtotals(data, filters):
 
     for row in data:
         if current_stock_entry and current_stock_entry != row["stock_entry"]:
+            total_value=frappe.db.get_value("Stock Entry", current_stock_entry, "total_outgoing_value")
             formatted_data.append({
                 "posting_date": "",
                 "stock_entry": f"Total for {current_stock_entry}",
@@ -105,6 +106,7 @@ def calculate_subtotals(data, filters):
                 "qty": subtotal_qty,
                 "current_qty": subtotal_current_qty,
                 "is_total": True,
+                "amount":total_value,
             })
             total_qty += subtotal_qty
             total_current_qty += subtotal_current_qty
@@ -159,8 +161,6 @@ def get_data(filters):
     })
 
     return formatted_data
-
-
 
 def convert_alternative_uom(data, filters):
 	alternative_uom = filters.get('alternative_uom')
