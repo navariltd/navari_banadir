@@ -661,6 +661,12 @@ def convert_alternative_uom(data, filters):
 						if isinstance(value, (int, float)): 
 							new_value = value / conversion_factor
 							row[key] = new_value 
+				for key in ["rate","current_rate","current_landed_cost","current_rate_plus_landed_cost",  "rate_plus_landed_cost"]:
+					if key in row:
+						value = row[key]
+						if isinstance(value, (int, float)): 
+							new_value = value * conversion_factor
+							row[key] = new_value
 			else:
 				data = invoice_details(item_code, row, data, presentation_currency)
 				
