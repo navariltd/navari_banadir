@@ -185,6 +185,7 @@ def execute(filters=None):
 	# frappe.throw(str(data))
 	if filters.get("alternative_uom"):
 		data = convert_alternative_uom(data, filters)
+		print(str(data))
 	return columns, data
 
 
@@ -1313,6 +1314,10 @@ def convert_alternative_uom(data, filters):
                 if isinstance(qty, (int, float)):
                     conversion_factor = get_conversion_factor(item_code, alternative_uom)
                     row['qty'] = qty / conversion_factor
+                    row['valuation_rate'] *= conversion_factor
+                    row['avg._selling_rate'] *= conversion_factor
+
+
         
         elif group_by == 'Item Code':
             if len(row) > 4: 
@@ -1321,6 +1326,8 @@ def convert_alternative_uom(data, filters):
                 if isinstance(qty, (int, float)):
                     conversion_factor = get_conversion_factor(row[0], alternative_uom)
                     row[4] = qty / conversion_factor
+                    row[5] *= conversion_factor
+                    row[6] *= conversion_factor
     
     return data
 
