@@ -5,11 +5,16 @@
 
 import frappe
 from frappe import _, scrub
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, getdate, nowdate
 
 from erpnext.accounts.party import get_partywise_advanced_payment_amount
-from erpnext.accounts.report.accounts_receivable.accounts_receivable import ReceivablePayableReport
-from erpnext.accounts.utils import get_currency_precision, get_party_types_from_account_type
+from erpnext.accounts.report.accounts_receivable.accounts_receivable import (
+    ReceivablePayableReport,
+)
+from erpnext.accounts.utils import (
+    get_currency_precision,
+    get_party_types_from_account_type,
+)
 from erpnext.accounts.report.utils import convert
 
 
@@ -26,18 +31,21 @@ class AccountsReceivableSummary(ReceivablePayableReport):
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
         self.currency_conversion_rate = 1.0
-        if self.filters.get("presentation_currency") and self.filters.get("exchange_date"):
+        if self.filters.get("presentation_currency") and self.filters.get(
+            "exchange_date"
+        ):
             self.currency_conversion_rate = self.get_conversion_rate(
                 self.filters.get("presentation_currency"),
-                self.filters.get("exchange_date")
+                self.filters.get("exchange_date"),
             )
         super().__init__(filters)
-
 
     def run(self, args):
         self.account_type = args.get("account_type")
         self.party_type = get_party_types_from_account_type(self.account_type)
-        self.party_naming_by = frappe.db.get_value(args.get("naming_by")[0], None, args.get("naming_by")[1])
+        self.party_naming_by = frappe.db.get_value(
+            args.get("naming_by")[0], None, args.get("naming_by")[1]
+        )
         self.get_columns()
         self.get_data(args)
         return self.columns, self.data
@@ -66,7 +74,9 @@ class AccountsReceivableSummary(ReceivablePayableReport):
         )
 
         if self.filters.show_gl_balance:
-            gl_balance_map = get_gl_balance(self.filters.report_date, self.filters.company)
+            gl_balance_map = get_gl_balance(
+                self.filters.report_date, self.filters.company
+            )
 
         for party, party_dict in self.party_total.items():
             if flt(party_dict.outstanding, self.currency_precision) == 0:
@@ -86,7 +96,6 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
             row.update(party_dict)
 
-            
             # Advance against party
             row.advance = party_advance_amount.get(party, 0)
 
@@ -101,6 +110,7 @@ class AccountsReceivableSummary(ReceivablePayableReport):
             if self.filters.show_future_payments:
                 row.remaining_balance = flt(row.outstanding) - flt(row.future_amount)
 
+            self.set_ageing(row)
             self.data.append(row)
 
             # Helper function to find exchange rate
@@ -108,7 +118,7 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
                 if from_currency == to_currency:
                     return (1, None)
-                
+
                 # Try direct exchange rate
                 conversion_rate = frappe.db.get_value(
                     "Currency Exchange",
@@ -131,11 +141,13 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
             # Convert amounts to presentation currency
             if self.filters.get("presentation_currency"):
-                
-                from_currency = frappe.get_cached_value("Company", self.filters.company, "default_currency")
-                
+
+                from_currency = frappe.get_cached_value(
+                    "Company", self.filters.company, "default_currency"
+                )
+
                 to_currency = self.filters.get("presentation_currency")
-                
+
                 # Step 1: Try to get Direct or inverse conversion rate
                 conversion_rate = get_exchange_rate(from_currency, to_currency)
 
@@ -152,22 +164,55 @@ class AccountsReceivableSummary(ReceivablePayableReport):
                     for value in conversion_rate:
                         conversion_data.append(value)
                     row.currency = self.filters.get("presentation_currency")
-                    row.invoiced = convert(row.invoiced,  to_currency, from_currency, conversion_data[1])
-                    row.paid = convert(row.paid,  to_currency, from_currency, conversion_data[1])
-                    row.outstanding = convert(row.outstanding,  to_currency, from_currency, conversion_data[1])
-                    row.advance = convert(row.advance,  to_currency, from_currency, conversion_data[1])
-                    row.range1 = convert(row.range1,  to_currency, from_currency, conversion_data[1])
-                    row.range2 = convert(row.range2,  to_currency, from_currency, conversion_data[1])
-                    row.range3 = convert(row.range3,  to_currency, from_currency, conversion_data[1])
-                    row.range4 = convert(row.range4,  to_currency, from_currency, conversion_data[1])
-                    row.range5 = convert(row.range5,  to_currency, from_currency, conversion_data[1])
-                    row.total_due = convert(row.total_due,  to_currency, from_currency, conversion_data[1])
-                    row.future_amount = convert(row.future_amount,  to_currency, from_currency, conversion_data[1])
-                    row.gl_balance = convert(row.gl_balance,  to_currency, from_currency, conversion_data[1])
-                    row.diff = convert(row.diff,  to_currency, from_currency, conversion_data[1])
-                    row.remaining_balance = convert(row.remaining_balance,  to_currency, from_currency, conversion_data[1])
+                    row.invoiced = convert(
+                        row.invoiced, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.paid = convert(
+                        row.paid, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.outstanding = convert(
+                        row.outstanding, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.advance = convert(
+                        row.advance, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.range1 = convert(
+                        row.range1, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.range2 = convert(
+                        row.range2, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.range3 = convert(
+                        row.range3, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.range4 = convert(
+                        row.range4, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.range5 = convert(
+                        row.range5, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.total_due = convert(
+                        row.total_due, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.future_amount = convert(
+                        row.future_amount,
+                        to_currency,
+                        from_currency,
+                        conversion_data[1],
+                    )
+                    row.gl_balance = convert(
+                        row.gl_balance, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.diff = convert(
+                        row.diff, to_currency, from_currency, conversion_data[1]
+                    )
+                    row.remaining_balance = convert(
+                        row.remaining_balance,
+                        to_currency,
+                        from_currency,
+                        conversion_data[1],
+                    )
 
-            
     def get_party_total(self, args):
         self.party_total = frappe._dict()
 
@@ -181,6 +226,9 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
             # set territory, customer_group, sales person etc
             self.set_party_details(d)
+
+            # set posting_date
+            self.set_posting_date(d)
 
     def init_party_total(self, row):
         self.party_total.setdefault(
@@ -214,7 +262,13 @@ class AccountsReceivableSummary(ReceivablePayableReport):
             self.party_total[row.party].sales_person.append(row.get("sales_person", ""))
 
         if self.filters.sales_partner:
-            self.party_total[row.party]["default_sales_partner"] = row.get("default_sales_partner", "")
+            self.party_total[row.party]["default_sales_partner"] = row.get(
+                "default_sales_partner", ""
+            )
+
+    def set_posting_date(self, row):
+        if "posting_date" not in self.party_total[row.party]:
+            self.party_total[row.party]["posting_date"] = row.posting_date
 
     def get_columns(self):
         self.columns = []
@@ -234,12 +288,18 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
         if self.party_naming_by == "Naming Series":
             self.add_column(
-                label=_("Supplier Name") if self.account_type == "Payable" else _("Customer Name"),
+                label=(
+                    _("Supplier Name")
+                    if self.account_type == "Payable"
+                    else _("Customer Name")
+                ),
                 fieldname="party_name",
                 fieldtype="Data",
             )
 
-        credit_debit_label = "Credit Note" if self.account_type == "Receivable" else "Debit Note"
+        credit_debit_label = (
+            "Credit Note" if self.account_type == "Receivable" else "Debit Note"
+        )
 
         self.add_column(_("Advance Amount"), fieldname="advance")
         self.add_column(_("Invoiced Amount"), fieldname="invoiced")
@@ -259,7 +319,10 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
         if self.account_type == "Receivable":
             self.add_column(
-                label=_("Territory"), fieldname="territory", fieldtype="Link", options="Territory"
+                label=_("Territory"),
+                fieldname="territory",
+                fieldtype="Link",
+                options="Territory",
             )
             self.add_column(
                 label=_("Customer Group"),
@@ -268,10 +331,16 @@ class AccountsReceivableSummary(ReceivablePayableReport):
                 options="Customer Group",
             )
             if self.filters.show_sales_person:
-                self.add_column(label=_("Sales Person"), fieldname="sales_person", fieldtype="Data")
+                self.add_column(
+                    label=_("Sales Person"), fieldname="sales_person", fieldtype="Data"
+                )
 
             if self.filters.sales_partner:
-                self.add_column(label=_("Sales Partner"), fieldname="default_sales_partner", fieldtype="Data")
+                self.add_column(
+                    label=_("Sales Partner"),
+                    fieldname="default_sales_partner",
+                    fieldtype="Data",
+                )
 
         else:
             self.add_column(
@@ -282,38 +351,54 @@ class AccountsReceivableSummary(ReceivablePayableReport):
             )
 
         self.add_column(
-            label=_("Currency"), fieldname="currency", fieldtype="Link", options="Currency", width=80
+            label=_("Currency"),
+            fieldname="currency",
+            fieldtype="Link",
+            options="Currency",
+            width=80,
         )
+
     def setup_ageing_columns(self):
+        self.add_column(
+            label=_("Age (Days)"), fieldname="age", fieldtype="Int", width=80
+        )
         for i, label in enumerate(
-			[
-				"0-{range1}".format(range1=self.filters["range1"]),
-				"{range1}-{range2}".format(
-					range1=cint(self.filters["range1"]) + 1, range2=self.filters["range2"]
-				),
-				"{range2}-{range3}".format(
-					range2=cint(self.filters["range2"]) + 1, range3=self.filters["range3"]
-				),
-				"{range3}-{range4}".format(
-					range3=cint(self.filters["range3"]) + 1, range4=self.filters["range4"]
-				),
-				"{range4}-{above}".format(range4=cint(self.filters["range4"]) + 1, above=_("Above")),
-			]
-		):
+            [
+                "0-{range1}".format(range1=self.filters["range1"]),
+                "{range1}-{range2}".format(
+                    range1=cint(self.filters["range1"]) + 1,
+                    range2=self.filters["range2"],
+                ),
+                "{range2}-{range3}".format(
+                    range2=cint(self.filters["range2"]) + 1,
+                    range3=self.filters["range3"],
+                ),
+                "{range3}-{range4}".format(
+                    range3=cint(self.filters["range3"]) + 1,
+                    range4=self.filters["range4"],
+                ),
+                "{range4}-{above}".format(
+                    range4=cint(self.filters["range4"]) + 1, above=_("Above")
+                ),
+            ]
+        ):
             self.add_column(label=label, fieldname="range" + str(i + 1))
 
-		# Add column for total due amount
+        # Add column for total due amount
         self.add_column(label="Total Amount Due", fieldname="total_due")
 
 
 def get_gl_balance(report_date, company):
-	return frappe._dict(
-		frappe.db.get_all(
-			"GL Entry",
-			fields=["party", "sum(debit -  credit)"],
-			filters={"posting_date": ("<=", report_date), "is_cancelled": 0, "company": company},
-			group_by="party",
-			as_list=1,
-		)
-	)
-
+    return frappe._dict(
+        frappe.db.get_all(
+            "GL Entry",
+            fields=["party", "sum(debit -  credit)"],
+            filters={
+                "posting_date": ("<=", report_date),
+                "is_cancelled": 0,
+                "company": company,
+            },
+            group_by="party",
+            as_list=1,
+        )
+    )
