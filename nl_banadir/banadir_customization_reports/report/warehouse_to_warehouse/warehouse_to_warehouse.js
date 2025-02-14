@@ -53,8 +53,9 @@ frappe.query_reports["Warehouse To Warehouse"] = {
 		},
 		{
 			"fieldname": "hide_column",
-			"label": "Hide",
+			"label": "Quantity Only",
 			"fieldtype": "Check",
+			"default":1,
 			
 			
 		}
