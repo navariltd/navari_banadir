@@ -79,28 +79,49 @@ class AutoRepeat:
                 "fieldtype": "Date",
                 "width": "200",
             },
+            {
+                "label": "Status",
+                "fieldname": "status",
+                "fieldtype": "Data",
+                "width": "200",
+            },
+            {
+                "label": "Frequency",
+                "fieldname": "frequency",
+                "fieldtype": "Data",
+                "width": "200",
+            },
+            {
+                "label": "Next Schedule Date",
+                "fieldname": "next_schedule_date",
+                "fieldtype": "Data",
+                "width": "200",
+            },
         ]
         return columns
 
     def get_data(self):
         ar_doctype = DocType("Auto Repeat")
-        je_doctype = DocType(self.filters.get("reference_doctype"))
+        ref_doctype = DocType(self.filters.get("reference_doctype"))
 
         query = (
             frappe.qb.from_(ar_doctype)
-            .join(je_doctype)
-            .on(je_doctype.name == ar_doctype.reference_document)
+            .join(ref_doctype)
+            .on(ref_doctype.name == ar_doctype.reference_document)
             .select(
                 ar_doctype.name.as_("auto_repeat"),
                 ar_doctype.reference_document,
                 ar_doctype.start_date,
                 ar_doctype.end_date,
-                je_doctype.company,
+                ar_doctype.status,
+                ar_doctype.frequency,
+                ar_doctype.next_schedule_date,
+                ref_doctype.company,
             )
         )
 
         if self.filters.get("company"):
-            query = query.where(je_doctype.company == self.filters.get("company"))
+            query = query.where(ref_doctype.company == self.filters.get("company"))
 
         if self.filters.get("reference_doctype"):
             query = query.where(
