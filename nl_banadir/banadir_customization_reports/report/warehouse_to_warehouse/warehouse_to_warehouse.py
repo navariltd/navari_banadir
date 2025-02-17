@@ -84,6 +84,61 @@ def fetch_stock_data(filters):
 
 	return frappe.db.sql(query, values, as_dict=True)
 
+# def calculate_subtotals(data, filters):
+# 	"""Processes data to calculate subtotals and grand totals."""
+# 	formatted_data = []
+# 	current_stock_entry = None
+# 	subtotal_qty = 0
+# 	subtotal_current_qty = 0
+# 	total_qty = 0
+# 	total_current_qty = 0
+# 	total_amount = 0
+
+# 	for row in data:
+# 		if current_stock_entry and current_stock_entry != row["stock_entry"]:
+# 			total_value=frappe.db.get_value("Stock Entry", current_stock_entry, "total_outgoing_value")
+# 			formatted_data.append({
+# 				"posting_date": "",
+# 				"stock_entry": f"Total for {current_stock_entry}",
+# 				"item_code": "",
+# 				"item_name": "",
+# 				"from_warehouse": "",
+# 				"to_warehouse": "",
+# 				"qty": subtotal_qty,
+# 				"current_qty": subtotal_current_qty,
+# 				"is_total": True,
+# 				"amount":total_value,
+# 			})
+# 			total_qty += subtotal_qty
+# 			total_current_qty += subtotal_current_qty
+# 			subtotal_qty = 0
+# 			subtotal_current_qty = 0
+# 			total_amount += total_value
+
+# 		formatted_data.append(row)
+# 		subtotal_qty += row.get("qty", 0)
+# 		subtotal_current_qty += row.get("current_qty", 0) if row.get("current_qty") is not None else 0
+# 		current_stock_entry = row["stock_entry"]
+# 		total_amount += row.get("amount", 0)
+# 	# Add last subtotal row
+# 	if current_stock_entry:
+# 		formatted_data.append({
+# 			"posting_date": "",
+# 			"stock_entry": f"Total for {current_stock_entry}",
+# 			"item_code": "",
+# 			"item_name": "",
+# 			"from_warehouse": "",
+# 			"to_warehouse": "",
+# 			"qty": subtotal_qty,
+# 			"current_qty": subtotal_current_qty,
+# 			"is_total": True,
+# 			"currency":frappe.get_cached_value('Company',  filters.get('company'),  'default_currency')
+# 		})
+# 		total_qty += subtotal_qty
+# 		total_current_qty += subtotal_current_qty
+# 		total_amount += total_value
+
+# 	return formatted_data, total_qty, total_current_qty, total_amount
 def calculate_subtotals(data, filters):
 	"""Processes data to calculate subtotals and grand totals."""
 	formatted_data = []
@@ -92,10 +147,12 @@ def calculate_subtotals(data, filters):
 	subtotal_current_qty = 0
 	total_qty = 0
 	total_current_qty = 0
+	total_amount = 0  # This should sum only total_outgoing_value per Stock Entry
 
 	for row in data:
 		if current_stock_entry and current_stock_entry != row["stock_entry"]:
-			total_value=frappe.db.get_value("Stock Entry", current_stock_entry, "total_outgoing_value")
+			# Fetch total_outgoing_value for Stock Entry
+			total_value = frappe.db.get_value("Stock Entry", current_stock_entry, "total_outgoing_value") or 0
 			formatted_data.append({
 				"posting_date": "",
 				"stock_entry": f"Total for {current_stock_entry}",
@@ -106,12 +163,13 @@ def calculate_subtotals(data, filters):
 				"qty": subtotal_qty,
 				"current_qty": subtotal_current_qty,
 				"is_total": True,
-				"amount":total_value,
+				"amount": total_value,
 			})
 			total_qty += subtotal_qty
 			total_current_qty += subtotal_current_qty
 			subtotal_qty = 0
 			subtotal_current_qty = 0
+			total_amount += total_value  # Sum total_outgoing_value for each Stock Entry
 
 		formatted_data.append(row)
 		subtotal_qty += row.get("qty", 0)
@@ -120,6 +178,7 @@ def calculate_subtotals(data, filters):
 
 	# Add last subtotal row
 	if current_stock_entry:
+		total_value = frappe.db.get_value("Stock Entry", current_stock_entry, "total_outgoing_value") or 0
 		formatted_data.append({
 			"posting_date": "",
 			"stock_entry": f"Total for {current_stock_entry}",
@@ -130,12 +189,15 @@ def calculate_subtotals(data, filters):
 			"qty": subtotal_qty,
 			"current_qty": subtotal_current_qty,
 			"is_total": True,
-			"currency":frappe.get_cached_value('Company',  filters.get('company'),  'default_currency')
+			"amount": total_value,
+			"currency": frappe.get_cached_value('Company', filters.get('company'), 'default_currency')
 		})
 		total_qty += subtotal_qty
 		total_current_qty += subtotal_current_qty
+		total_amount += total_value  # Add last stock entry's total value
 
-	return formatted_data, total_qty, total_current_qty
+	return formatted_data, total_qty, total_current_qty, total_amount
+
 
 def get_data(filters):
 	"""Fetches stock data, processes subtotals, and adds a grand total row."""
@@ -143,7 +205,7 @@ def get_data(filters):
 	data = convert_alternative_uom(data, filters)
 	data = currency_(data, filters)
 	
-	formatted_data, total_qty, total_current_qty = calculate_subtotals(data, filters)
+	formatted_data, total_qty, total_current_qty, total_amount = calculate_subtotals(data, filters)
 
 	# Append the final grand total row
 	formatted_data.append({
@@ -156,8 +218,8 @@ def get_data(filters):
 		"qty": total_qty,
 		"current_qty": total_current_qty,
 		"is_total": True,
-		"currency":frappe.get_cached_value('Company',  filters.get('company'),  'default_currency')
-
+		"currency":frappe.get_cached_value('Company',  filters.get('company'),  'default_currency'),
+		"amount": total_amount,
 	})
 
 	return formatted_data
