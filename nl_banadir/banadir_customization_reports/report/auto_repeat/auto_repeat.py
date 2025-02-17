@@ -57,16 +57,10 @@ class AutoRepeat:
             {
                 "label": "Reference Document",
                 "fieldname": "reference_document",
-                "fieldtype": "Data",
+                "fieldtype": "Link",
+                "options": self.filters.get("reference_doctype"),
                 "width": "200",
             },
-            # {
-            #     "label": "Journal Entry",
-            #     "fieldname": "journal_entry",
-            #     "fieldtype": "Link",
-            #     "options": "Journal Entry",
-            #     "width": "200",
-            # },
             {
                 "label": "Start Date",
                 "fieldname": "start_date",

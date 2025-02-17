@@ -32,7 +32,6 @@ frappe.query_reports["Auto Repeat"] = {
         return {
           filters: {
             docstatus: ["=", 1],
-            // posting_date: ["between", [start_date, end_date]],
           },
         };
       },
